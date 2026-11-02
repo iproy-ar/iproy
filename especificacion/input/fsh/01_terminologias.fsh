@@ -368,7 +368,7 @@ Description: "Niveles acumulativos de conformidad (Parte 6)."
 * ^caseSensitive = true
 * ^content = #complete
 * #basico "Básico" "PIM-INV + PIM-SOL + PIM-OT."
-* #intermedio "Intermedio" "Básico + PIM-RSG, PIM-PRV, PIM-ENS y PIM-KPI."
+* #intermedio "Intermedio" "Básico + PIM-REG, PIM-RSG, PIM-PRV, PIM-ENS y PIM-KPI."
 * #avanzado "Avanzado" "Intermedio + PIM-TEL, PIM-ALR, PIM-FED y PIM-EQM."
 
 CodeSystem: PimPerfilIntegracion
@@ -402,8 +402,10 @@ Description: "Actores del marco técnico PIM. En la colmena, cada actor cliente 
 * #SO "Solicitante" "Sistema o aplicación que registra solicitudes."
 * #EJ "Ejecutor" "Empresa o área que ejecuta órdenes de su organización."
 * #FT "Fuente de telemetría" "Gateway, PLC o sensor que envía mediciones."
-* #CI "Consumidor de información" "Sistema que consulta inventario, órdenes, riesgo e indicadores."
+* #CI "Consumidor de información e indicadores" "Sistema que consulta inventario, órdenes, riesgo e indicadores (ministerio, dirección del hospital). Se agrupa con IHE mCSD Query Client."
+* #DA "Destinatario de alarmas" "Recibe y gestiona avisos técnicos (guardia técnica, mensajería). Se agrupa con IHE ACM Alert Communicator."
 * #RE "Registro estatal" "Registro del Estado que recibe datos de PMA (REFES)."
+* #DI "Directorio" "Publica los organismos, establecimientos, locales y endpoints. Es el actor Directory de IHE mCSD."
 
 CodeSystem: PimOpcion
 Id: pim-opcion

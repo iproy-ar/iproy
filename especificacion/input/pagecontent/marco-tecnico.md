@@ -18,8 +18,10 @@ Desde la versión 0.9.2 el PIM se describe con la estructura de un marco técnic
 | SO | Solicitante | SO | — |
 | EJ | Ejecutor | EJ | — |
 | FT | Fuente de telemetría | FT | — |
-| CI | Consumidor de información | CI | mCSD Query Client |
+| CI | Consumidor de información e indicadores | CI | mCSD Query Client |
+| DA | Destinatario de alarmas | — | ACM Alert Communicator |
 | RE | Registro estatal | RE | — |
+| DI | Directorio | — | mCSD Directory (el GM puede cumplirlo agrupado) |
 
 Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-ej`, `pim-ft`, `pim-ci`, `pim-re`.
 
@@ -48,7 +50,7 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | PIM-INV Inventario | PIM-1, PIM-2 (+ ITI-90) | Básico |
 | PIM-SOL Solicitud | PIM-3 | Básico |
 | PIM-OT Orden de trabajo | PIM-4, PIM-5 | Básico |
-| PIM-REG Registro estatal | PIM-9 | Básico (Argentina) |
+| PIM-REG Registro estatal | PIM-9 | Intermedio |
 | PIM-RSG Riesgo | PIM-7 | Intermedio |
 | PIM-PRV Preventivo | PlanDefinition y Questionnaire | Intermedio |
 | PIM-ENS Ensayo reglamentario | PIM-10 | Intermedio |
