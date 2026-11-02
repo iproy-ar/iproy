@@ -2,6 +2,15 @@
 
 Ningún nodo comparte datos con otro sin un **vínculo**: una relación que una parte propone, la otra acepta y ambas firman. *[propuesta — Fase 1]*
 
+> **Estado de la implementación (núcleo 1.0, 02-11-2026).** Ya funcionan:
+>
+> - la propuesta, la aceptación y la revocación con sobres firmados (ed25519);
+> - el tipo, la vigencia y el sha256 del acta;
+> - el registro mutuo como clientes PIM, con el rol acordado;
+> - el diario encadenado y firmado de cada nodo.
+>
+> Quedan para la versión 1.1: el alcance por recurso, la representación FHIR (Contract `pim-vinculo`) y el anclaje del sello de tiempo en BFA. Ver `COLMENA.md`.
+
 ## Tipos
 
 | Tipo | Partes | Ejemplo |

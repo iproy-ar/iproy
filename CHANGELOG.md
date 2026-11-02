@@ -50,7 +50,24 @@
 **Pruebas**
 - Unitarias (32), integración de la colmena (19) e integración industrial (19).
 
+### Agregado el 02-11-2026, tarde
+
+- **Especificación PIM 0.9.1** en `especificacion/`: FSH compilado con SUSHI 3.21.0, 0 errores y 0 advertencias.
+- Contrato OpenAPI 1.1.0 en `api/`.
+- Documentos de la especificación: dominio canónico, vínculos, pruebas y publicación.
+- `CITATION.cff` y CI: guía, pruebas unitarias, `verificar` y contrato.
+- `herramientas/contrato.py`: tabla de diferencias entre la especificación y la implementación (L-329).
+- **Vínculos según `docs/vinculos.md`:**
+  - tipo (`local`, `institucional` o `central`);
+  - vigencia: al vencer, el vínculo deja de autorizar y el cliente PIM del otro nodo se da de baja;
+  - sha256 del acta firmada.
+- **Proxy de salida** para la colmena, para redes con proxy (L-291): el tráfico a la LAN y al propio equipo nunca pasa por el proxy.
+- Rango `nucleo` en el manifiesto, que se verifica. Esquema unificado en `docs/modulo.schema.json`.
+
 ### Cambiado
+
+- El Servidor PIM publica en el canónico de la especificación, `https://iproy.com.ar/fhir`, y acepta `https://iproy.com.ar/pim` como alias.
+- El lanzador detecta la IP de la LAN también en Arch y EndeavourOS, donde `hostname` no acepta `-I`.
 
 - La distribución pública no trae datos ni configuración institucional:
   - organismo genérico;

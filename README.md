@@ -20,6 +20,7 @@ iproy/
 │   └── iProy-Control.sh / .ps1 / .bat   lanzador: init, start, stop, usuario, modulo, nucleo, colmena, pim…
 ├── incubadora/      incubar.php: crea un software derivado (nombre, logo, plantilla) o un módulo nuevo; verifica licencias
 ├── hub/             hub de relevo de la colmena para Internet: un PHP para cualquier hosting (SQLite + libsodium)
+├── especificacion/  estándar PIM 0.9.1 en FSH (HL7 FHIR R4) · api/ contrato OpenAPI 1.1.0, visor y colección de pruebas
 ├── pruebas/         unitarias.php · colmena.sh (dos nodos, intranet y hub) · industrial.sh (alarmas, preventivos, MQTT, Modbus)
 ├── herramientas/    simuladores Modbus y MQTT para pruebas
 ├── docs/            arquitectura, protocolo colmena/1, guía de módulos, integración industrial, hoja de ruta, investigación
@@ -79,7 +80,10 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | Prueba | Resultado |
 |---|---|
 | `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, condición de alarma, libsodium, manifiestos | 32/32 |
-| `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub | 19/19 |
+| `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 |
+| La misma prueba por Internet, con el hub instalado en un hosting real (`sghmq.com.ar/MantHMQ/colmena-hub`) | 20/20 |
+| Distribución en una ruta con espacios, modo LAN con HTTPS y nodos nuevos (canónico `/fhir`) | 17/17 |
+| Especificación PIM 0.9.1 (`sushi build especificacion`) | 0 errores, 0 advertencias |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos por calendario y por uso, Modbus TCP, MQTT con proceso residente | 19/19 |
 | Recorrido de la aplicación web en Chromium, 11 pestañas, en iProy y en Colmen | sin errores de consola |
 | `incubar.php verificar` sobre la base y sobre Colmen | sin secretos, sin datos institucionales, licencias libres |

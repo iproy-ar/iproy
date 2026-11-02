@@ -63,6 +63,10 @@ B: colmena aceptar A <rol>      ──vinculo-aceptado (identidad B)──▶  A
 - Si las dos partes se piden el vínculo a la vez, queda activo automáticamente: hay consentimiento mutuo.
 - **Revocar.** El nodo mueve el cliente PIM del otro a `_bajas/` y avisa con un sobre firmado. A partir de ahí no hay RPC ni eventos.
 - **Cambio de clave.** Si un nodo aparece con otra clave para un vínculo vigente, se rechaza (409). Para restablecerlo hay que revocar y volver a vincular verificando la huella.
+- **Tipo y vigencia** (según `docs/vinculos.md`):
+  - el tipo es `local`, `institucional` o `central`, y se elige al pedir: `colmena vincular <url> institucional`;
+  - la vigencia y el acta se fijan al aceptar: `colmena aceptar <par> <rol> <AAAA-MM-DD> <acta.pdf>`. Del acta se guarda solo su sha256, y las dos partes registran la misma huella;
+  - al vencer, el vínculo pasa a `vencido` y el cliente PIM del otro nodo se da de baja.
 - **Respaldo legal (opcional).** El acuerdo entre instituciones puede firmarse en papel o con firma digital (Ley 25.506) y citar las dos huellas y la fecha. El diario de cada nodo asienta la solicitud, la aceptación y la revocación con firma.
 
 ## 4. RPC sobre la API PIM
@@ -81,6 +85,8 @@ El nodo A arma `{rpc, metodo, ruta, cuerpo, if_match, asercion}`, lo sella para 
 |---|---|---|
 | Intranet | `POST <url>/api/colmena/sobre` con `{sobre}`. La respuesta trae `{ok, sobre}` | El vínculo tiene `url` y `via = auto` |
 | Hub | `enviar` al hub y el destinatario lo retira con `buzon` en su tick (cada 15 s) | Si la intranet falla, o si `via = hub` |
+
+**Proxy de salida.** Las redes con proxy se configuran en el núcleo (`proxy` en `data/nucleo/config.json`), en el panel de Redes o con `HTTPS_PROXY`. El tráfico hacia la LAN, hacia el propio equipo y hacia lo que figure en `NO_PROXY` va siempre directo.
 
 La seguridad no depende de TLS: los sobres están firmados y sellados. TLS (CA propia del nodo) es una defensa adicional.
 

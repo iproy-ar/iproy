@@ -6,7 +6,7 @@
 - **Windows.** El lanzador `.ps1` tiene los mismos comandos, pasa el análisis sintáctico y se probó con pwsh en Linux (`colmena lista`). La primera corrida real en Windows queda pendiente \[pendiente\].
 - **MQTT sin residente.** Si el proceso residente no está corriendo, la tarea de respaldo escucha unos segundos por ciclo. Con brokers sin sesiones persistentes se pueden perder mensajes. Con el residente (que `start` inicia solo) no se perdió ninguno en las pruebas.
 - **Hub.** La RPC por el hub es asíncrona: la latencia es la del tick del otro nodo (hasta 15 s; en las pruebas, entre 8 y 12 s). Para tiempo real, conviene la intranet o una VPN.
-- **PIM 1.0.** La implementación de referencia cumple el contrato 1.0.0. El contrato 1.1.0 (DeviceMetric, 11 CodeSystems, `$refes`, rol RE) y el espacio canónico definitivo (`PIM_CANONICAL`) están pendientes. La incubadora protege `https://iproy.com.ar/fhir` y `https://iproy.com.ar/fhir`, pero el canónico se define al integrar la especificación.
+- **PIM 1.0 frente a la especificación 0.9.1.** El canónico ya está alineado: `https://iproy.com.ar/fhir`, con `/pim` como alias. El resto de las diferencias (ids de extensiones, DeviceMetric, CodeSystems y ValueSets, `$refes`, rol RE, Contract) está medido en `especificacion/DIFERENCIAS_IMPLEMENTACION.md` y es el trabajo de la versión 1.1.
 - **Bases heredadas.** En la distribución pública, el puente con un sistema anterior (vistas `iproy_fhir` sobre bases `legado_*`) queda inactivo si esas bases no existen. Se registra un aviso en `data/logs/fhir_vistas.log`. No impide nada.
 - **Cifrado de la base en reposo.** Depende del sistema operativo (por ejemplo, BitLocker o LUKS).
 
@@ -14,7 +14,7 @@
 
 ### 1.1
 
-- Incorporar la especificación PIM (`pim-repositorio_v0.9.1c`) en `especificacion/`.
+- ~~Incorporar la especificación PIM en `especificacion/`~~: hecho el 02-11-2026 (SUSHI 0/0).
 - Implementar el contrato OpenAPI 1.1.0: DeviceMetric + Observation (L-331), CodeSystems completos, operación `Device/$refes` y rol RE.
 - Kit de pruebas Inferno.
 - Sparkplug B en el módulo mqtt: birth/death, métricas y estado del nodo de borde.
