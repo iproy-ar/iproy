@@ -144,6 +144,12 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
         CURLOPT_CONNECTTIMEOUT => min(5, $timeout), CURLOPT_HTTPHEADER => $h, CURLOPT_HEADER => true,
         CURLOPT_SSL_VERIFYPEER => $verificar_tls, CURLOPT_SSL_VERIFYHOST => $verificar_tls ? 2 : 0, CURLOPT_FOLLOWLOCATION => false]);
     if ($cuerpo !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $cuerpo);
+    // Proxy de salida (redes hospitalarias, L-291): solo hacia Internet; la LAN y el propio equipo van directo.
+    $host = (string) parse_url($url, PHP_URL_HOST);
+    $privado = $host === 'localhost' || str_ends_with($host, '.local') || str_ends_with($host, '.colmena')
+        || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE));
+    if (!$privado && ($px = proxy_salida())) curl_setopt($ch, CURLOPT_PROXY, $px);
+    foreach (['SSL_CERT_FILE', 'CURL_CA_BUNDLE'] as $e) if (($ca = getenv($e)) && is_file($ca)) { curl_setopt($ch, CURLOPT_CAINFO, $ca); break; }
     $r = curl_exec($ch);
     if ($r === false) { $e = curl_error($ch); return ['http' => 0, 'cuerpo' => '', 'cab' => [], 'error' => $e]; }
     $hs = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
@@ -152,6 +158,13 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
     return ['http' => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), 'cuerpo' => substr($r, $hs), 'cab' => $cabs, 'error' => null];
 }
 
+/** Proxy de salida: data/nucleo/config.json «proxy», o el del panel de Redes (data/red.json), o HTTPS_PROXY del sistema. */
+function proxy_salida(): string {
+    $p = (string) (cfg()['proxy'] ?? '');
+    if ($p === '') $p = (string) (leer_json(raiz() . '/data/red.json')['proxy'] ?? '');
+    if ($p === '') $p = (string) (getenv('HTTPS_PROXY') ?: getenv('https_proxy') ?: '');
+    return $p;
+}
 /** Carga todas las bibliotecas del núcleo. */
 function cargar(): void {
     static $ok = false;

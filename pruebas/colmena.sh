@@ -24,7 +24,8 @@ B POST pim/Device '{"resourceType":"Device","identifier":[{"system":"https://ipr
 DEV=$(B GET "pim/Device?identifier=PRUEBA-COLMENA" | grep -o '"resourceType":"Device","id":"[^"]*"' | head -1 | grep -o '[0-9A-Z]\{26\}')
 echo "1) Vínculo por la intranet"
 A POST colmena/vinculos/$IB/revocar >/dev/null 2>&1; B POST colmena/vinculos/$IA/revocar >/dev/null 2>&1
-ver "A pide vínculo a B (tipo institucional)" "$(A POST colmena/vincular "{\"destino\":\"http://127.0.0.1:$PORT_B\",\"tipo\":\"institucional\"}")" '"estado":"saliente"'
+DEST_B="${DEST_B:-http://127.0.0.1:$PORT_B}"     # en modo LAN: DEST_B=https://<IP>:<puerto TLS> bash pruebas/colmena.sh …
+ver "A pide vínculo a B por $DEST_B (tipo institucional)" "$(A POST colmena/vincular "{\"destino\":\"$DEST_B\",\"tipo\":\"institucional\"}")" '"estado":"saliente"'
 ver "B ve la solicitud entrante" "$(B GET colmena/vinculos)" '"estado":"entrante"'
 ver "una vigencia vencida se rechaza" "$(B POST colmena/vinculos/$IA/aceptar '{"rol":"CI","vence":"2020-01-01"}')" '"ok":false'
 VENCE=$(date -d '+1 year' +%F); ACTA=$(printf 'acta de prueba' | sha256sum | cut -d' ' -f1)
