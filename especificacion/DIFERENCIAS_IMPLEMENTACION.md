@@ -3,99 +3,92 @@
 
 Generado por `herramientas/contrato.py` el 02-11-2026. Es la verificación por máquina de la lección L-329.
 
-- **Especificación:** guía FSH 0.9.1 (SUSHI 3.21.0: 0 errores, 0 advertencias).
-- **Implementación:** Servidor PIM 1.0, `nodo/app/pim`, que cumple el contrato OpenAPI 1.0.0.
+| | Versión |
+|---|---|
+| Especificación (guía FSH compilada por SUSHI) | **0.9.2** |
+| Servidor PIM (`nodo/app/pim`) | **1.1.0** (declara PIM 0.9.2) |
+| Contrato OpenAPI (`api/openapi_pim_v1_2_0.yaml`) | **1.2.0** |
 
-El contrato 1.1.0 (`api/openapi_pim_v1_1_0.yaml`) es la meta de la versión 1.1 (ver `docs/HOJA_DE_RUTA.md`).
+**Cómo se mide:** toda extensión, perfil y CodeSystem que el código del servidor (y del módulo `mem`) emite o lee debe existir en la guía compilada;
+todo recurso del servidor debe estar en el CapabilityStatement del actor Gestor (`pim-gm`). Además, desde la 1.1 el servidor **no tiene copia
+propia** de las terminologías: sirve los artefactos de la guía (`nodo/conf/pim-guia`), y `pruebas/unitarias.php` comprueba que sus constantes
+(estados de la orden, tipos de mantenimiento, sistemas, grupos de local, valores de extensiones) coinciden código por código con la guía.
 
-**Espacio canónico:** las dos usan `https://iproy.com.ar/fhir`. Desde el 02-11-2026 el servidor publica en ese espacio y acepta `https://iproy.com.ar/pim` (el de la versión 1.0) como alias.
+**Resultado:** ✔ sin diferencias no declaradas.
 
-**Resumen:**
+| Tipo | Artefacto | En la guía 0.9.2 | En el servidor 1.1.0 | Estado | Nota |
+|---|---|---|---|---|---|
+| StructureDefinition | `pim-activo` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-ambiente-controlado` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-categoria-alcance` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-categoria-riesgo` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-clase-riesgo-pm` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-conformidad` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-establecimiento` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-estado-declarado` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-grupo-activo` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-grupo-uso-medico` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-iru` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-medicion` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-modo-falla` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-orden-generada` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-pertenencia` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-pma` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-procedencia` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-puesta-en-marcha` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-punto` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-punto-medicion` | — | ✔ | declarada | Extensión de la 1.0 que el servidor sigue ACEPTANDO al recibir un Device para configurar el rango de un punto. No se emite: los puntos son DeviceMetric (L-331). Se retira en la 2.0. |
+| StructureDefinition | `pim-redundancia` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-riesgo` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-tipo-mantenimiento` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `ambienteControlado → pim-ambiente-controlado` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `categoriaAlcance → pim-categoria-alcance` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `categoriaRiesgo → pim-categoria-riesgo` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `claseRiesgoPM → pim-clase-riesgo-pm` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `componentesIRU → pim-iru` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `estadoDeclarado → pim-estado-declarado` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `grupoUsoMedico → pim-grupo-uso-medico` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `modoFalla → pim-modo-falla` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `pertenencia → pim-pertenencia` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `pim-equipo-medico → pim-pma` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `puestaEnMarcha → pim-puesta-en-marcha` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `redundancia → pim-redundancia` | ✔ | ✔ | ✔ |  |
+| Alias de entrada | `tipoMantenimiento → pim-tipo-mantenimiento` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-categoria-alcance` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-categoria-riesgo` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-clase-riesgo-pm` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-estado-orden` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-grupo-local` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-metodo-riesgo` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-modo-falla` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-origen` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-punto` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-sistema` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-tipo-mantenimiento` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-valores` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Device` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `DeviceMetric` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Group` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Location` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Observation` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Organization` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Provenance` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `RiskAssessment` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `ServiceRequest` | ✔ | ✔ | ✔ |  |
+| Recurso (actor GM) | `Task` | ✔ | ✔ | ✔ |  |
 
-| Tipo de artefacto | Especificación | Servidor | En común |
-|---|---|---|---|
-| CodeSystems | 13 | 12 referenciados (7 publicados en `/CodeSystem`) | 8 |
-| Extensiones | 12 (ids camelCase) | 16 (StructureDefinition por nombre) | 0 |
+## Pendiente de implementación (declarado en la Declaración de Integración del servidor)
 
-Recursos del servidor: Device, Group, Location, Observation, Organization, Provenance, RiskAssessment, ServiceRequest, Task.
-
-
-### CodeSystems
-
-| Artefacto | Especificación 0.9.1 | Servidor PIM 1.0 |
+| Perfil de integración | Recursos | Nivel |
 |---|---|---|
-| `pim-banda-iru` | — | ✔ |
-| `pim-categoria` | — | ✔ |
-| `pim-categoria-alcance` | ✔ | — |
-| `pim-categoria-riesgo` | ✔ | ✔ |
-| `pim-clase-riesgo-pm` | ✔ | — |
-| `pim-ensayo` | ✔ | — |
-| `pim-estado-declarado` | — | ✔ |
-| `pim-estado-orden` | ✔ | ✔ |
-| `pim-grupo-local` | ✔ | ✔ |
-| `pim-metodo-riesgo` | ✔ | ✔ |
-| `pim-modo-falla` | ✔ | ✔ |
-| `pim-origen` | — | ✔ |
-| `pim-punto` | ✔ | ✔ |
-| `pim-sistema` | ✔ | ✔ |
-| `pim-tipo-mantenimiento` | ✔ | ✔ |
-| `pim-tipo-vinculo` | ✔ | — |
-| `pim-valores` | ✔ | — |
+| PIM-PRV | PlanDefinition, Questionnaire, QuestionnaireResponse | Intermedio |
+| PIM-ENS | DiagnosticReport (pim-informe-ensayo) | Intermedio |
+| PIM-KPI | Measure, MeasureReport | Intermedio |
 
+Con PRV, ENS y KPI pendientes, el servidor declara el nivel **Básico** completo más REG, RSG, TEL, FED, ALR y EQM.
 
-### Extensiones y perfiles referenciados por el servidor (sd)
+## Lo que no se puede verificar acá
 
-| Artefacto | Especificación 0.9.1 | Servidor PIM 1.0 |
-|---|---|---|
-| `ambienteControlado` | ✔ | — |
-| `categoriaAlcance` | ✔ | — |
-| `categoriaRiesgo` | ✔ | — |
-| `claseRiesgoPM` | ✔ | — |
-| `componentesIRU` | ✔ | — |
-| `estadoDeclarado` | ✔ | — |
-| `grupoUsoMedico` | ✔ | — |
-| `modoFalla` | ✔ | — |
-| `pertenencia` | ✔ | — |
-| `pim-activo` | ✔ | ✔ |
-| `pim-ambiente-controlado` | — | ✔ |
-| `pim-categoria-riesgo` | — | ✔ |
-| `pim-conformidad` | — | ✔ |
-| `pim-empresa` | ✔ | — |
-| `pim-estado-declarado` | — | ✔ |
-| `pim-grupo-activo` | — | ✔ |
-| `pim-grupo-uso-medico` | — | ✔ |
-| `pim-informe-ensayo` | ✔ | — |
-| `pim-iru` | — | ✔ |
-| `pim-local` | ✔ | — |
-| `pim-medicion` | ✔ | ✔ |
-| `pim-modo-falla` | — | ✔ |
-| `pim-orden` | ✔ | — |
-| `pim-orden-generada` | — | ✔ |
-| `pim-organismo` | ✔ | — |
-| `pim-pma` | ✔ | — |
-| `pim-procedencia` | — | ✔ |
-| `pim-punto` | ✔ | — |
-| `pim-punto-medicion` | — | ✔ |
-| `pim-redundancia` | — | ✔ |
-| `pim-riesgo` | ✔ | ✔ |
-| `pim-sistema` | ✔ | — |
-| `pim-solicitud` | ✔ | — |
-| `pim-tipo-mantenimiento` | — | ✔ |
-| `pim-vinculo` | ✔ | — |
-| `puestaEnMarcha` | ✔ | — |
-| `redundancia` | ✔ | — |
-| `tipoMantenimiento` | ✔ | — |
-
-
-### ValueSets de la especificación (el servidor 1.0 no publica ValueSets)
-
-`pim-banda-iru`, `pim-categoria-alcance`, `pim-categoria-riesgo`, `pim-clase-riesgo-pm`, `pim-conformidad`, `pim-ensayo`, `pim-estado-declarado`, `pim-estado-orden`, `pim-grupo-local`, `pim-metodo-riesgo`, `pim-modo-falla`, `pim-pertenencia`, `pim-presion-relativa`, `pim-punto`, `pim-redundancia`, `pim-sistema`, `pim-tipo-mantenimiento`, `pim-tipo-vinculo`
-
-
-### Decisiones para la versión 1.1
-
-1. **Ids de extensiones.** El servidor adopta los ids de la especificación (camelCase: `estadoDeclarado`, `tipoMantenimiento`, `categoriaRiesgo`, …). Durante 2 años sigue aceptando los nombres 1.0 (`pim-estado-declarado`, `pim-categoria-riesgo`, …) como alias de entrada.
-2. **Puntos de medición.** El perfil `pim-punto` (DeviceMetric) reemplaza a la extensión `pim-punto-medicion` dentro de Device (L-331).
-3. **Catálogos.** `pim-banda-iru` y `pim-estado-declarado` pasan a ser ValueSets sobre `pim-valores`, como dice la especificación (L-341). Se publican los 13 CodeSystems y los 18 ValueSets.
-4. **Recursos nuevos.** Contract (`pim-vinculo`), DiagnosticReport (`pim-informe-ensayo`), operación `Device/$refes` y rol RE.
+- La validación de las instancias contra los perfiles con el validador oficial de HL7: la ejecuta el flujo `.github/workflows/guia.yml` al publicar.
+- La conformidad de los mensajes HL7 v2 de PCD-15 contra el perfil de conformidad de IHE: `pruebas/mem.sh` usa mensajes con la forma del ejemplo del suplemento Rev. 1.5.
 

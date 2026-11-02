@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "API iProy · PIM 1.1.0",
+    "name": "API iProy · PIM 1.2.0 (PIM 0.9.2, alineada con IHE)",
     "description": "Pedidos de prueba de la API iProy (datos ficticios). Licencia CC BY-SA 4.0.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -234,6 +234,82 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"resourceType\": \"Observation\",\n  \"meta\": {\n    \"profile\": [\n      \"https://iproy.com.ar/fhir/StructureDefinition/pim-medicion\"\n    ]\n  },\n  \"status\": \"final\",\n  \"code\": {\n    \"coding\": [\n      {\n        \"system\": \"https://iproy.com.ar/fhir/CodeSystem/pim-punto\",\n        \"code\": \"PRES-LINEA\"\n      }\n    ]\n  },\n  \"device\": {\n    \"reference\": \"DeviceMetric/ejemplo-presion-linea\"\n  },\n  \"effectiveInstant\": \"2026-11-02T10:10:00-03:00\",\n  \"valueQuantity\": {\n    \"value\": 410,\n    \"unit\": \"kPa\",\n    \"system\": \"http://unitsofmeasure.org\",\n    \"code\": \"kPa\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "8. Directorio IHE mCSD: establecimiento (ITI-90)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Location?type=facility"
+        }
+      }
+    },
+    {
+      "name": "9. Cambios del directorio (ITI-91)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Location/_history?_since=2026-11-01"
+        }
+      }
+    },
+    {
+      "name": "10. Puntos de medición de un activo",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/DeviceMetric?source=Device/{{device}}"
+        }
+      }
+    },
+    {
+      "name": "11. Actor Gestor (CapabilityStatement pim-gm)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/CapabilityStatement/pim-gm"
         }
       }
     }

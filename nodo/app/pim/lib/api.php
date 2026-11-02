@@ -295,6 +295,18 @@ function op_refes(?string $id): never {
     }
     if ($id && !$n) throw new Fallo(404, 'not-found', "Device/$id no es un producto médico activo");
     $GLOBALS['iproy_pim_audit']['n'] = count($par);
+    if (($_GET['_format'] ?? '') === 'csv') {                                   // archivo de carga mientras no haya interfaz con SISA
+        $col = ['codigo', 'marca', 'modelo', 'fechaFabricacion', 'puestaEnMarcha', 'pertenencia', 'anmatPM', 'completo'];
+        $txt = "\xEF\xBB\xBF" . implode(';', array_merge($col, ['falta'])) . "\r\n";
+        foreach ($par as $x) {
+            $v = []; $f = [];
+            foreach ($x['part'] as $pp) { if ($pp['name'] === 'falta') { $f[] = $pp['valueString']; continue; }
+                $v[$pp['name']] = $pp['valueString'] ?? $pp['valueDate'] ?? ($pp['valueCoding']['code'] ?? (isset($pp['valueBoolean']) ? ($pp['valueBoolean'] ? 'si' : 'no') : '')); }
+            $txt .= implode(';', array_map(fn($c) => '"' . str_replace('"', '""', (string) ($v[$c] ?? '')) . '"', $col)) . ';"' . implode(', ', $f) . "\"\r\n";
+        }
+        http_response_code(200); header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="refes_pma.csv"'); header('Cache-Control: no-store');
+        echo $txt; auditar(200); exit;
+    }
     responder(200, ['resourceType' => 'Parameters', 'parameter' => array_merge([
         ['name' => 'total', 'valueInteger' => $n], ['name' => 'completos', 'valueInteger' => $nc],
         ['name' => 'norma', 'valueString' => 'Res. SGS 532/2026: marca, modelo, fecha de fabricación o puesta en marcha, pertenencia y n.º de producto ANMAT']], $par)]);

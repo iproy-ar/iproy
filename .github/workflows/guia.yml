@@ -49,9 +49,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with: { php-version: "8.3", extensions: sodium, pdo_sqlite }
-      - name: Pruebas unitarias del núcleo y los módulos
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Compilar la guía y comprobar que el nodo sirve exactamente esos artefactos
+        run: |
+          npm install -g fsh-sushi
+          bash herramientas/guia-al-nodo.sh
+          git diff --exit-code -- nodo/conf/pim-guia
+      - name: Pruebas unitarias (núcleo, módulos, HL7 v2 de PCD-15 y contrato servidor ↔ guía)
         run: php pruebas/unitarias.php
       - name: Licencias, cabeceras SPDX, secretos y datos institucionales
         run: php incubadora/incubar.php verificar nodo
-      - name: Contrato especificación ↔ implementación al día
+      - name: Contrato especificación ↔ implementación sin diferencias no declaradas y al día
         run: python3 herramientas/contrato.py > /tmp/d.md && diff <(sed 1,5d /tmp/d.md) <(sed 1,5d especificacion/DIFERENCIAS_IMPLEMENTACION.md)
+      - name: Contrato OpenAPI válido
+        run: pip install openapi-spec-validator pyyaml && python3 -c "import yaml; from openapi_spec_validator import validate; validate(yaml.safe_load(open('api/openapi_pim_v1_2_0.yaml')))"
