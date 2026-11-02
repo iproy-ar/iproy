@@ -147,7 +147,9 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
     // Proxy de salida (redes hospitalarias, L-291): solo hacia Internet; la LAN y el propio equipo van directo.
     $host = (string) parse_url($url, PHP_URL_HOST);
     $privado = $host === 'localhost' || str_ends_with($host, '.local') || str_ends_with($host, '.colmena')
-        || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE));
+        || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
+        || in_array($host, (array) (leer_json(raiz() . '/data/run/ips.json')['ipv4'] ?? []), true)          // el propio equipo
+        || sin_proxy($host);
     if (!$privado && ($px = proxy_salida())) curl_setopt($ch, CURLOPT_PROXY, $px);
     foreach (['SSL_CERT_FILE', 'CURL_CA_BUNDLE'] as $e) if (($ca = getenv($e)) && is_file($ca)) { curl_setopt($ch, CURLOPT_CAINFO, $ca); break; }
     $r = curl_exec($ch);
@@ -158,6 +160,17 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
     return ['http' => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), 'cuerpo' => substr($r, $hs), 'cab' => $cabs, 'error' => null];
 }
 
+/** NO_PROXY del sistema (dominios con sufijo, IP exactas o CIDR IPv4). */
+function sin_proxy(string $host): bool {
+    foreach (array_filter(array_map('trim', explode(',', (string) (getenv('NO_PROXY') ?: getenv('no_proxy') ?: '')))) as $n) {
+        $n = ltrim($n, '*');
+        if (str_contains($n, '/') && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            [$red, $bits] = explode('/', $n, 2); $m = -1 << (32 - (int) $bits);
+            if ((ip2long($host) & $m) === (ip2long($red) & $m)) return true;
+        } elseif ($n !== '' && ($host === ltrim($n, '.') || str_ends_with($host, '.' . ltrim($n, '.')))) return true;
+    }
+    return false;
+}
 /** Proxy de salida: data/nucleo/config.json «proxy», o el del panel de Redes (data/red.json), o HTTPS_PROXY del sistema. */
 function proxy_salida(): string {
     $p = (string) (cfg()['proxy'] ?? '');
