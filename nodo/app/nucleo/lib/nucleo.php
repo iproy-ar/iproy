@@ -150,7 +150,8 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
         || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
         || in_array($host, (array) (leer_json(raiz() . '/data/run/ips.json')['ipv4'] ?? []), true)          // el propio equipo
         || sin_proxy($host);
-    if (!$privado && ($px = proxy_salida())) curl_setopt($ch, CURLOPT_PROXY, $px);
+    if ($privado) curl_setopt($ch, CURLOPT_PROXY, '');                         // "" anula también el proxy de las variables de entorno
+    elseif ($px = proxy_salida()) curl_setopt($ch, CURLOPT_PROXY, $px);
     foreach (['SSL_CERT_FILE', 'CURL_CA_BUNDLE'] as $e) if (($ca = getenv($e)) && is_file($ca)) { curl_setopt($ch, CURLOPT_CAINFO, $ca); break; }
     $r = curl_exec($ch);
     if ($r === false) { $e = curl_error($ch); return ['http' => 0, 'cuerpo' => '', 'cab' => [], 'error' => $e]; }
