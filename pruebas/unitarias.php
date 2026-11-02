@@ -10,6 +10,8 @@ foreach (['bus', 'colmena', 'modulos'] as $l) require_once "$N/app/nucleo/lib/$l
 require "$N/modulos/modbus/lib.php";
 require "$N/modulos/mqtt/lib.php";
 require "$N/modulos/alarmas/lib.php";
+require "$N/modulos/mem/lib.php";
+foreach (['nucleo', 'modelo'] as $l) require_once "$N/app/pim/lib/$l.php";
 
 $ok = 0; $mal = 0;
 function prueba(string $n, bool $c): void { global $ok, $mal; $c ? $ok++ : $mal++; echo ($c ? '  ✔ ' : '  ✘ ') . $n . "\n"; }
@@ -67,5 +69,38 @@ foreach (glob("$N/modulos/*/modulo.json") as $f) {
     $j = json_decode((string) file_get_contents($f), true);
     prueba(basename(dirname($f)) . ': manifiesto válido, ABI ' . Nucleo\ABI . ', licencia libre', is_array($j) && $j['id'] === basename(dirname($f)) && (int) $j['abi'] === Nucleo\ABI && in_array($j['licencia'], Nucleo\LICENCIAS_LIBRES, true));
 }
-echo "\n" . ($mal ? "✘ $mal fallas, $ok correctas\n" : "✔ $ok pruebas correctas\n");
+echo "IHE PCD-15 (HL7 v2, módulo mem)\n";
+$m = "MSH|^~\\&|Fab^001A010000000001^EUI-64||Cli||20150119221713-0000||ORU^R44^ORU_R44|C1|P|2.6\rOBR|1|||69135^MDC_OBS_MEM^MDC|||20150119221713-0000\r"
+   . "OBX|1|CWE|67925^MDC_ATTR_POWER_STAT^MDC|1.0.0.3|^BATT||20150119221713-0000||||F|||||||2000101^Bomba^001A010000000002^EUI-64";
+$sg = Modulos\Mem\partir($m);
+prueba('MSH-1 es el separador y MSH-9 el tipo', Modulos\Mem\campo($sg[0], 1) === '|' && Modulos\Mem\campo($sg[0], 9) === 'ORU^R44^ORU_R44');
+prueba('OBX-18: EUI-64 del componente anterior al tipo', Modulos\Mem\eui(Modulos\Mem\campo($sg[2], 18)) === '001A010000000002');
+prueba('MSH-3: EUI-64', Modulos\Mem\eui(Modulos\Mem\campo($sg[0], 3)) === '001A010000000001');
+prueba('TS de HL7 v2 → dateTime FHIR', Modulos\Mem\ts('20150119221713-0000') === '2015-01-19T22:17:13-00:00' && Modulos\Mem\ts('20261102') === '2026-11-02T00:00:00-03:00');
+$ack = Modulos\Mem\ack($sg, 'AA');
+prueba('ACK con MSA|AA|<control> y ACK^R44', str_contains($ack, "\rMSA|AA|C1") && str_contains($ack, '|ACK^R44^ACK|'));
+prueba('IP permitida por CIDR', Modulos\Mem\ip_permitida('192.168.1.20', ['192.168.1.0/24']) && !Modulos\Mem\ip_permitida('10.0.0.1', ['192.168.1.0/24']) && Modulos\Mem\ip_permitida('1.2.3.4', []));
+
+echo "Contrato servidor ↔ especificación (L-329: por máquina)\n";
+$G = "$N/conf/pim-guia";
+$cods = function (string $id) use ($G): array {
+    $j = json_decode((string) @file_get_contents("$G/CodeSystem-$id.json"), true) ?? []; $l = [];
+    $r = function ($c) use (&$r, &$l) { foreach ($c as $x) { $l[] = (string) $x['code']; if (!empty($x['concept'])) $r($x['concept']); } }; $r((array) ($j['concept'] ?? [])); return $l;
+};
+prueba('estados de la orden = pim-estado-orden', array_keys(IproyPim\ESTADOS_ORDEN) == $cods('pim-estado-orden'));
+prueba('tipos de mantenimiento = pim-tipo-mantenimiento', IproyPim\TIPOS_MANT == $cods('pim-tipo-mantenimiento'));
+prueba('sistemas = pim-sistema', !array_diff(array_keys(IproyPim\SISTEMAS), $cods('pim-sistema')) && !array_diff($cods('pim-sistema'), array_keys(IproyPim\SISTEMAS)));
+prueba('categoría de alcance de cada sistema (A–D)', !array_diff($cods('pim-sistema'), array_keys(IproyPim\SISTEMA_ALCANCE)) && !array_diff(IproyPim\SISTEMA_ALCANCE, ['A', 'B', 'C', 'D']));
+prueba('grupos de local = pim-grupo-local', IproyPim\GRUPOS_LOCAL == $cods('pim-grupo-local'));
+prueba('estado declarado, presión y pertenencia ⊂ pim-valores', !array_diff(array_merge(IproyPim\ESTADO_DECLARADO, array_values(IproyPim\PRESION), IproyPim\PERTENENCIA), $cods('pim-valores')));
+$fuente = implode("\n", array_map('file_get_contents', array_merge(glob("$N/app/pim/lib/*.php"), ["$N/modulos/mem/lib.php"])));
+preg_match_all("/sd\\('([a-z0-9\\-]+)'\\)/", $fuente, $x1); preg_match_all("/(?:SD \\. |StructureDefinition\\/)'?(pim-[a-z0-9\\-]+)/", $fuente, $x2);
+$sds = array_unique(array_merge($x1[1], $x2[1], array_values(IproyPim\ALIAS_SD)));
+$faltan = array_values(array_filter($sds, fn($n) => $n !== 'pim-punto-medicion' && !is_file("$G/StructureDefinition-$n.json")));
+prueba('toda extensión y perfil que usa el servidor existe en la guía (' . count($sds) . ')' . ($faltan ? ' · faltan: ' . implode(', ', $faltan) : ''), !$faltan);
+preg_match_all("/cs\\('([a-z0-9\\-]+)'\\)/", $fuente, $x3);
+$faltan = array_values(array_filter(array_unique($x3[1]), fn($n) => !is_file("$G/CodeSystem-$n.json")));
+prueba('todo CodeSystem que usa el servidor existe en la guía' . ($faltan ? ' · faltan: ' . implode(', ', $faltan) : ''), !$faltan);
+
+echo "\n" . ($mal ? "✘ $mal fallas, $ok correctas" : "✔ $ok pruebas correctas") . "\n";
 exit($mal ? 1 : 0);

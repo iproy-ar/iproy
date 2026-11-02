@@ -115,8 +115,18 @@
     {
       "code": "TRV-ASC",
       "display": "Transporte vertical"
+    },
+    {
+      "code": "COM-LLAM",
+      "display": "Llamado de enfermería",
+      "definition": "Sistema de llamado paciente-enfermería (categoría B)."
+    },
+    {
+      "code": "GAS-NAT",
+      "display": "Gas natural",
+      "definition": "Red de gas natural del establecimiento (categoría D salvo que alimente esterilización o calderas de servicios críticos)."
     }
   ],
   "caseSensitive": true,
-  "count": 27
+  "count": 29
 }

@@ -160,6 +160,8 @@ Description: "Clases de sistemas de instalación (PIM-PROP-001, Anexo B)."
 * #EDI-GRAL "Edificio y obra civil"
 * #EDI-ABE "Aberturas"
 * #TRV-ASC "Transporte vertical"
+* #COM-LLAM "Llamado de enfermería" "Sistema de llamado paciente-enfermería (categoría B)."
+* #GAS-NAT "Gas natural" "Red de gas natural del establecimiento (categoría D salvo que alimente esterilización o calderas de servicios críticos)."
 
 CodeSystem: PimPuntoCS
 Id: pim-punto

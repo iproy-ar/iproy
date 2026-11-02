@@ -1,12 +1,12 @@
 {
   "id": "pim",
   "nombre": "Servidor PIM (HL7 FHIR R4)",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "abi": 1,
   "nucleo": ">=1.0 <2.0",
   "estabilidad": "estable",
   "licencia": "AGPL-3.0-or-later",
-  "descripcion": "Integra el Servidor PIM v0.9 (activos, solicitudes, órdenes, mediciones) al núcleo: un vigía publica en el bus cada alta o cambio (pim/<Tipo>/<create|update>) y la app suma las pestañas Órdenes, Nueva solicitud e Inventario. El servidor en sí sigue en /pim/r4 y es igual para cualquier cliente.",
+  "descripcion": "Integra el Servidor PIM 1.1 (PIM 0.9.2: activos, solicitudes, órdenes, mediciones) al núcleo: un vigía publica en el bus cada alta o cambio (pim/<Tipo>/<create|update>) y la app suma las pestañas Órdenes, Nueva solicitud e Inventario. El servidor en sí sigue en /pim/r4 y es igual para cualquier cliente.",
   "requiere": [],
   "capacidades": {
     "pim.ordenes.operar": ["GM", "EJ"],

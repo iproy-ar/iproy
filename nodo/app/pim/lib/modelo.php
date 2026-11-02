@@ -32,13 +32,15 @@ const TRANSICIONES = [
 const CON_MOTIVO = ['en-espera', 'rechazada', 'anulada', 'en-revision'];
 const PRIORIDADES = ['routine', 'urgent', 'asap', 'stat'];
 const BANDA_PRIORIDAD = ['A' => 'stat', 'B' => 'asap', 'C' => 'urgent', 'D' => 'routine'];
-const TIPOS_MANT = ['correctivo-inmediato', 'correctivo-diferido', 'preventivo-sistematico', 'preventivo-condicional', 'mejora', 'ensayo-reglamentario'];
+const TIPOS_MANT = ['correctivo-inmediato', 'correctivo-diferido', 'preventivo-sistematico', 'preventivo-condicional', 'predictivo', 'mejora', 'ensayo-reglamentario', 'verificacion-tecnica-pma'];
 const SISTEMAS = ['GAS-O2' => 'Oxígeno medicinal', 'GAS-AIRE' => 'Aire medicinal', 'GAS-VAC' => 'Vacío medicinal', 'GAS-N2O' => 'Óxido nitroso',
     'GAS-CO2' => 'Dióxido de carbono', 'GAS-AGSS' => 'Evacuación de gases anestésicos', 'ELE-EMER' => 'Energía de emergencia', 'ELE-UPS' => 'Sistemas de alimentación ininterrumpida',
     'ELE-ITM' => 'Red IT médica', 'ELE-NORM' => 'Distribución eléctrica normal e iluminación', 'HVAC-QX' => 'Climatización de quirófanos', 'HVAC-AIS' => 'Salas de aislamiento',
     'HVAC-GRAL' => 'Climatización general', 'FIL-HEPA' => 'Filtración absoluta', 'EST-VAP' => 'Esterilización y vapor', 'AGU-DIAL' => 'Agua para hemodiálisis',
     'AGU-SAN' => 'Agua sanitaria', 'FRIO-CONS' => 'Frío de conservación', 'INC-DET' => 'Detección de incendio', 'INC-EXT' => 'Extinción de incendio',
-    'TRV-ASC' => 'Transporte vertical', 'COM-LLAM' => 'Llamado de enfermería', 'GAS-NAT' => 'Gas natural', 'EDI-GRAL' => 'Edificio y obra civil'];
+    'TRV-ASC' => 'Transporte vertical', 'COM-LLAM' => 'Llamado de enfermería', 'GAS-NAT' => 'Gas natural', 'EDI-GRAL' => 'Edificio y obra civil',
+    'AGU-OSM' => 'Circuitos de ósmosis', 'PIS-COND' => 'Pisos conductivos o disipativos', 'TIC-CPD' => 'Centro de datos con sistemas clínicos',
+    'DES-CLO' => 'Desagües cloacales y pluviales', 'EDI-ABE' => 'Aberturas'];
 const ESTADO_DECLARADO = ['operativo-con-falla', 'degradado', 'fuera-de-servicio'];
 const GRUPOS_LOCAL = ['0', '1', '2a', '2b'];
 const TIPO_FISICO = ['bu' => 'Building', 'wi' => 'Wing', 'lvl' => 'Level', 'ro' => 'Room', 'bd' => 'Bed', 'area' => 'Area'];
@@ -48,7 +50,7 @@ const PRESION = ['+' => 'positiva', '-' => 'negativa', '0' => 'neutra'];
 const SISTEMA_ALCANCE = ['GAS-O2' => 'B', 'GAS-AIRE' => 'B', 'GAS-VAC' => 'B', 'GAS-N2O' => 'B', 'GAS-CO2' => 'B', 'GAS-AGSS' => 'B', 'ELE-ITM' => 'B',
     'HVAC-QX' => 'B', 'HVAC-AIS' => 'B', 'FIL-HEPA' => 'B', 'EST-VAP' => 'B', 'AGU-DIAL' => 'B', 'AGU-OSM' => 'B', 'PIS-COND' => 'B',
     'ELE-EMER' => 'C', 'ELE-UPS' => 'C', 'TIC-CPD' => 'C', 'INC-DET' => 'C', 'INC-EXT' => 'C', 'FRIO-CONS' => 'C',
-    'ELE-NORM' => 'D', 'HVAC-GRAL' => 'D', 'AGU-SAN' => 'D', 'DES-CLO' => 'D', 'EDI-GRAL' => 'D', 'EDI-ABE' => 'D', 'TRV-ASC' => 'D'];
+    'COM-LLAM' => 'B', 'GAS-NAT' => 'D', 'ELE-NORM' => 'D', 'HVAC-GRAL' => 'D', 'AGU-SAN' => 'D', 'DES-CLO' => 'D', 'EDI-GRAL' => 'D', 'EDI-ABE' => 'D', 'TRV-ASC' => 'D'];
 const PERTENENCIA = ['desconocida'];   // valores de SISA a confirmar con la DNSIS (pim-valores)
 
 function coding(string $sys, string $code, ?string $disp = null): array { return array_filter(['system' => $sys, 'code' => $code, 'display' => $disp], fn($x) => $x !== null); }

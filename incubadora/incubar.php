@@ -5,7 +5,7 @@
  * Incubadora de software: crea, a partir de la distribución base (../nodo), un sistema de gestión propio,
  * operativo en minutos, estandarizado (PIM / HL7 FHIR R4, ISA-18.2, EN 13306, ISO 14224) y libre (AGPL-3.0-or-later).
  *
- *   php incubar.php nuevo --nombre Colmen [--sigla CLM] [--destino ../../Colmen] [--color "#0b6e4f"] [--plantilla gestion-mantenimiento]
+ *   php incubar.php nuevo --nombre Colmen [--sigla CLM] [--destino ../../Colmen] [--color "#0b6e4f"] [--plantilla gestion-mantenimiento] [--version 0.2.0]
  *                         [--descripcion "…"] [--fuente https://…/colmen]
  *   php incubar.php modulo <id> --nombre "Calibraciones" --campos "equipo:texto!,fecha:fecha!,resultado:opcion(apto|no-apto),patron:texto"
  *                         [--destino ../nodo/modulos] [--ver GM,EJ,CI] [--editar GM]
@@ -23,13 +23,14 @@ declare(strict_types=1);
 
 const TEXTO = ['php', 'js', 'mjs', 'json', 'md', 'sql', 'sh', 'ps1', 'bat', 'txt', 'tpl', 'css', 'html', 'yaml', 'yml', 'toml', 'xml', 'svg', 'ini', ''];
 const EXCLUIR = ['data', 'runtime', 'descargas', '.git', 'node_modules'];
+const VERBATIM = ['conf/pim-guia'];                  // artefactos del estándar PIM: se copian tal cual (no son de la marca)
 const PROTEGIDO = [                                  // nunca se renombran (estándar, atribución, protocolo)
-    'https://iproy.com.ar/pim', 'https://iproy.com.ar/fhir',
+    'https://iproy.com.ar/pim', 'https://iproy.com.ar/fhir', 'ar.iproy.pim',
     'Proyecto iProy y colaboradores',
 ];
 const PLANTILLAS = [
-    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, preventivos, alarmas ISA-18.2, telemetría, MQTT y Modbus.',
-                                'modulos' => ['pim', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus']],
+    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, preventivos, alarmas ISA-18.2, telemetría, MQTT, Modbus y equipos médicos por IHE MEM-DMC.',
+                                'modulos' => ['pim', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus', 'mem']],
     'mantenimiento-basico'  => ['descripcion' => 'Órdenes, solicitudes, inventario y preventivos (sin integración industrial).',
                                 'modulos' => ['pim', 'preventivos']],
     'monitoreo-industrial'  => ['descripcion' => 'Telemetría, alarmas ISA-18.2, MQTT y Modbus sobre el inventario PIM (tipo SCADA liviano).',
@@ -61,14 +62,16 @@ function renombrar_texto(string $s, array $m, array &$cuenta): string {
     $s = strtr($s, $m);
     return strtr($s, $marcas);
 }
-function copiar(string $orig, string $dest, array $m, array &$cuenta, array &$archivos): void {
+function copiar(string $orig, string $dest, array $m, array &$cuenta, array &$archivos, string $rel = ''): void {
     if (!is_dir($dest)) mkdir($dest, 0755, true);
+    $tal = in_array($rel, VERBATIM, true);
     foreach (scandir($orig) as $n) {
         if ($n === '.' || $n === '..' || in_array($n, EXCLUIR, true)) continue;
-        $o = "$orig/$n"; $d = $dest . '/' . strtr($n, $m);
+        $o = "$orig/$n"; $d = $dest . '/' . ($tal ? $n : strtr($n, $m));
         if (is_link($o)) continue;                                          // enlaces: nunca (pueden apuntar a datos)
-        if (is_dir($o)) { copiar($o, $d, $m, $cuenta, $archivos); continue; }
-        if (es_texto($o)) file_put_contents($d, renombrar_texto((string) file_get_contents($o), $m, $cuenta));
+        if (is_dir($o)) { copiar($o, $d, $m, $cuenta, $archivos, ltrim("$rel/$n", '/')); continue; }
+        if ($tal) copy($o, $d);
+        elseif (es_texto($o)) file_put_contents($d, renombrar_texto((string) file_get_contents($o), $m, $cuenta));
         else copy($o, $d);
         @chmod($d, fileperms($o) & 0777);
         $archivos[] = $d;
@@ -125,7 +128,8 @@ function cmd_nuevo(array $o): void {
     @mkdir("$dest/modulos.disponibles", 0755, true);
     foreach (glob("$dest/modulos/*", GLOB_ONLYDIR) as $md) if (!in_array(basename($md), $P['modulos'], true)) rename($md, "$dest/modulos.disponibles/" . basename($md));
     // identidad del producto
-    $prod = ['nombre' => $nombre, 'sigla' => $sigla, 'version' => '0.1.0',
+    $ver = (string) ($o['version'] ?? '0.1.0'); if (!preg_match('/^\d+\.\d+\.\d+$/', $ver)) salir('--version: MAYOR.MENOR.PARCHE');
+    $prod = ['nombre' => $nombre, 'sigla' => $sigla, 'version' => $ver,
         'descripcion' => (string) ($o['descripcion'] ?? "$nombre: sistema de gestión basado en {$bp['nombre']} (plantilla $plant)."),
         'licencia' => 'AGPL-3.0-or-later', 'fuente' => (string) ($o['fuente'] ?? ''), 'base' => "{$bp['nombre']} {$bp['version']}",
         'plantilla' => $plant, 'incubado' => date('c'), 'colores' => ['primario' => $color, 'secundario' => aclarar($color, 0.25), 'claro' => aclarar($color, 0.88)]];
@@ -301,5 +305,5 @@ match ($o['_'][0] ?? '') {
     'modulo' => cmd_modulo($o),
     'verificar' => exit(verificar((string) ($o['_'][1] ?? salir('uso: incubar.php verificar <carpeta>')))['ok'] ? 0 : 2),
     'plantillas' => array_map(fn($k, $v) => dice(str_pad($k, 24) . $v['descripcion'] . ' [' . implode(', ', $v['modulos']) . ']'), array_keys(PLANTILLAS), PLANTILLAS),
-    default => salir("Incubadora · uso:\n  php incubar.php nuevo --nombre <Nombre> [--sigla ABC] [--destino carpeta] [--color #RRGGBB] [--plantilla " . implode('|', array_keys(PLANTILLAS)) . "]\n  php incubar.php modulo <id> --nombre \"…\" --campos \"campo:tipo[!],…\"\n  php incubar.php verificar <carpeta>\n  php incubar.php plantillas", 0),
+    default => salir("Incubadora · uso:\n  php incubar.php nuevo --nombre <Nombre> [--sigla ABC] [--destino carpeta] [--color #RRGGBB] [--version 0.1.0] [--plantilla " . implode('|', array_keys(PLANTILLAS)) . "]\n  php incubar.php modulo <id> --nombre \"…\" --campos \"campo:tipo[!],…\"\n  php incubar.php verificar <carpeta>\n  php incubar.php plantillas", 0),
 };

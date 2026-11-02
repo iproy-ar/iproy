@@ -393,7 +393,7 @@
   /* ---------------------------------------------------------------- arranque */
   api('GET', 'metadata').then(function (m) {
     $('#chipNodo').textContent = m.implementation.description;
-    $('#chipVer').textContent = 'PIM v0.9 · API ' + m.version;
+    $('#chipVer').textContent = 'PIM ' + ((m.implementationGuide || [''])[0].split('|')[1] || '') + ' · API ' + m.version;
   }).catch(function (e) { $('#chipNodo').textContent = 'sin conexión con la API'; aviso(main, 'mal', e.message); });
   ir('tablero');
 })();

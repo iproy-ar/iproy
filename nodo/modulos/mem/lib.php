@@ -53,7 +53,7 @@ function seg(array $segs, string $nombre): ?array { foreach ($segs as $s) if ($s
 function ts(string $v): ?string {
     if (!preg_match('/^(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?(?:\.\d+)?([+-]\d{4})?$/', trim($v), $m)) return null;
     $z = isset($m[7]) && $m[7] !== '' ? substr($m[7], 0, 3) . ':' . substr($m[7], 3) : '-03:00';
-    return sprintf('%s-%s-%sT%s:%s:%s%s', $m[1], $m[2], $m[3], $m[4] ?: '00', $m[5] ?: '00', $m[6] ?: '00', $z);
+    return sprintf('%s-%s-%sT%s:%s:%s%s', $m[1], $m[2], $m[3], ($m[4] ?? '') ?: '00', ($m[5] ?? '') ?: '00', ($m[6] ?? '') ?: '00', $z);
 }
 /** EUI-64 dentro de un campo CX/EI: el componente anterior al tipo «EUI-64». */
 function eui(string $campo): ?string {

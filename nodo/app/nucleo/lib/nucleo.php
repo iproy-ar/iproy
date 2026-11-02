@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Nucleo;
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const ABI = 1;                    // versión del ABI de módulos: modulo.json declara "abi": 1
 const PROTOCOLO = 'colmena/1';
 const ROLES = ['AD' => 'Administrador del nodo', 'GM' => 'Gestor de mantenimiento', 'EJ' => 'Ejecutor (técnico o empresa)',
