@@ -14,7 +14,7 @@
  *
  * Reglas que la incubadora garantiza (y `verificar` controla):
  *  - El derivado conserva la licencia AGPL-3.0-or-later y los avisos de copyright del original (AGPL §4-§5) y suma los suyos.
- *  - Los espacios de nombres canónicos de PIM (https://iproy.com.ar/pim y /fhir) NO se renombran: son del estándar, no del producto;
+ *  - Los espacios de nombres canónicos de PIM (https://iproy.com.ar/fhir y su alias /pim) NO se renombran: son del estándar, no del producto;
  *    así un nodo Colmen y uno iProy se entienden sin alias.
  *  - El protocolo de colmena («colmena/1») es neutral: los derivados se reconocen entre sí.
  *  - Nunca se copian data/, runtime/, descargas/ ni secretos: el derivado nace vacío y genera sus claves al instalarse.
@@ -137,7 +137,7 @@ function cmd_nuevo(array $o): void {
         ".\n\n- Licencia: GNU AGPL-3.0-or-later (la misma del original). Quien use $nombre por red tiene derecho a recibir su código fuente completo, con las modificaciones.\n" .
         "- Se conservan los avisos de copyright del original («Proyecto iProy y colaboradores»); los cambios propios se agregan con una línea `SPDX-FileCopyrightText` nueva.\n" .
         "- Fuente de $nombre: " . ($prod['fuente'] ?: '**(completar en producto.json → «fuente» antes de ponerlo en servicio)**') . "\n" .
-        "- Protocolos y estándares sin cambios: PIM v0.9 (HL7 FHIR R4) con espacio de nombres canónico https://iproy.com.ar/pim, colmena/1.\n");
+        "- Protocolos y estándares sin cambios: PIM v0.9 (HL7 FHIR R4) con espacio de nombres canónico https://iproy.com.ar/fhir, colmena/1.\n");
     $rep = ['producto' => $prod, 'archivos' => count($arch), 'reemplazos' => $cuenta, 'modulos' => $P['modulos'], 'protegidos' => PROTEGIDO];
     file_put_contents("$destRaiz/INCUBACION.json", json_encode($rep, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
     $lanz = "$nombre-Control";
@@ -179,7 +179,7 @@ function cmd_modulo(array $o): void {
     $t = "mod_$id";
     @mkdir("$dest/sql", 0755, true);
     $cab = "// SPDX-License-Identifier: AGPL-3.0-or-later\n// SPDX-FileCopyrightText: " . date('Y') . " Proyecto iProy y colaboradores\n";
-    file_put_contents("$dest/modulo.json", json_encode(['id' => $id, 'nombre' => $nombre, 'version' => '0.1.0', 'abi' => 1, 'estabilidad' => 'pruebas', 'licencia' => 'AGPL-3.0-or-later',
+    file_put_contents("$dest/modulo.json", json_encode(['id' => $id, 'nombre' => $nombre, 'version' => '0.1.0', 'abi' => 1, 'nucleo' => '>=1.0 <2.0', 'estabilidad' => 'pruebas', 'licencia' => 'AGPL-3.0-or-later',
         'descripcion' => "Registro de $nombre generado por la incubadora (" . date('d-m-Y') . '). Altas, cambios, baja lógica, historial en el diario firmado y eventos en el bus.',
         'requiere' => [], 'lib' => 'lib.php', 'rutas' => 'rutas.php', 'capacidades' => ["$id.ver" => array_values($ver), "$id.editar" => array_values($edi)],
         'ui' => ['script' => 'ui.js', 'orden' => 60], 'config_defecto' => new stdClass()], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");

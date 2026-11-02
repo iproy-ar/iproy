@@ -3,6 +3,7 @@
   "nombre": "Puente MQTT 3.1.1",
   "version": "1.0.0",
   "abi": 1,
+  "nucleo": ">=1.0 <2.0",
   "estabilidad": "pruebas",
   "licencia": "AGPL-3.0-or-later",
   "descripcion": "Cliente MQTT 3.1.1 (OASIS) sin dependencias: se suscribe a los temas configurados (por defecto pim/v1/{refes}/{activo}/{punto}), convierte cada mensaje en telemetria/medicion y publica en el broker los cambios de alarma. Sesión persistente (clean session = 0) con QoS 1: el broker guarda los mensajes entre una lectura y la siguiente. TLS opcional.",

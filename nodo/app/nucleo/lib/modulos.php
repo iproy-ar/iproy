@@ -35,6 +35,7 @@ function manifiestos(): array {
         if (!preg_match('/^[a-z][a-z0-9_]{1,38}$/', $id)) $err[] = 'id: minúsculas, números y _ (2-39)';
         if (!preg_match('/^\d+\.\d+\.\d+$/', (string) ($j['version'] ?? ''))) $err[] = 'version: semver x.y.z';
         if ((int) ($j['abi'] ?? 0) !== ABI) $err[] = 'abi ' . ($j['abi'] ?? '?') . ' incompatible con el núcleo (ABI ' . ABI . ')';
+        if (isset($j['nucleo']) && !version_en_rango(VERSION, (string) $j['nucleo'])) $err[] = "requiere núcleo {$j['nucleo']} (este es " . VERSION . ')';
         if (!in_array($j['estabilidad'] ?? 'pruebas', ESTABILIDADES, true)) $err[] = 'estabilidad: ' . implode(' | ', ESTABILIDADES);
         if (($j['estabilidad'] ?? '') === 'retirado') $err[] = 'módulo retirado: ya no se carga';
         if (empty($j['licencia'])) $err[] = 'falta licencia (identificador SPDX)';
@@ -49,6 +50,14 @@ function manifiestos(): array {
     }
     ksort($m);
     return $GLOBALS['nucleo_cache']['man'] = $m;
+}
+/** «>=1.0 <2.0» (rango del manifiesto, esquema de la especificación 0.9.1) contra una versión. */
+function version_en_rango(string $v, string $rango): bool {
+    foreach (preg_split('/\s+/', trim($rango)) as $c) {
+        if ($c === '' || !preg_match('/^(>=|<=|>|<|=)?(\d+(?:\.\d+){0,2})$/', $c, $m)) return false;
+        if (!version_compare($v, $m[2], ['>=' => '>=', '<=' => '<=', '>' => '>', '<' => '<', '=' => '==', '' => '=='][$m[1]])) return false;
+    }
+    return true;
 }
 function olvidar_cache(): void { $GLOBALS['nucleo_cache'] = []; }
 

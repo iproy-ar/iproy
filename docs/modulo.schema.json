@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iproy.com.ar/fhir/nucleo/modulo.schema.json",
+  "title": "Manifiesto de módulo del núcleo iProy (ABI 1, núcleo 1.0)",
+  "description": "Unifica la propuesta de la especificación 0.9.1 (docs/modulo.schema.v0.9-propuesta.json) con lo implementado en el núcleo 1.0. Los campos marcados «declarativo» se documentan y se publican en /api/proc/modulos, pero el núcleo todavía no los hace cumplir.",
+  "type": "object",
+  "required": ["id", "nombre", "version", "abi", "licencia"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,38}$", "description": "= nombre de la carpeta; prefijo de sus tablas" },
+    "nombre": { "type": "string" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "abi": { "type": "integer", "const": 1, "description": "ABI de módulos del núcleo; si no coincide, el módulo no se carga" },
+    "nucleo": { "type": "string", "description": "Rango de versiones del núcleo, p. ej. \">=1.0 <2.0\" (se verifica)" },
+    "estabilidad": { "enum": ["estable", "pruebas", "obsoleto", "retirado"] },
+    "licencia": { "type": "string", "description": "SPDX. Un módulo que se carga dentro del núcleo debe ser AGPL-3.0-or-later; otra licencia marca el nodo como «contaminado»" },
+    "autor": { "type": "string" },
+    "descripcion": { "type": "string" },
+    "requiere": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_]+(>=\\d+\\.\\d+(\\.\\d+)?)?$" } },
+    "lib": { "type": "string" },
+    "rutas": { "type": "string", "description": "API /api/m/<id>/…" },
+    "capacidades": { "type": "object", "additionalProperties": { "type": "array", "items": { "enum": ["AD", "GM", "EJ", "SO", "FT", "CI"] } } },
+    "tareas": { "type": "array", "items": { "type": "object", "required": ["id", "cada", "archivo"], "properties": { "id": { "type": "string" }, "cada": { "type": "integer", "minimum": 5 }, "archivo": { "type": "string" } } } },
+    "suscribe": { "type": "object", "additionalProperties": { "type": "string" }, "description": "tema del bus (comodines MQTT + y #) → archivo manejador. Equivale a «eventos» de la propuesta 0.9.1" },
+    "ui": { "type": "object", "properties": { "script": { "type": "string" }, "orden": { "type": "integer" } }, "description": "Equivale a «pantallas» de la propuesta 0.9.1" },
+    "config_defecto": { "type": "object" },
+    "activo_por_defecto": { "type": "boolean" },
+    "perfiles": { "type": "array", "items": { "type": "string" }, "description": "declarativo: perfiles PIM que usa" },
+    "permisos": { "type": "array", "items": { "type": "string", "pattern": "^system/[A-Za-z*]+\\.[cruds]+$" }, "description": "declarativo: alcances SMART (los módulos usan clientes internos por rol)" },
+    "tablas": { "type": "array", "items": { "type": "string" }, "description": "declarativo: tablas propias (se crean con sql/NNN_*.sql)" }
+  }
+}

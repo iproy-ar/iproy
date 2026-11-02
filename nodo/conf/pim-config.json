@@ -1,7 +1,7 @@
 {
-  "ns": "https://iproy.com.ar/pim",
+  "ns": "https://iproy.com.ar/fhir",
   "ns_alias": [
-    "https://iproy.com.ar/fhir"
+    "https://iproy.com.ar/pim"
   ],
   "organismo": {
     "codigo": "ORG",

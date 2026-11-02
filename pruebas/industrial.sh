@@ -11,7 +11,7 @@ A() { curl -s -m 90 -X "$1" -H "X-$P-Tick: $TOK" -H 'Content-Type: application/j
 OK=0; MAL=0; ver() { if [[ "$2" == *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
 tick() { A POST nucleo/tick >/dev/null; }
 S=$RANDOM; COD="IND-$S"
-A POST pim/Device "{\"resourceType\":\"Device\",\"identifier\":[{\"system\":\"https://iproy.com.ar/pim/sid/activo\",\"value\":\"$COD\"}],\"deviceName\":[{\"name\":\"Compresor de prueba $S\",\"type\":\"user-friendly-name\"}],\"status\":\"active\"}" >/dev/null
+A POST pim/Device "{\"resourceType\":\"Device\",\"identifier\":[{\"system\":\"https://iproy.com.ar/fhir/sid/activo\",\"value\":\"$COD\"}],\"deviceName\":[{\"name\":\"Compresor de prueba $S\",\"type\":\"user-friendly-name\"}],\"status\":\"active\"}" >/dev/null
 DEV=$(A GET "pim/Device?identifier=$COD" | grep -o '"resourceType":"Device","id":"[^"]*"' | head -1 | grep -o '[0-9A-Z]\{26\}')
 echo "Activo $COD = $DEV"
 echo "1) Alarma ISA-18.2"

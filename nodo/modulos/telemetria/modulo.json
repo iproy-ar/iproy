@@ -3,6 +3,7 @@
   "nombre": "Telemetría",
   "version": "1.0.0",
   "abi": 1,
+  "nucleo": ">=1.0 <2.0",
   "estabilidad": "estable",
   "licencia": "AGPL-3.0-or-later",
   "descripcion": "Recibe mediciones de cualquier origen (MQTT, Modbus, HTTP, otros nodos) por el tema telemetria/medicion, resuelve el activo en PIM, guarda el último valor y una serie corta, y las envía al Servidor PIM como Observation por excepción (banda muerta + intervalo máximo), en lotes.",

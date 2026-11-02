@@ -3,7 +3,7 @@
  * Sin dependencias externas: funciona sin Internet. */
 (function () {
   'use strict';
-  var NS = 'https://iproy.com.ar/pim';
+  var NS = 'https://iproy.com.ar/fhir';
   var SD = NS + '/StructureDefinition/', CS = NS + '/CodeSystem/';
   var ESTADOS = ['solicitada', 'en-revision', 'asignada', 'aceptada', 'lista', 'en-ejecucion', 'en-espera', 'finalizada', 'conformada', 'rechazada', 'anulada'];
   // Tabla 9-2 (igual que el servidor; el servidor es quien valida)

@@ -1,0 +1,323 @@
+# SPDX-License-Identifier: CC-BY-SA-4.0
+# Copyright (C) 2026 Ovidio Francisco Arias
+openapi: 3.1.0
+info:
+  title: API iProy · PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud
+  version: 1.1.0
+  summary: API REST HL7 FHIR R4 con perfiles PIM v0.9.1 (República Argentina)
+  description: |
+    Contrato del protocolo PIM v0.9.1 (mantenimiento de productos médicos activos —PMA— e instalaciones de salud sobre HL7 FHIR R4).
+    **Estado:** contrato publicado el 31-10-2026 junto con PIM-PROP-001 v0.9.1. La implementación de referencia v1.0 cumple el contrato 1.0.0;
+    los cambios de 1.1.0 (lista en `x-pim-cambios`) se implementan en la Fase 1.
+
+    Puede funcionar en paralelo a un sistema de mantenimiento existente: base propia, clientes y claves propios. No contiene datos de pacientes.
+
+    **Autorización**: SMART Backend Services. El cliente firma un JWT (RS384 o ES384) con su clave privada,
+    lo canjea en `POST /pim/auth/token` y usa el `access_token` (5 minutos) como `Authorization: Bearer`.
+    Cada cliente tiene un **rol PIM** (GM gestor · EJ ejecutor · SO solicitante · FT telemetría · CI consulta · RE registro estatal).
+
+    **Concurrencia**: toda modificación exige `If-Match: W/"<versión>"` (412 si cambió, 428 si falta).
+    **Nunca hay borrado físico**: se anula o inactiva y queda la traza en `_history` y `Provenance`.
+  license: { name: Uso interno del organismo y adherentes al protocolo PIM }
+servers:
+  - url: https://{nodo}:{puerto}/pim/r4
+    variables:
+      nodo: { default: localhost }
+      puerto: { default: "8443" }
+  - url: http://localhost:8080/pim/r4
+    description: Solo en el propio equipo del nodo
+security:
+  - smart: []
+tags:
+  - { name: Descubrimiento }
+  - { name: PIM-INV, description: "Inventario (Organization, Location, Device —pim-pma, pim-sistema, pim-activo—, DeviceMetric)" }
+  - { name: PIM-REG, description: "Informe al registro estatal (datos de PMA exigidos por el REFES, Res. SGS 532/2026)" }
+  - { name: PIM-SOL, description: Solicitudes de servicio }
+  - { name: PIM-OT, description: Órdenes de trabajo y máquina de estados }
+  - { name: PIM-RSG, description: Riesgo (IRU) }
+  - { name: PIM-TEL, description: Telemetría }
+  - { name: PIM-FED, description: Historial y procedencia }
+paths:
+  /metadata:
+    get:
+      tags: [Descubrimiento]
+      summary: CapabilityStatement (declaración de conformidad)
+      security: []
+      responses: { "200": { $ref: "#/components/responses/Recurso" } }
+  /.well-known/smart-configuration:
+    get:
+      tags: [Descubrimiento]
+      summary: Descubrimiento OAuth2 (SMART)
+      security: []
+      responses: { "200": { description: "JSON con token_endpoint, algoritmos y alcances" } }
+  /CodeSystem/{id}:
+    get:
+      tags: [Descubrimiento]
+      summary: Catálogo PIM
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, enum: [pim-categoria-alcance, pim-clase-riesgo-pm, pim-sistema, pim-grupo-local, pim-categoria-riesgo, pim-metodo-riesgo, pim-tipo-mantenimiento, pim-estado-orden, pim-modo-falla, pim-ensayo, pim-punto] }
+      responses: { "200": { $ref: "#/components/responses/Recurso" }, "404": { $ref: "#/components/responses/Error" } }
+  /ValueSet/{id}:
+    get:
+      tags: [Descubrimiento]
+      summary: Conjuntos de valores de las extensiones PIM (no son CodeSystem)
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, enum: [pim-banda-iru, pim-estado-declarado, pim-presion-relativa, pim-redundancia, pim-conformidad, pim-pertenencia] }
+      responses: { "200": { $ref: "#/components/responses/Recurso" }, "404": { $ref: "#/components/responses/Error" } }
+  /Device/$refes:
+    get:
+      tags: [PIM-REG]
+      summary: Datos de PMA para el REFES (Res. SGS 532/2026)
+      description: |
+        Devuelve, para los Device con perfil pim-pma del organismo, los cinco datos mínimos del REFES: marca (manufacturer),
+        modelo (modelNumber), fecha de fabricación (manufactureDate) o de puesta en marcha (ext. puestaEnMarcha),
+        pertenencia (ext. pertenencia) y n.º de producto ANMAT (identifier system {ns}/sid/anmat-pm, patrón PM-NNNN-NNNN).
+        `_format=csv` produce el archivo de carga mientras no exista una interfaz con SISA. Los PMA incompletos se listan aparte.
+      parameters:
+        - { name: tipologia, in: query, schema: { type: string }, description: "Filtro por tipología de la Res. SGS 532/2026" }
+        - { name: _format, in: query, schema: { type: string, enum: [json, csv] } }
+      responses: { "200": { description: Bundle o CSV con los datos y una sección de faltantes } }
+  /auth-token:
+    post:
+      tags: [Descubrimiento]
+      summary: "Canje de la aserción firmada por un access_token. Ruta real: POST /pim/auth/token (fuera de /pim/r4)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_assertion_type, client_assertion, scope]
+              properties:
+                grant_type: { const: client_credentials }
+                client_assertion_type: { const: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer" }
+                client_assertion: { type: string, description: "JWT RS384/ES384: iss = sub = client_id, aud = URL de este endpoint, exp ≤ 5 min, jti único" }
+                scope: { type: string, examples: ["system/*.cruds", "system/Task.rs system/ServiceRequest.c"] }
+      responses:
+        "200":
+          description: Token emitido (se concede la intersección entre lo pedido y lo autorizado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { const: bearer }
+                  expires_in: { type: integer }
+                  scope: { type: string }
+        "400": { description: "invalid_request · invalid_scope · unsupported_grant_type" }
+        "401": { description: "invalid_client (firma, aud, exp, jti repetido, cliente dado de baja)" }
+  /:
+    post:
+      tags: [PIM-TEL, PIM-SOL]
+      summary: Lote (Bundle batch) de Observation y ServiceRequest (máx. 500)
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses: { "200": { description: Bundle batch-response (cada entrada con su estado) } }
+  /{tipo}:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    get:
+      summary: Búsqueda
+      description: |
+        Parámetros por recurso — Organization: identifier, name, type · Location: identifier, name, status, partof ·
+        Device: identifier, device-name, location, type, status, parent, manufacturer, categoria-alcance (A|B|C|D), _profile ·
+        DeviceMetric: identifier, type, source, category · ServiceRequest: identifier, status, priority, subject, authored ·
+        Task: identifier, status, business-status, owner, priority, location, focus, based-on, code, authored-on, modified, _lastUpdated ·
+        Observation: device (DeviceMetric), code, date, interpretation · RiskAssessment: subject, banda · Group: member · Provenance: target (obligatorio).
+        Comunes: _id, _count (≤ 200), _offset, _sort (_lastUpdated, -_lastUpdated, date), _summary=count, _total=none.
+        Modificadores de texto: :exact, :contains. Fechas con prefijos eq, ge, gt, le, lt. Varios valores separados por coma = O.
+        El rol EJ solo ve las Task de su organización.
+      parameters:
+        - { name: _count, in: query, schema: { type: integer, maximum: 200 } }
+        - { name: _offset, in: query, schema: { type: integer } }
+        - { name: _summary, in: query, schema: { const: count } }
+      responses: { "200": { $ref: "#/components/responses/Bundle" }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } }
+    post:
+      summary: Alta (Organization, Location, Device, DeviceMetric — GM · ServiceRequest — GM, SO · Observation — GM, FT)
+      description: |
+        ServiceRequest crea su Task (cabecera `X-PIM-Task`); sin `priority`, la prioridad sale de la banda IRU del activo.
+        Observation.device DEBE referenciar el DeviceMetric del punto (pim-punto). Una medición fuera del referenceRange del punto
+        genera solicitud y orden automáticas, sin duplicar una orden abierta del mismo punto.
+        Device con perfil pim-pma exige los cinco datos REFES (422 si falta alguno; 'pertenencia' admite el valor 'desconocida' durante la migración).
+        Cualquier referencia a Patient, Person o RelatedPerson se rechaza con 422.
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses:
+        "201":
+          $ref: "#/components/responses/Recurso"
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { description: Identificador duplicado }
+        "422": { $ref: "#/components/responses/Error" }
+  /{tipo}/_search:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    post:
+      summary: Búsqueda por formulario
+      requestBody: { content: { application/x-www-form-urlencoded: { schema: { type: object } } } }
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/_history:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    get:
+      tags: [PIM-FED]
+      summary: Historial del tipo
+      parameters: [ { name: _since, in: query, schema: { type: string, format: date-time } } ]
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/{id}:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" } ]
+    get:
+      summary: Lectura (ETag = versión)
+      responses: { "200": { $ref: "#/components/responses/Recurso" }, "404": { $ref: "#/components/responses/Error" } }
+    put:
+      summary: Modificación (Organization, Location, Device, DeviceMetric — GM · Task — GM, EJ)
+      description: Task por PUT aplica la misma máquina de estados que $transicion; las notas solo se agregan. Los registros reflejados del sistema de origen son de solo lectura (409).
+      parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses:
+        "200": { $ref: "#/components/responses/Recurso" }
+        "409": { description: Registro reflejado del sistema de origen (solo lectura) }
+        "412": { description: La versión cambió (releer) }
+        "422": { $ref: "#/components/responses/Error" }
+        "428": { description: Falta If-Match }
+  /{tipo}/{id}/_history:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" } ]
+    get:
+      tags: [PIM-FED]
+      summary: Historial del recurso
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/{id}/_history/{vid}:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" }, { name: vid, in: path, required: true, schema: { type: integer } } ]
+    get:
+      tags: [PIM-FED]
+      summary: Lectura de una versión (vread)
+      responses: { "200": { $ref: "#/components/responses/Recurso" } }
+  /Task/{id}/$transicion:
+    parameters: [ { $ref: "#/components/parameters/id" } ]
+    post:
+      tags: [PIM-OT]
+      summary: Cambio de estado de la orden (Tabla 9-2)
+      description: |
+        Transiciones: solicitada → en-revision | asignada | rechazada | anulada (GM) · en-revision → asignada | rechazada | anulada (GM) ·
+        asignada → aceptada | en-revision (EJ), anulada (GM) · aceptada → lista | en-ejecucion | en-espera (EJ), anulada (GM) ·
+        lista → en-ejecucion | en-espera (EJ), anulada (GM) · en-ejecucion → en-espera | finalizada (EJ) · en-espera → en-ejecucion | aceptada (EJ), anulada (GM) ·
+        finalizada → conformada | en-ejecucion (GM). Terminales: conformada, rechazada, anulada.
+        Motivo obligatorio para en-espera, rechazada, anulada y en-revision. Asignar exige responsable.
+        Una orden correctiva se finaliza con modoFalla (ISO 14224). Conformar, rechazar o anular cierra la ServiceRequest.
+      parameters: [ { name: If-Match, in: header, required: false, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema: { $ref: "#/components/schemas/Parameters" }
+            example:
+              resourceType: Parameters
+              parameter:
+                - { name: estado, valueCode: en-espera }
+                - { name: motivo, valueString: Esperando repuesto }
+                - { name: nota, valueString: Se pidió la placa al proveedor }
+      responses:
+        "200": { $ref: "#/components/responses/Recurso" }
+        "403": { description: El rol no puede hacer esa transición }
+        "409": { description: Orden reflejada del sistema de origen (solo lectura) }
+        "412": { description: Versión desactualizada }
+        "422": { description: Transición no permitida o falta un dato obligatorio }
+components:
+  securitySchemes:
+    smart:
+      type: oauth2
+      description: SMART Backend Services (client_credentials + private_key_jwt RS384/ES384)
+      flows:
+        clientCredentials:
+          tokenUrl: /pim/auth/token
+          scopes:
+            "system/*.cruds": Todo (rol GM)
+            "system/*.rs": Lectura y búsqueda
+            "system/Task.u": Modificar órdenes (rol EJ)
+            "system/ServiceRequest.c": Crear solicitudes (rol SO)
+            "system/Observation.crs": Enviar mediciones (rol FT)
+            "system/Device.rs": Leer PMA para el registro estatal (rol RE)
+  parameters:
+    tipo:
+      name: tipo
+      in: path
+      required: true
+      schema: { type: string, enum: [Organization, Location, Device, DeviceMetric, ServiceRequest, Task, Observation, RiskAssessment, Group, Provenance] }
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[A-Za-z0-9\\-\\.]{1,64}$" }
+    ifMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, examples: ['W/"3"'] }
+  requestBodies:
+    Recurso:
+      required: true
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+  responses:
+    Recurso:
+      description: Recurso FHIR
+      headers:
+        ETag: { schema: { type: string }, description: 'W/"<versión>"' }
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+    Bundle:
+      description: Bundle FHIR (searchset o history)
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+    Error:
+      description: OperationOutcome
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/OperationOutcome" } } }
+  schemas:
+    Recurso:
+      type: object
+      required: [resourceType]
+      properties:
+        resourceType: { type: string }
+        id: { type: string }
+        meta: { type: object, properties: { versionId: { type: string }, lastUpdated: { type: string }, profile: { type: array, items: { type: string } } } }
+      additionalProperties: true
+    Parameters:
+      type: object
+      required: [resourceType, parameter]
+      properties:
+        resourceType: { const: Parameters }
+        parameter:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, enum: [estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota] }
+              valueCode: { type: string }
+              valueString: { type: string }
+              valueReference: { type: object, properties: { reference: { type: string } } }
+    OperationOutcome:
+      type: object
+      properties:
+        resourceType: { const: OperationOutcome }
+        issue:
+          type: array
+          items:
+            type: object
+            properties:
+              severity: { type: string }
+              code: { type: string }
+              diagnostics: { type: string }
+              expression: { type: array, items: { type: string } }
+x-pim-cambios:
+  version: 1.1.0
+  fecha: "2026-10-31"
+  documento: PIM-PROP-001 v0.9.1
+  cambios:
+    - "C2: puntos de medición como DeviceMetric (pim-punto) y Observation.device -> DeviceMetric; se retira la extensión pim-punto-medicion dentro de Device"
+    - "C3: 11 CodeSystem (se agregan pim-categoria-alcance, pim-clase-riesgo-pm, pim-metodo-riesgo, pim-modo-falla, pim-ensayo, pim-punto); banda IRU, estado declarado, presión relativa, redundancia, conformidad y pertenencia pasan a ValueSet"
+    - "Perfil pim-pma con los cinco datos mínimos del REFES (Res. SGS 532/2026) y extensión categoriaAlcance"
+    - "Perfil de integración PIM-REG: operación Device/$refes y rol RE"
+    - "Parámetro de búsqueda categoria-alcance en Device"
+  pendiente_en_implementacion: "Todos los cambios anteriores (Fase 1). La implementación v1.0 sigue cumpliendo el contrato 1.0.0."

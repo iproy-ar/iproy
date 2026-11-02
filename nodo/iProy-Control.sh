@@ -646,9 +646,11 @@ cmd_colmena() {
   case "$acc" in
     identidad) api GET colmena/identidad | ver;;
     lista)     api GET colmena/vinculos | ver;;
-    vincular)  [[ -n "${1:-}" ]] || fallo "uso: colmena vincular <http(s)://IP:puerto | ID del nodo (por el hub)>"
-               api POST colmena/vincular "{\"destino\":\"$(json_txt "$1")\"}" | ver;;
-    aceptar)   api POST "colmena/vinculos/${1:?par}/aceptar" "{\"rol\":\"${2:-CI}\"}" | ver;;
+    vincular)  [[ -n "${1:-}" ]] || fallo "uso: colmena vincular <http(s)://IP:puerto | ID del nodo (por el hub)> [local|institucional|central]"
+               api POST colmena/vincular "{\"destino\":\"$(json_txt "$1")\",\"tipo\":\"${2:-institucional}\"}" | ver;;
+    aceptar)   # aceptar <par> [rol] [vence AAAA-MM-DD] [acta.pdf firmada: se guarda su sha256]
+               local sha=""; [[ -n "${4:-}" ]] && { [[ -f "$4" ]] || fallo "no existe $4"; sha="$(sha256sum "$4" | cut -d' ' -f1)"; }
+               api POST "colmena/vinculos/${1:?par}/aceptar" "{\"rol\":\"${2:-CI}\",\"vence\":\"${3:-}\",\"acta_sha\":\"$sha\"}" | ver;;
     rol)       api POST "colmena/vinculos/${1:?par}/rol" "{\"rol\":\"${2:?rol}\"}" | ver;;
     revocar)   api POST "colmena/vinculos/${1:?par}/revocar" | ver;;
     ping)      api POST "colmena/vinculos/${1:?par}/ping" | ver;;

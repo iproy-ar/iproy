@@ -35,6 +35,9 @@ function url_propia(): string {
     return 'http://127.0.0.1:' . puerto_local();
 }
 function vinculo(string $par): ?array { return fila('SELECT * FROM nucleo_vinculo WHERE par = ?', [strtoupper($par)]); }
+const TIPOS_VINCULO = ['local', 'institucional', 'central'];
+/** Un vínculo autoriza solo si está activo y vigente (docs/vinculos.md: al vencer deja de autorizar). */
+function vigente(array $v): bool { return $v['estado'] === 'activo' && (empty($v['vence']) || $v['vence'] >= date('Y-m-d')); }
 
 // ---------------------------------------------------------------- sobres
 function sobre(string $para, string $tipo, array $datos, ?string $caja_pub = null): array {
@@ -90,7 +93,8 @@ function recibir_sobre(array $s, string $via): ?array {
             return null;
         case 'vinculo-aceptado':
             if ($v['estado'] === 'saliente' || $v['estado'] === 'entrante') {
-                q("UPDATE nucleo_vinculo SET estado = 'activo', pim_jwk = ?, url = COALESCE(NULLIF(?, ''), url) WHERE par = ?", [json_encode($d['pim_jwk'] ?? json_decode($v['pim_jwk'], true)), (string) ($d['url'] ?? ''), $de]);
+                q("UPDATE nucleo_vinculo SET estado = 'activo', pim_jwk = ?, url = COALESCE(NULLIF(?, ''), url), vence = ?, acta_sha = ? WHERE par = ?",
+                  [json_encode($d['pim_jwk'] ?? json_decode($v['pim_jwk'], true)), (string) ($d['url'] ?? ''), ($d['vence'] ?? null) ?: null, ($d['acta_sha'] ?? null) ?: null, $de]);
                 registrar_cliente_par(vinculo($de));
                 asentar('colmena.vinculo_activo', ['via' => $via, 'huella' => $v['huella']], $de);
                 publicar('nucleo/colmena/vinculo', ['par' => $de, 'estado' => 'activo'], 'nucleo');
@@ -104,7 +108,7 @@ function recibir_sobre(array $s, string $via): ?array {
         case 'pong':
             return null;
         case 'rpc':
-            if ($v['estado'] !== 'activo') throw new Fallo(403, "El vínculo con $de no está activo");
+            if (!vigente($v)) throw new Fallo(403, "El vínculo con $de no está activo o venció");
             $r = pim_con_asercion((string) ($d['asercion'] ?? ''), (string) ($d['metodo'] ?? 'GET'), (string) ($d['ruta'] ?? ''), $d['cuerpo'] ?? null, $d['if_match'] ?? null);
             return sobre($de, 'rpc-resp', ['rpc' => (string) ($d['rpc'] ?? ''), 'http' => $r['http'], 'cuerpo' => $r['cuerpo'], 'cab' => $r['cab']], $v['caja_pub']);
         case 'rpc-resp':
@@ -112,7 +116,7 @@ function recibir_sobre(array $s, string $via): ?array {
               [(int) ($d['http'] ?? 0), json_encode(['cuerpo' => $d['cuerpo'] ?? null, 'cab' => $d['cab'] ?? []], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ahora(), (string) ($d['rpc'] ?? ''), $de]);
             return null;
         case 'evento':
-            if ($v['estado'] !== 'activo') throw new Fallo(403, 'Vínculo no activo');
+            if (!vigente($v)) throw new Fallo(403, 'Vínculo no activo o vencido');
             $tema = preg_replace('#[^A-Za-z0-9_\-./]#', '', (string) ($d['tema'] ?? 'mensaje'));
             publicar('colmena/' . strtolower($de) . '/' . trim($tema, '/'), (array) ($d['datos'] ?? []), 'colmena:' . $de);
             return null;
@@ -130,6 +134,7 @@ function guardar_vinculo(array $d, string $estado, string $via): void {
       [strtoupper($d['node_id']), mb_substr((string) ($d['nombre'] ?? ''), 0, 120), mb_substr((string) ($d['producto'] ?? ''), 0, 60),
        ($d['url'] ?? '') !== '' ? mb_substr((string) $d['url'], 0, 255) : null, $d['firma_pub'], $d['caja_pub'], json_encode($d['pim_jwk']),
        huella($d['firma_pub']), $estado, $via === 'hub' ? 'hub' : 'auto']);
+    if (in_array($d['tipo_vinculo'] ?? '', TIPOS_VINCULO, true)) q('UPDATE nucleo_vinculo SET tipo = ? WHERE par = ?', [$d['tipo_vinculo'], strtoupper($d['node_id'])]);
 }
 /** El otro nodo pasa a ser un cliente del Servidor PIM de este nodo, con el rol del vínculo. */
 function registrar_cliente_par(array $v): void {
@@ -143,7 +148,8 @@ function baja_cliente_par(string $par): void {
     if (is_file($f)) { @mkdir(dirname($f) . '/_bajas', 0700, true); rename($f, dirname($f) . '/_bajas/' . basename($f, '.json') . '.' . date('Ymd_His') . '.json'); }
 }
 /** Pide un vínculo: $destino es la URL del otro nodo (intranet) o su identificador (por el hub). */
-function vincular(string $destino): array {
+function vincular(string $destino, string $tipo = 'institucional'): array {
+    if (!in_array($tipo, TIPOS_VINCULO, true)) throw new Fallo(422, 'tipo: ' . implode(' | ', TIPOS_VINCULO));
     if (preg_match('#^https?://#', $destino)) {
         $url = rtrim($destino, '/');
         $r = http('GET', "$url/api/colmena/identidad", null, ['Accept' => 'application/json'], 8, false);
@@ -157,21 +163,24 @@ function vincular(string $destino): array {
     $v = vinculo($par);
     if ($v && $v['estado'] === 'activo') return ['par' => $par, 'estado' => 'activo', 'huella' => $v['huella']];
     if ($v && $v['firma_pub'] !== $d['firma_pub'] && $v['estado'] !== 'revocado') throw new Fallo(409, "El nodo $par cambió de clave: revocá el vínculo anterior y verificá la huella");
-    guardar_vinculo($d, $v && $v['estado'] === 'entrante' ? 'entrante' : 'saliente', $via);
-    asentar('colmena.solicitud_enviada', ['huella' => huella($d['firma_pub']), 'via' => $via, 'url' => $d['url'] ?? null], $par);
-    $res = enviar($par, sobre($par, 'vinculo-solicitud', identidad_publica()));
+    guardar_vinculo($d + ['tipo_vinculo' => $tipo], $v && $v['estado'] === 'entrante' ? 'entrante' : 'saliente', $via);
+    asentar('colmena.solicitud_enviada', ['huella' => huella($d['firma_pub']), 'via' => $via, 'url' => $d['url'] ?? null, 'tipo' => $tipo], $par);
+    $res = enviar($par, sobre($par, 'vinculo-solicitud', identidad_publica() + ['tipo_vinculo' => $tipo]));
     return ['par' => $par, 'nombre' => $d['nombre'] ?? null, 'producto' => $d['producto'] ?? null, 'huella' => huella($d['firma_pub']),
             'estado' => vinculo($par)['estado'], 'via' => $res['via'], 'aviso' => 'Compará la huella con el administrador del otro nodo antes de que la acepte.'];
 }
-function aceptar(string $par, string $rol = 'CI'): array {
+/** Acepta un vínculo. $vence (AAAA-MM-DD) = vigencia; $acta_sha = sha256 del acta o convenio firmado (Ley 25.506), si existe. */
+function aceptar(string $par, string $rol = 'CI', ?string $vence = null, ?string $acta_sha = null): array {
     $v = vinculo($par) ?? throw new Fallo(404, "No hay solicitud de $par");
     if (!isset(ALCANCES_PIM[$rol])) throw new Fallo(422, 'rol PIM: ' . implode(' | ', array_keys(ALCANCES_PIM)));
     if ($v['estado'] !== 'entrante' && $v['estado'] !== 'activo') throw new Fallo(409, "El vínculo con $par está «{$v['estado']}»");
-    q("UPDATE nucleo_vinculo SET estado = 'activo', rol_pim = ? WHERE par = ?", [$rol, $v['par']]);
+    if ($vence !== null && $vence !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $vence) || $vence < date('Y-m-d'))) throw new Fallo(422, 'vence: fecha futura AAAA-MM-DD');
+    if ($acta_sha !== null && $acta_sha !== '' && !preg_match('/^[a-f0-9]{64}$/', $acta_sha)) throw new Fallo(422, 'acta_sha: sha256 en hexadecimal (64 caracteres)');
+    q("UPDATE nucleo_vinculo SET estado = 'activo', rol_pim = ?, vence = ?, acta_sha = ? WHERE par = ?", [$rol, $vence ?: null, $acta_sha ?: null, $v['par']]);
     $v = vinculo($par); registrar_cliente_par($v);
-    asentar('colmena.vinculo_aceptado', ['rol_pim' => $rol, 'huella' => $v['huella']], $v['par']);
-    $res = enviar($v['par'], sobre($v['par'], 'vinculo-aceptado', identidad_publica()));
-    return ['par' => $v['par'], 'estado' => 'activo', 'rol_pim' => $rol, 'via' => $res['via']];
+    asentar('colmena.vinculo_aceptado', ['rol_pim' => $rol, 'huella' => $v['huella'], 'tipo' => $v['tipo'], 'vence' => $v['vence'], 'acta_sha' => $v['acta_sha']], $v['par']);
+    $res = enviar($v['par'], sobre($v['par'], 'vinculo-aceptado', identidad_publica() + ['vence' => $v['vence'], 'acta_sha' => $v['acta_sha']]));
+    return ['par' => $v['par'], 'estado' => 'activo', 'rol_pim' => $rol, 'tipo' => $v['tipo'], 'vence' => $v['vence'], 'via' => $res['via']];
 }
 function revocar_local(string $par, string $motivo): void {
     q("UPDATE nucleo_vinculo SET estado = 'revocado' WHERE par = ?", [strtoupper($par)]);
@@ -217,7 +226,7 @@ function enviar(string $par, array $s): array {
 /** RPC sobre la API PIM del otro nodo. Por la intranet responde en el acto; por el hub queda «enviado» hasta que llega la respuesta. */
 function rpc(string $par, string $metodo, string $ruta, ?array $cuerpo = null, ?string $if_match = null, int $esperar = 0): array {
     $v = vinculo($par) ?? throw new Fallo(404, "No hay vínculo con $par");
-    if ($v['estado'] !== 'activo') throw new Fallo(409, "El vínculo con {$v['par']} está «{$v['estado']}»");
+    if (!vigente($v)) throw new Fallo(409, "El vínculo con {$v['par']} está «{$v['estado']}»" . (!empty($v['vence']) && $v['vence'] < date('Y-m-d') ? " y venció el {$v['vence']}" : ''));
     $metodo = strtoupper($metodo);
     if (!in_array($metodo, ['GET', 'POST', 'PUT'], true)) throw new Fallo(422, 'Método: GET | POST | PUT');
     $id = id_nuevo(); $yo = strtolower(yo());
@@ -237,7 +246,7 @@ function rpc_estado(string $id): ?array {
 }
 function evento_remoto(string $par, string $tema, array $datos): array {
     $v = vinculo($par) ?? throw new Fallo(404, "No hay vínculo con $par");
-    if ($v['estado'] !== 'activo') throw new Fallo(409, 'Vínculo no activo');
+    if (!vigente($v)) throw new Fallo(409, 'Vínculo no activo o vencido');
     return enviar($v['par'], sobre($v['par'], 'evento', ['tema' => $tema, 'datos' => $datos], $v['caja_pub']));
 }
 function ping_par(string $par): array {
@@ -293,6 +302,10 @@ function hub_buzon(): array {
 }
 function colmena_tick(): string {
     q("UPDATE nucleo_rpc SET estado = 'vencido' WHERE estado = 'enviado' AND creado < DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
+    foreach (filas("SELECT par FROM nucleo_vinculo WHERE estado = 'activo' AND vence IS NOT NULL AND vence < CURDATE()") as $x) {
+        q("UPDATE nucleo_vinculo SET estado = 'vencido' WHERE par = ?", [$x['par']]); baja_cliente_par($x['par']);
+        asentar('colmena.vinculo_vencido', [], $x['par']);
+    }
     $hub = cfg()['hub'];
     if (empty($hub['activo']) || empty($hub['url'])) return 'sin hub';
     $e = estado('colmena_hub');

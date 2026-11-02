@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "API iProy · PIM 1.1.0",
+    "description": "Pedidos de prueba de la API iProy (datos ficticios). Licencia CC BY-SA 4.0.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "https://localhost/pim/r4"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Capacidades (metadata)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/metadata",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "metadata"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Buscar PMA (categoría A)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Device?categoria-alcance=A&_count=20",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "Device"
+          ],
+          "query": [
+            {
+              "key": "categoria-alcance",
+              "value": "A"
+            },
+            {
+              "key": "_count",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Datos del REFES en CSV",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Device/$refes?_format=csv",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "Device",
+            "$refes"
+          ],
+          "query": [
+            {
+              "key": "_format",
+              "value": "csv"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Catálogo de ensayos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/CodeSystem/pim-ensayo",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "CodeSystem",
+            "pim-ensayo"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Nueva solicitud",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/ServiceRequest",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "ServiceRequest"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resourceType\": \"ServiceRequest\",\n  \"meta\": {\n    \"profile\": [\n      \"https://iproy.com.ar/fhir/StructureDefinition/pim-solicitud\"\n    ]\n  },\n  \"status\": \"active\",\n  \"intent\": \"order\",\n  \"code\": {\n    \"text\": \"Alarma de baja presión en la red de oxígeno\"\n  },\n  \"subject\": {\n    \"reference\": \"Device/ejemplo-red-oxigeno\"\n  },\n  \"authoredOn\": \"2026-11-02T10:00:00-03:00\",\n  \"priority\": \"urgent\"\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Aceptar una orden (If-Match)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/fhir+json"
+          },
+          {
+            "key": "If-Match",
+            "value": "W/\"1\""
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Task/ejemplo-orden",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "Task",
+            "ejemplo-orden"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resourceType\": \"Task\",\n  \"id\": \"ejemplo-orden\",\n  \"meta\": {\n    \"profile\": [\n      \"https://iproy.com.ar/fhir/StructureDefinition/pim-orden\"\n    ]\n  },\n  \"identifier\": [\n    {\n      \"system\": \"https://iproy.com.ar/fhir/sid/orden\",\n      \"value\": \"EJ-OT-2026-000001\"\n    }\n  ],\n  \"status\": \"accepted\",\n  \"businessStatus\": {\n    \"coding\": [\n      {\n        \"system\": \"https://iproy.com.ar/fhir/CodeSystem/pim-estado-orden\",\n        \"code\": \"aceptada\"\n      }\n    ]\n  },\n  \"intent\": \"order\",\n  \"focus\": {\n    \"reference\": \"Device/ejemplo-red-oxigeno\"\n  },\n  \"authoredOn\": \"2026-10-29T14:30:05-03:00\",\n  \"lastModified\": \"2026-11-02T10:05:00-03:00\",\n  \"extension\": [\n    {\n      \"url\": \"https://iproy.com.ar/fhir/StructureDefinition/tipoMantenimiento\",\n      \"valueCoding\": {\n        \"system\": \"https://iproy.com.ar/fhir/CodeSystem/pim-tipo-mantenimiento\",\n        \"code\": \"correctivo-inmediato\"\n      }\n    }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Enviar una medición",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/fhir+json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/fhir+json"
+          }
+        ],
+        "url": {
+          "raw": "{{base}}/Observation",
+          "host": [
+            "{{base}}"
+          ],
+          "path": [
+            "Observation"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resourceType\": \"Observation\",\n  \"meta\": {\n    \"profile\": [\n      \"https://iproy.com.ar/fhir/StructureDefinition/pim-medicion\"\n    ]\n  },\n  \"status\": \"final\",\n  \"code\": {\n    \"coding\": [\n      {\n        \"system\": \"https://iproy.com.ar/fhir/CodeSystem/pim-punto\",\n        \"code\": \"PRES-LINEA\"\n      }\n    ]\n  },\n  \"device\": {\n    \"reference\": \"DeviceMetric/ejemplo-presion-linea\"\n  },\n  \"effectiveInstant\": \"2026-11-02T10:10:00-03:00\",\n  \"valueQuantity\": {\n    \"value\": 410,\n    \"unit\": \"kPa\",\n    \"system\": \"http://unitsofmeasure.org\",\n    \"code\": \"kPa\"\n  }\n}"
+        }
+      }
+    }
+  ]
+}

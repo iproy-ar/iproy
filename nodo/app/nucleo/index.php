@@ -136,8 +136,8 @@ try {
 
     // ---------------------------------------------------------------- colmena
     if ($es('GET', 'colmena', 'vinculos')) { exigir('colmena.ver'); responder(200, ['ok' => true, 'yo' => array_diff_key(identidad_publica(), ['pim_jwk' => 1]) + ['url' => url_propia()], 'vinculos' => proc('vinculos'), 'hub' => array_diff_key(cfg()['hub'], ['codigo' => 1])]); }
-    if ($es('POST', 'colmena', 'vincular')) { exigir('colmena.admin'); responder(200, ['ok' => true] + vincular((string) $c('destino', ''))); }
-    if ($es('POST', 'colmena', 'vinculos', '*', 'aceptar')) { exigir('colmena.admin'); responder(200, ['ok' => true] + aceptar($p[2], (string) $c('rol', 'CI'))); }
+    if ($es('POST', 'colmena', 'vincular')) { exigir('colmena.admin'); responder(200, ['ok' => true] + vincular((string) $c('destino', ''), (string) $c('tipo', 'institucional'))); }
+    if ($es('POST', 'colmena', 'vinculos', '*', 'aceptar')) { exigir('colmena.admin'); responder(200, ['ok' => true] + aceptar($p[2], (string) $c('rol', 'CI'), $c('vence'), $c('acta_sha'))); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'revocar')) { exigir('colmena.admin'); responder(200, ['ok' => true] + revocar($p[2])); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'rol')) { exigir('colmena.admin'); responder(200, ['ok' => true] + rol_par($p[2], (string) $c('rol', 'CI'))); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'via')) {

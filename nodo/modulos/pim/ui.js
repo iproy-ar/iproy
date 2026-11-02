@@ -61,7 +61,7 @@
         const sr = { resourceType: 'ServiceRequest', status: 'active', intent: 'order', subject: { reference: 'Device/' + a.id },
           code: { coding: [{ code: d.categoria }], text: d.categoria }, note: [{ text: d.descripcion }], requester: { display: Nucleo.sesion.usuario.nombre } };
         if (d.prioridad) sr.priority = d.prioridad;
-        if (d.estadoDeclarado) sr.extension = [{ url: 'https://iproy.com.ar/pim/StructureDefinition/pim-estado-declarado', valueCode: d.estadoDeclarado }];
+        if (d.estadoDeclarado) sr.extension = [{ url: 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', valueCode: d.estadoDeclarado }];
         const r = await pim('POST', 'ServiceRequest', sr);
         aviso(m, 'ok', `Solicitud ${r.cuerpo.identifier?.[0]?.value || r.cuerpo.id} registrada; se generó la orden ${r.cab.get('X-PIM-Task') || ''}.`);
       })}</div>`;
@@ -71,7 +71,7 @@
     el.innerHTML = `<div class="tarjeta"><div class="filtros"><div style="flex:1;min-width:220px"><label>Buscar por nombre</label><input id="iQ"></div><button class="b sec" id="iBus">Buscar</button></div><div id="iLista"></div>
       ${puede('pim.inventario.editar') ? `<h2 style="margin-top:16px">Nuevo activo</h2>${form([{ n: 'codigo', t: 'Código de inventario', req: true }, { n: 'nombre', t: 'Nombre', req: true },
         { n: 'fabricante', t: 'Fabricante' }, { n: 'modelo', t: 'Modelo' }, { n: 'serie', t: 'N.º de serie' }], 'Dar de alta', async (d, m) => {
-          await pim('POST', 'Device', { resourceType: 'Device', status: 'active', identifier: [{ system: 'https://iproy.com.ar/pim/sid/activo', value: d.codigo }], deviceName: [{ name: d.nombre, type: 'user-friendly-name' }],
+          await pim('POST', 'Device', { resourceType: 'Device', status: 'active', identifier: [{ system: 'https://iproy.com.ar/fhir/sid/activo', value: d.codigo }], deviceName: [{ name: d.nombre, type: 'user-friendly-name' }],
             manufacturer: d.fabricante || undefined, modelNumber: d.modelo || undefined, serialNumber: d.serie || undefined });
           aviso(m, 'ok', 'Activo creado.'); })}` : ''}</div>`;
     const cargar = async () => {

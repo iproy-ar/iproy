@@ -20,14 +20,16 @@ OK=0; MAL=0; ver() { if [[ "$2" == *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1))
 IA=$(A GET colmena/identidad | campo node_id); IB=$(B GET colmena/identidad | campo node_id)
 echo "Nodo A: $PA $IA (:$PORT_A) · Nodo B: $PB $IB (:$PORT_B)"
 ver "identidades colmena/1" "$(A GET colmena/identidad)$(B GET colmena/identidad)" '"protocolo":"colmena/1"'
-B POST pim/Device '{"resourceType":"Device","identifier":[{"system":"https://iproy.com.ar/pim/sid/activo","value":"PRUEBA-COLMENA"}],"deviceName":[{"name":"Activo de prueba de la colmena","type":"user-friendly-name"}],"status":"active"}' >/dev/null
+B POST pim/Device '{"resourceType":"Device","identifier":[{"system":"https://iproy.com.ar/fhir/sid/activo","value":"PRUEBA-COLMENA"}],"deviceName":[{"name":"Activo de prueba de la colmena","type":"user-friendly-name"}],"status":"active"}' >/dev/null
 DEV=$(B GET "pim/Device?identifier=PRUEBA-COLMENA" | grep -o '"resourceType":"Device","id":"[^"]*"' | head -1 | grep -o '[0-9A-Z]\{26\}')
 echo "1) Vínculo por la intranet"
 A POST colmena/vinculos/$IB/revocar >/dev/null 2>&1; B POST colmena/vinculos/$IA/revocar >/dev/null 2>&1
-ver "A pide vínculo a B" "$(A POST colmena/vincular "{\"destino\":\"http://127.0.0.1:$PORT_B\"}")" '"estado":"saliente"'
+ver "A pide vínculo a B (tipo institucional)" "$(A POST colmena/vincular "{\"destino\":\"http://127.0.0.1:$PORT_B\",\"tipo\":\"institucional\"}")" '"estado":"saliente"'
 ver "B ve la solicitud entrante" "$(B GET colmena/vinculos)" '"estado":"entrante"'
-ver "B acepta (rol CI)" "$(B POST colmena/vinculos/$IA/aceptar '{"rol":"CI"}')" '"estado":"activo"'
-ver "A quedó activo" "$(A GET colmena/vinculos)" '"estado":"activo"'
+ver "una vigencia vencida se rechaza" "$(B POST colmena/vinculos/$IA/aceptar '{"rol":"CI","vence":"2020-01-01"}')" '"ok":false'
+VENCE=$(date -d '+1 year' +%F); ACTA=$(printf 'acta de prueba' | sha256sum | cut -d' ' -f1)
+ver "B acepta (rol CI, vigencia 1 año, sha del acta)" "$(B POST colmena/vinculos/$IA/aceptar "{\"rol\":\"CI\",\"vence\":\"$VENCE\",\"acta_sha\":\"$ACTA\"}")" '"estado":"activo"'
+ver "A quedó activo con la misma vigencia y acta" "$(A GET colmena/vinculos)" "\"vence\":\"$VENCE\",\"acta_sha\":\"$ACTA\""
 ver "ping A→B" "$(A POST colmena/vinculos/$IB/ping)" '"respuesta":"pong"'
 ver "ping B→A" "$(B POST colmena/vinculos/$IA/ping)" '"respuesta":"pong"'
 ver "RPC A→PIM de B (lectura)" "$(A POST colmena/rpc "{\"par\":\"$IB\",\"metodo\":\"GET\",\"ruta\":\"Device?identifier=PRUEBA-COLMENA\"}")" 'Activo de prueba de la colmena'

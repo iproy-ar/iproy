@@ -18,7 +18,7 @@ php incubar.php verificar ../../Colmen/Colmen-Portable
 
 - Copia `../nodo` y renombra el producto en contenido, archivos y carpetas, respetando mayúsculas: `iProy→Colmen`, `IPROY→COLMEN`, `iproy→colmen`. Eso alcanza al lanzador, las variables, las bases de datos, el espacio de nombres PHP y el encabezado del worker.
 - **No renombra** (está protegido):
-  - el espacio de nombres canónico del estándar PIM (`https://iproy.com.ar/pim` y `/fhir`);
+  - el espacio de nombres canónico del estándar PIM (`https://iproy.com.ar/fhir` y `/fhir`);
   - los avisos de copyright («Proyecto iProy y colaboradores»);
   - el protocolo `colmena/1`.
 

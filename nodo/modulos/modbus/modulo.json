@@ -3,6 +3,7 @@
   "nombre": "Sondeo Modbus TCP",
   "version": "1.0.0",
   "abi": 1,
+  "nucleo": ">=1.0 <2.0",
   "estabilidad": "pruebas",
   "licencia": "AGPL-3.0-or-later",
   "descripcion": "Cliente Modbus TCP (Modbus Application Protocol v1.1b3) sin dependencias: lee registros de retención (FC3) y de entrada (FC4) de PLC, tableros, medidores de energía y variadores; agrupa direcciones contiguas, decodifica int16/uint16/int32/uint32/float32 con orden de palabras configurable, aplica escala y publica telemetria/medicion.",

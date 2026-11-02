@@ -14,7 +14,7 @@ export class PimError extends Error {
   constructor(http, mensaje, outcome) { super(mensaje); this.http = http; this.outcome = outcome; }
 }
 
-const NS = 'https://iproy.com.ar/pim';
+const NS = 'https://iproy.com.ar/fhir';
 const b64u = (b) => Buffer.from(b).toString('base64url');
 
 export class PimCliente {

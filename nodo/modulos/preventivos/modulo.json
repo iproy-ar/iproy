@@ -3,6 +3,7 @@
   "nombre": "Mantenimiento preventivo",
   "version": "1.0.0",
   "abi": 1,
+  "nucleo": ">=1.0 <2.0",
   "estabilidad": "estable",
   "licencia": "AGPL-3.0-or-later",
   "descripcion": "Planes preventivos por calendario (cada N días) o por uso/condición (contador de un punto de telemetría, p. ej. horas de marcha). Genera la solicitud y la orden en PIM con su tipo EN 13306, la asigna al responsable del plan y reprograma desde la fecha real de finalización.",

@@ -612,8 +612,9 @@ function CmdColmena([string]$acc, [string]$a1, [string]$a2, [string]$a3, [string
   switch ($(if ($acc) { $acc } else { 'lista' })) {
     'identidad' { Ver (Api 'GET' 'colmena/identidad') }
     'lista' { Ver (Api 'GET' 'colmena/vinculos') }
-    'vincular' { Ver (Api 'POST' 'colmena/vincular' @{ destino = $a1 }) }
-    'aceptar' { Ver (Api 'POST' "colmena/vinculos/$a1/aceptar" @{ rol = $(if ($a2) { $a2 } else { 'CI' }) }) }
+    'vincular' { Ver (Api 'POST' 'colmena/vincular' @{ destino = $a1; tipo = $(if ($a2) { $a2 } else { 'institucional' }) }) }
+    'aceptar' { $sha = ''; if ($a4) { $sha = (Get-FileHash -Algorithm SHA256 $a4).Hash.ToLower() }
+                Ver (Api 'POST' "colmena/vinculos/$a1/aceptar" @{ rol = $(if ($a2) { $a2 } else { 'CI' }); vence = $a3; acta_sha = $sha }) }
     'rol' { Ver (Api 'POST' "colmena/vinculos/$a1/rol" @{ rol = $a2 }) }
     'revocar' { Ver (Api 'POST' "colmena/vinculos/$a1/revocar" '{}') }
     'ping' { Ver (Api 'POST' "colmena/vinculos/$a1/ping" '{}') }

@@ -1,6 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Gobernanza (propuesta inicial)
 
+Hay dos gobernanzas, una para cada cosa que se gobierna:
+
+- **El estándar PIM:** es una propuesta (PIM-PROP-001, sección 12) que rige solo si un organismo lo adopta.
+  1. **Etapa provincial:** Comisión Provincial PIM del Ministerio de Salud Pública de San Juan. Aplica el estándar, fija la gradualidad y lleva el registro de sistemas conformes.
+  2. **Etapa nacional:** Consejo Directivo con la Dirección Nacional de Sistemas de Información en Salud, provincias, IRAM, hospitales y academia.
+- **El software iProy:** sigue las etapas de abajo.
+
+Hasta que alguna de esas instancias se forme, el proyecto lo mantiene su autor a título personal.
+
 ## Etapas
 
 1. **Fundación (hoy).** El autor actúa como mantenedor principal, con un rol parecido al de Linus Torvalds en Linux: integra, publica versiones y delega áreas.

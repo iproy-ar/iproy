@@ -24,7 +24,7 @@ function cfg(): array {
     static $c = null;
     if ($c !== null) return $c;
     $def = [
-        'ns' => 'https://iproy.com.ar/pim', 'ns_alias' => [],
+        'ns' => 'https://iproy.com.ar/fhir', 'ns_alias' => ['https://iproy.com.ar/pim'],   // PIM_CANONICAL (docs/dominio-canonico.md); /pim = alias de la v1.0
         'organismo' => ['codigo' => 'ORG', 'nombre' => 'Organismo (configurar en data/pim/config.json)', 'refes' => '', 'refes_system' => ''],
         'empresas_internas' => [],
         'exponer_detalle' => false, 'token_ttl' => 300, 'max_count' => 200, 'count_def' => 50,

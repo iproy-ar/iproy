@@ -1,0 +1,22 @@
+id: ar.iproy.pim
+canonical: https://iproy.com.ar/fhir
+name: PIM
+title: "PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud"
+description: "Guía de implementación HL7 FHIR R4 para la gestión interoperable del mantenimiento de productos médicos activos e instalaciones de los establecimientos de salud (República Argentina)."
+status: draft
+version: 0.9.1
+fhirVersion: 4.0.1
+copyrightYear: 2026+
+releaseLabel: ci-build
+license: CC-BY-SA-4.0
+language: es
+jurisdiction: urn:iso:std:iso:3166#AR "Argentina"
+publisher:
+  name: "Ovidio Francisco Arias (autor)"
+  url: https://iproy.com.ar
+pages:
+  index.md:
+    title: Inicio
+menu:
+  Inicio: index.html
+  Artefactos: artifacts.html

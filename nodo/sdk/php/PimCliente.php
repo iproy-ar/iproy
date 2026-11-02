@@ -65,18 +65,18 @@ final class PimCliente {
     /** PIM-SOL atajo: crea la solicitud (y el servidor crea la orden). Devuelve [ServiceRequest, 'Task/<id>']. */
     public function solicitar(string $sujeto, string $categoria, string $descripcion, ?string $estadoDeclarado = null, ?string $prioridad = null, ?string $solicitante = null): array {
         $sr = ['resourceType' => 'ServiceRequest', 'status' => 'active', 'intent' => 'order', 'subject' => ['reference' => $sujeto],
-               'code' => ['coding' => [['system' => 'https://iproy.com.ar/pim/CodeSystem/pim-categoria', 'code' => $categoria]], 'text' => $categoria],
+               'code' => ['coding' => [['system' => 'https://iproy.com.ar/fhir/CodeSystem/pim-categoria', 'code' => $categoria]], 'text' => $categoria],
                'note' => [['text' => $descripcion]]];
         if ($prioridad) $sr['priority'] = $prioridad;
         if ($solicitante) $sr['requester'] = ['display' => $solicitante];
-        if ($estadoDeclarado) $sr['extension'] = [['url' => 'https://iproy.com.ar/pim/StructureDefinition/pim-estado-declarado', 'valueCode' => $estadoDeclarado]];
+        if ($estadoDeclarado) $sr['extension'] = [['url' => 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', 'valueCode' => $estadoDeclarado]];
         [$r, $cab] = $this->http('POST', 'ServiceRequest', $sr);
         return [$r, $cab['x-pim-task'] ?? null];
     }
     /** PIM-TEL atajo: envía una medición. */
     public function medir(string $deviceId, string $punto, float $valor, string $unidadUcum, ?string $instante = null): array {
         return $this->crear(['resourceType' => 'Observation', 'status' => 'final', 'device' => ['reference' => "Device/$deviceId"],
-            'code' => ['coding' => [['system' => 'https://iproy.com.ar/pim/CodeSystem/pim-punto', 'code' => $punto]]],
+            'code' => ['coding' => [['system' => 'https://iproy.com.ar/fhir/CodeSystem/pim-punto', 'code' => $punto]]],
             'effectiveDateTime' => $instante ?? date('c'), 'valueQuantity' => ['value' => $valor, 'unit' => $unidadUcum, 'system' => 'http://unitsofmeasure.org', 'code' => $unidadUcum]]);
     }
     /** Lote (Bundle batch) de recursos Observation/ServiceRequest. */
