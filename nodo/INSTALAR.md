@@ -19,7 +19,7 @@ Un nodo es una carpeta autocontenida: servidor web con PHP (FrankenPHP), base de
 
 ```bash
 bash iProy-Control.sh init --nombre "Pañol central" --modo lan     # ID del nodo, claves, base de datos (vacía)
-bash iProy-Control.sh start                                       # MariaDB + FrankenPHP + worker + residente MQTT + núcleo
+bash iProy-Control.sh start                                       # MariaDB + FrankenPHP + worker + residentes MQTT y MLLP + núcleo
 bash iProy-Control.sh usuario alta admin AD                       # pide la contraseña dos veces (mínimo 10 caracteres)
 ```
 
@@ -37,7 +37,7 @@ bash iProy-Control.sh usuario alta admin AD                       # pide la cont
 | `start` · `stop` · `status` | Iniciar, detener (con respaldo automático) y ver el estado de cada proceso |
 | `usuario alta <u> <AD\|GM\|EJ\|SO\|FT\|CI> [organización]` · `usuario lista` · `usuario clave <u>` · `usuario token <u> [días]` | Usuarios. `token` sirve para integraciones (gateways, scripts) con su rol |
 | `nucleo estado\|modulos\|tareas\|diario\|verificar\|bus\|tick` · `nucleo ejecutar <modulo:tarea>` | Introspección y operación del núcleo |
-| `modulo activar\|desactivar <id>` · `modulo config <id> [archivo.json]` | Módulos y su configuración (por ejemplo, el broker MQTT o los equipos Modbus) |
+| `modulo activar\|desactivar <id>` · `modulo config <id> [archivo.json]` | Módulos y su configuración (por ejemplo, el broker MQTT, los equipos Modbus o el puerto MLLP de IHE PCD-15 del módulo `mem`: `{"habilitado":true,"host":"0.0.0.0","puerto":2575,"ips_permitidas":["192.168.1.0/24"]}`) |
 | `colmena identidad\|lista` · `colmena vincular <url\|ID>` · `colmena aceptar <par> [rol]` · `colmena rol\|revocar\|ping <par>` | Vínculos con otros nodos |
 | `colmena rpc <par> GET "<ruta FHIR>"` · `colmena hub <url> [código]` · `colmena via <par> auto\|hub` · `colmena url <url>` | Usar la API PIM de otro nodo; hub de relevo para Internet |
 | `pim cliente alta <id> <jwks.json> <rol>` · `pim prueba` · `pim verificar` · `pim remoto …` | Clientes del Servidor PIM y pruebas |

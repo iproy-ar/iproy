@@ -1,11 +1,12 @@
 cff-version: 1.2.0
 message: "Si usás iProy o el estándar PIM, citalo así."
 title: "iProy — plataforma libre del estándar PIM (Protocolo de Interoperabilidad de Mantenimiento en Salud)"
-version: 0.9.1
+version: 1.1.0
 date-released: 2026-11-02
 license: AGPL-3.0-or-later
 url: "https://iproy.com.ar"
+repository-code: "https://github.com/CUENTA-GITHUB/iproy"
 authors:
   - family-names: Arias
     given-names: Ovidio Francisco
-keywords: [HL7 FHIR, interoperabilidad, mantenimiento hospitalario, productos médicos activos, ingeniería clínica, Argentina]
+keywords: [HL7 FHIR, IHE, interoperabilidad, mantenimiento hospitalario, productos médicos activos, ingeniería clínica, Argentina]

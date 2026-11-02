@@ -2,9 +2,13 @@
 
 **Núcleo libre para sistemas de gestión de mantenimiento e infraestructura crítica.** iProy funciona como un kernel: un núcleo pequeño y estable que carga módulos, una red de nodos («colmena») que se vinculan por acuerdo mutuo, y una incubadora que deja un sistema propio funcionando en minutos.
 
-- **Interoperable por diseño.** Servidor PIM: HL7 FHIR R4, SMART Backend Services, Provenance encadenado.
+- **Interoperable por diseño.** Servidor PIM: HL7 FHIR R4, SMART Backend Services, Provenance encadenado. Alineado con IHE: directorio mCSD (ITI-90/91) y equipos médicos por MEM-DMC (PCD-15).
 - **Industrial.** Incluye MQTT 3.1.1, Modbus TCP, alarmas ANSI/ISA-18.2 con indicadores EEMUA 191 y mantenimiento EN 13306.
 - **Libre para siempre.** Código bajo AGPL-3.0-or-later, especificación bajo CC BY-SA 4.0. Las contribuciones se firman con DCO y no hay CLA.
+
+> **Repositorio:** https://github.com/CUENTA-GITHUB/iproy
+>
+> ⚠ **Para completar al publicar:** la cuenta de GitHub (`bash herramientas/fijar-github.sh <cuenta> <correo>`; ver [docs/publicar-en-github.md](docs/publicar-en-github.md)). <!-- marcador-publicacion -->
 
 > Proyecto personal de su autor, publicado como software libre. No es una publicación oficial de ninguna institución. No contiene datos, documentos ni configuraciones de ninguna institución: cada nodo nace vacío.
 
@@ -15,14 +19,15 @@ iproy/
 ├── nodo/            distribución base: un nodo completo, portable (Linux y Windows), sin instalar nada en el sistema
 │   ├── app/nucleo/  el núcleo: módulos, bus, planificador, diario firmado, usuarios, /api/proc, colmena
 │   ├── app/pim/     Servidor PIM (FHIR R4) · app/app/ aplicación web · app/_iproy/ utilidades del nodo
-│   ├── modulos/     pim · telemetria · alarmas · preventivos · mqtt · modbus  (cada uno con su modulo.json)
+│   ├── modulos/     pim · telemetria · alarmas · preventivos · mqtt · modbus · mem (IHE MEM-DMC)  (cada uno con su modulo.json)
+│   ├── conf/pim-guia/  artefactos de la guía PIM tal como los compila la especificación (los sirve el Servidor PIM)
 │   ├── conf/ tools/ sdk/   Caddyfile, SQL, residente MQTT, SDK PHP y JS
 │   └── iProy-Control.sh / .ps1 / .bat   lanzador: init, start, stop, usuario, modulo, nucleo, colmena, pim…
 ├── incubadora/      incubar.php: crea un software derivado (nombre, logo, plantilla) o un módulo nuevo; verifica licencias
 ├── hub/             hub de relevo de la colmena para Internet: un PHP para cualquier hosting (SQLite + libsodium)
-├── especificacion/  estándar PIM 0.9.1 en FSH (HL7 FHIR R4) · api/ contrato OpenAPI 1.1.0, visor y colección de pruebas
-├── pruebas/         unitarias.php · colmena.sh (dos nodos, intranet y hub) · industrial.sh (alarmas, preventivos, MQTT, Modbus)
-├── herramientas/    simuladores Modbus y MQTT para pruebas
+├── especificacion/  estándar PIM 0.9.2 en FSH (HL7 FHIR R4, perfiles de directorio sobre IHE mCSD) · api/ contrato OpenAPI 1.2.0, visor y colección
+├── pruebas/         unitarias.php · pim.sh (Servidor PIM, mCSD, REFES) · mem.sh (IHE PCD-15) · colmena.sh · industrial.sh
+├── herramientas/    contrato.py (especificación ↔ servidor) · guia-al-nodo.sh · fijar-github.sh · simuladores Modbus y MQTT
 ├── docs/            arquitectura, protocolo colmena/1, guía de módulos, integración industrial, hoja de ruta, investigación
 └── LICENSE, LICENSES/, CONTRATO_SOCIAL.md, CONTRIBUIR.md, GOBERNANZA.md, MAINTAINERS, SEGURIDAD.md, CHANGELOG.md, REUSE.toml
 ```
@@ -75,18 +80,21 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.0.0 · 02-11-2026)
+## Estado (v1.1.0 · 02-11-2026)
 
-| Prueba | Resultado |
-|---|---|
-| `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, condición de alarma, libsodium, manifiestos | 32/32 |
-| `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 |
-| La misma prueba por Internet, con el hub instalado en un hosting real (`sghmq.com.ar/MantHMQ/colmena-hub`) | 20/20 |
-| Distribución en una ruta con espacios, modo LAN con HTTPS y nodos nuevos (canónico `/fhir`) | 17/17 |
-| Especificación PIM 0.9.1 (`sushi build especificacion`) | 0 errores, 0 advertencias |
-| `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos por calendario y por uso, Modbus TCP, MQTT con proceso residente | 19/19 |
-| Recorrido de la aplicación web en Chromium, 11 pestañas, en iProy y en Colmen | sin errores de consola |
-| `incubar.php verificar` sobre la base y sobre Colmen | sin secretos, sin datos institucionales, licencias libres |
+| Prueba | iProy 1.1.0 | Colmen 0.2.0 |
+|---|---|---|
+| `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, alarmas, libsodium, manifiestos, HL7 v2 de PCD-15 y **contrato servidor ↔ guía código por código** | 47/47 | — |
+| `pruebas/pim.sh`: guía y conformidad IHE, directorio mCSD (ITI-90/91), PMA con REFES y EUI-64, `Device/$refes`, DeviceMetric + Observation, solicitud → orden | 51/51 | 51/51 |
+| `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
+| `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
+| `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
+| `herramientas/contrato.py`: especificación 0.9.2 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.2.0 | sin diferencias no declaradas | |
+| Especificación PIM 0.9.2 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
+| Recorrido de la aplicación web y la consola PIM en Chromium | sin errores de consola | |
+| `incubar.php verificar` | sin secretos, sin datos institucionales, licencias libres | ídem |
+
+Resultados anteriores (v1.0.0): la colmena por Internet con el hub en un hosting real dio 20/20, y la distribución en una ruta con espacios con HTTPS en la LAN, 17/17.
 
 Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA_DE_RUTA.md).
 
@@ -96,7 +104,9 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 - [docs/COLMENA.md](docs/COLMENA.md): especificación del protocolo `colmena/1` y del hub.
 - [docs/MODULOS.md](docs/MODULOS.md): cómo escribir un módulo, con el manifiesto, el ABI y los puntos de enganche.
 - [docs/INDUSTRIAL.md](docs/INDUSTRIAL.md): MQTT, Modbus, alarmas ISA-18.2, OPC UA y Sparkplug.
-- [docs/INVESTIGACION.md](docs/INVESTIGACION.md): qué se tomó de Linux, EdgeX, Sparkplug, la CRA europea, openMAINT y Atlas CMMS, y por qué.
+- [docs/IHE.md](docs/IHE.md): alineación con IHE (mCSD, XDW, MEM-DMC, Integration Statement) y lo que queda pendiente.
+- [docs/INVESTIGACION.md](docs/INVESTIGACION.md): qué se tomó de IHE, Linux, EdgeX, Sparkplug, la CRA europea, openMAINT y Atlas CMMS, y por qué.
+- [docs/publicar-en-github.md](docs/publicar-en-github.md): crear la cuenta, completar los marcadores y publicar.
 - [nodo/INSTALAR.md](nodo/INSTALAR.md): instalación detallada y comandos del lanzador.
 
 ## Licencia

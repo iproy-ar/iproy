@@ -1,6 +1,38 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.1.0 · 02-11-2026 — PIM 0.9.2 alineado con IHE
+
+**Principio rector:** apoyarse en los bordes que IHE ya estandarizó (mCSD, MEM, ACM, ATNA/BALP) y crear solo lo que nadie cubre (ver `docs/IHE.md`).
+
+### Especificación PIM 0.9.2 (`especificacion/`)
+- Perfiles de directorio derivados de IHE mCSD 4.0.0; nuevo `pim-establecimiento`; `pim-grupo-activo` y `pim-procedencia` formalizados.
+- Marco técnico en formato IHE: actores con CapabilityStatement, transacciones PIM-1 a PIM-11, opciones y la definición de flujo PIM-OT con correspondencia XDW.
+- Extensiones con ids `pim-*` (los camelCase de la 0.9.1 se aceptan como alias); nuevas `pim-orden-generada`, `pim-conformidad` e `pim-iru` (Device y RiskAssessment).
+- CodeSystems de conformidad (nivel, perfil de integración, actor, opción) y de origen; ValueSet `pim-mem-dmc` con los códigos MDC de PCD-15.
+- `pim-sistema` suma COM-LLAM y GAS-NAT (diferencia detectada por la prueba de contrato). SUSHI: 0 errores, 0 advertencias.
+
+### Servidor PIM 1.1
+- IHE ITI-90 e ITI-91 sobre Organization y Location; establecimiento como Facility de mCSD.
+- `pim-pma` con n.º ANMAT, EUI-64, fechas, pertenencia y clase de riesgo; categoría de alcance A–D.
+- `Device/$refes` (JSON y CSV) y rol RE.
+- Puntos de medición como DeviceMetric; Observation con valores codificados, texto y booleanos; códigos MDC.
+- `reasonReference` entre solicitud, orden y medición.
+- Artefactos de la guía servidos tal como los compila la especificación (`herramientas/guia-al-nodo.sh`); Declaración de Integración en `/pim/declaracion`.
+- Los nodos creados con el canónico `/pim` pasan solos a `/fhir`.
+
+### Módulo nuevo `mem` (IHE MEM-DMC)
+- Actor DMIC: PCD-15 (ORU^R44) por MLLP (proceso residente en los lanzadores `.sh` y `.ps1`) y por HTTP; ACK AA/AE/AR; rechaza PID y PV1.
+- Alta automática del PMA por EUI-64, DeviceMetric con el código MDC, ubicación por PL, orden correctiva si la autoprueba falla y valores normalizados para las alarmas.
+
+### Incubadora
+- `--version`; la guía (`conf/pim-guia`) se copia sin renombrar; `ar.iproy.pim` protegido; la plantilla `gestion-mantenimiento` incluye `mem`. Colmen 0.2.0 regenerado.
+
+### Contrato y pruebas
+- OpenAPI 1.2.0. `herramientas/contrato.py` compara la guía compilada con el código: sin diferencias no declaradas. El CI lo exige.
+- Pruebas: unitarias 47 · `pim.sh` 51 · `mem.sh` 19 · `colmena.sh` 20 · `industrial.sh` 19, en iProy y en Colmen.
+- Marcadores `CUENTA-GITHUB` y `CORREO-SEGURIDAD` con `herramientas/fijar-github.sh` y guía de publicación.
+
 ## 1.0.0 · 02-11-2026 — núcleo modular, colmena e incubadora
 
 ### Agregado

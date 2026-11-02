@@ -57,7 +57,8 @@ B: colmena aceptar A <rol>      ──vinculo-aceptado (identidad B)──▶  A
   - `SO`: solicitante (puede pedir trabajos);
   - `EJ`: ejecutor, por organización;
   - `FT`: telemetría;
-  - `GM`: gestor.
+  - `GM`: gestor;
+  - `RE`: registro estatal (solo lee PMA y usa `Device/$refes`).
 
   `colmena rol <par> <rol>` cambia el rol en cualquier momento.
 - Si las dos partes se piden el vínculo a la vez, queda activo automáticamente: hay consentimiento mutuo.

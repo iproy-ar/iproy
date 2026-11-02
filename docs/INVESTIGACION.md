@@ -3,6 +3,17 @@
 
 Investigación del 02-11-2026 previa al diseño de la versión 1.0. Criterio: *si existe, se aplica; si hay algo cercano, se adapta; si no hay nada, se crea*. Las marcas indican la certeza: \[verificado\] significa que se leyó la fuente en la fecha indicada; \[supuesto\], que es inferencia o fuente secundaria.
 
+## IHE (02-11-2026, para la versión 1.1)
+
+| Perfil o documento | Fuente | Qué se aplicó |
+|---|---|---|
+| MEM: white paper 2009, MEM-DMC y MEM-LS Rev. 1.5 | IHE DEV \[verificado\] | Diagnóstico del mismo problema, limitado a equipos médicos y al tramo equipo → CMMS. Módulo `mem` (DMIC de PCD-15) |
+| mCSD 4.0.0 | IHE ITI \[verificado: paquete ihe.iti.mcsd\] | Perfiles de directorio derivados; ITI-90 e ITI-91 en el servidor |
+| XDW Rev. 20.0 (Final Text) | IHE ITI \[verificado\] | Modelo de tres capas: los perfiles PIM son definiciones de flujo sobre FHIR Task |
+| Integration Statement y Connectathon | IHE \[verificado en el curso MSP–UNSJ\] | Declaración de Integración PIM; kit de pruebas propio |
+
+Detalle en `docs/IHE.md`.
+
 ## Linux (núcleo, ABI, gobierno, seguridad)
 
 | Práctica | Fuente | Qué se aplicó en iProy |
