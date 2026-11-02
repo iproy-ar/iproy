@@ -1,6 +1,7 @@
 <?php
 /**
- * iProy · Servidor PIM v1.0 · modelo: filas de iproy_pim ⇄ recursos FHIR R4 con perfiles PIM v0.9 · 30-10-2026
+ * iProy · Servidor PIM v1.1 · modelo: filas de iproy_pim ⇄ recursos FHIR R4 con perfiles PIM 0.9.2 · 02-11-2026
+ *   Directorio alineado con IHE mCSD 4.0.0 (pim-organismo, pim-establecimiento, pim-local, pim-empresa) · PMA con datos REFES y EUI-64 (IHE MEM-DMC)
  *   Organization (pim-organismo, pim-empresa) · Location (pim-local) · Device (pim-sistema, pim-activo, equipo médico)
  *   ServiceRequest (pim-solicitud) · Task (pim-orden) · Observation (pim-medicion)
  *   RiskAssessment (pim-riesgo) + Group · Provenance (pim-procedencia)
@@ -41,14 +42,24 @@ const SISTEMAS = ['GAS-O2' => 'Oxígeno medicinal', 'GAS-AIRE' => 'Aire medicina
 const ESTADO_DECLARADO = ['operativo-con-falla', 'degradado', 'fuera-de-servicio'];
 const GRUPOS_LOCAL = ['0', '1', '2a', '2b'];
 const TIPO_FISICO = ['bu' => 'Building', 'wi' => 'Wing', 'lvl' => 'Level', 'ro' => 'Room', 'bd' => 'Bed', 'area' => 'Area'];
+const TIPO_FISICO_ES = ['bu' => 'Edificio', 'wi' => 'Ala', 'lvl' => 'Nivel', 'ro' => 'Local', 'bd' => 'Cama', 'area' => 'Área'];
+const PRESION = ['+' => 'positiva', '-' => 'negativa', '0' => 'neutra'];
+/** Categoría de alcance (sección 3.3) de cada sistema de instalación (pim-sistema). */
+const SISTEMA_ALCANCE = ['GAS-O2' => 'B', 'GAS-AIRE' => 'B', 'GAS-VAC' => 'B', 'GAS-N2O' => 'B', 'GAS-CO2' => 'B', 'GAS-AGSS' => 'B', 'ELE-ITM' => 'B',
+    'HVAC-QX' => 'B', 'HVAC-AIS' => 'B', 'FIL-HEPA' => 'B', 'EST-VAP' => 'B', 'AGU-DIAL' => 'B', 'AGU-OSM' => 'B', 'PIS-COND' => 'B',
+    'ELE-EMER' => 'C', 'ELE-UPS' => 'C', 'TIC-CPD' => 'C', 'INC-DET' => 'C', 'INC-EXT' => 'C', 'FRIO-CONS' => 'C',
+    'ELE-NORM' => 'D', 'HVAC-GRAL' => 'D', 'AGU-SAN' => 'D', 'DES-CLO' => 'D', 'EDI-GRAL' => 'D', 'EDI-ABE' => 'D', 'TRV-ASC' => 'D'];
+const PERTENENCIA = ['desconocida'];   // valores de SISA a confirmar con la DNSIS (pim-valores)
 
 function coding(string $sys, string $code, ?string $disp = null): array { return array_filter(['system' => $sys, 'code' => $code, 'display' => $disp], fn($x) => $x !== null); }
 function meta(array $r, string $perfil): array {
     return array_filter(['versionId' => isset($r['version']) ? (string) $r['version'] : null,
         'lastUpdated' => iso($r['actualizado'] ?? null), 'profile' => [sd($perfil)],
-        'tag' => ($r['origen'] ?? '') === 'legado' ? [coding(cs('pim-origen'), 'legado', 'Reflejado de iProy (solo lectura en PIM)')] : null], fn($x) => $x !== null);
+        'tag' => match ($r['origen'] ?? '') { 'legado' => [coding(cs('pim-origen'), 'legado', 'Sistema anterior')], 'mem-dmc' => [coding(cs('pim-origen'), 'mem-dmc', 'MEM-DMC')], default => null }],
+        fn($x) => $x !== null);
 }
 function quitar_nulos(array $a): array { return array_filter($a, fn($x) => $x !== null && $x !== [] && $x !== ''); }
+function dm_ref(?string $activo, ?string $punto): ?array { return $activo && $punto !== null ? ['reference' => 'DeviceMetric/' . dm_id($activo, $punto)] : null; }
 function org_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Organization/' . $id, 'display' => $disp]) : null; }
 function loc_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Location/' . $id, 'display' => $disp]) : null; }
 function dev_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Device/' . $id, 'display' => $disp]) : null; }
@@ -76,7 +87,8 @@ function org_fhir(array $r): array {
     if (!empty($r['refes']) && cfg()['organismo']['refes_system'] !== '') $ids[] = ['system' => cfg()['organismo']['refes_system'], 'value' => $r['refes']];
     return quitar_nulos(['resourceType' => 'Organization', 'id' => $r['id'], 'meta' => meta($r, $r['tipo'] === 'organismo' ? 'pim-organismo' : 'pim-empresa'),
         'identifier' => $ids, 'active' => (bool) $r['activo'],
-        'type' => [['coding' => [coding('http://terminology.hl7.org/CodeSystem/organization-type', $t[0], $t[1])]]],
+        'type' => array_values(array_filter([$r['tipo'] === 'organismo' ? ['coding' => [coding(MCSD_TIPOS, 'facility', 'Facility')]] : null,
+            ['coding' => [coding('http://terminology.hl7.org/CodeSystem/organization-type', $t[0], $t[1])]]])),
         'name' => $r['nombre'], 'partOf' => org_ref($r['parte_de'])]);
 }
 function org_desde(array $j): array {
@@ -94,15 +106,27 @@ function loc_fhir(array $r): array {
     $ext = [];
     if ($r['grupo_uso_medico'] !== null) $ext[] = ['url' => sd('pim-grupo-uso-medico'), 'valueCoding' => coding(cs('pim-grupo-local'), $r['grupo_uso_medico'])];
     $amb = quitar_nulos([
-        $r['clase_iso14644'] !== null ? ['url' => 'claseISO14644', 'valueString' => $r['clase_iso14644']] : null,
-        $r['presion_relativa'] !== null ? ['url' => 'presionRelativa', 'valueCode' => $r['presion_relativa']] : null,
-        $r['renovaciones_h'] !== null ? ['url' => 'renovacionesHora', 'valueDecimal' => (float) $r['renovaciones_h']] : null]);
+        $r['presion_relativa'] !== null ? ['url' => 'presionRelativa', 'valueCode' => PRESION[$r['presion_relativa']] ?? $r['presion_relativa']] : null,
+        $r['renovaciones_h'] !== null ? ['url' => 'renovacionesHora', 'valueQuantity' => ['value' => (float) $r['renovaciones_h'], 'unit' => '/h', 'system' => UCUM, 'code' => '/h']] : null,
+        $r['clase_iso14644'] !== null ? ['url' => 'claseISO', 'valueString' => $r['clase_iso14644']] : null]);
     if ($amb) $ext[] = ['url' => sd('pim-ambiente-controlado'), 'extension' => array_values($amb)];
     return quitar_nulos(['resourceType' => 'Location', 'id' => $r['id'], 'meta' => meta($r, 'pim-local'), 'extension' => $ext ?: null,
         'identifier' => [['use' => 'official', 'system' => sid('local'), 'value' => $r['codigo']]],
         'status' => $r['estado'], 'name' => $r['nombre'], 'mode' => 'instance',
+        'type' => [['text' => TIPO_FISICO_ES[$r['tipo_fisico']] ?? 'Local']],
         'physicalType' => ['coding' => [coding('http://terminology.hl7.org/CodeSystem/location-physical-type', $r['tipo_fisico'], TIPO_FISICO[$r['tipo_fisico']] ?? null)]],
-        'managingOrganization' => org_ref(org_organismo_id()), 'partOf' => loc_ref($r['parte_de'])]);
+        'managingOrganization' => org_ref(org_organismo_id()), 'partOf' => loc_ref($r['parte_de'] ?: estab_id())]);
+}
+/** Sitio físico del establecimiento (pim-establecimiento, IHE mCSD FacilityLocation): raíz de la jerarquía de locales. */
+function estab_id(): string { return ulid_legado('establecimiento', cfg()['organismo']['codigo']); }
+function estab_fhir(): array {
+    $o = cfg()['organismo'];
+    return ['resourceType' => 'Location', 'id' => estab_id(), 'meta' => ['profile' => [sd('pim-establecimiento')]],
+        'identifier' => [['use' => 'official', 'system' => sid('local'), 'value' => $o['codigo']]],
+        'status' => 'active', 'name' => $o['nombre'], 'mode' => 'instance',
+        'type' => [['coding' => [coding(MCSD_TIPOS, 'facility', 'Facility')]], ['coding' => [coding('http://terminology.hl7.org/CodeSystem/v3-RoleCode', 'HOSP', 'Hospital')]]],
+        'physicalType' => ['coding' => [coding('http://terminology.hl7.org/CodeSystem/location-physical-type', 'si', 'Site')]],
+        'managingOrganization' => org_ref(org_organismo_id())];
 }
 function loc_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'Location') throw new Fallo(422, 'invalid', 'Se esperaba Location');
@@ -112,7 +136,7 @@ function loc_desde(array $j): array {
     $tf = (string) ($j['physicalType']['coding'][0]['code'] ?? 'area'); if (!isset(TIPO_FISICO[$tf])) throw new Fallo(422, 'code-invalid', "physicalType inválido: $tf", 'Location.physicalType');
     $f = ['codigo' => mb_substr($cod, 0, 60), 'nombre' => mb_substr($nombre, 0, 160), 'tipo_fisico' => $tf,
           'estado' => in_array($j['status'] ?? 'active', ['active', 'inactive', 'suspended'], true) ? ($j['status'] ?? 'active') : 'active',
-          'parte_de' => isset($j['partOf']['reference']) ? ref_id($j['partOf']['reference'], 'Location', 'Location.partOf') : null,
+          'parte_de' => isset($j['partOf']['reference']) && ($pa = ref_id($j['partOf']['reference'], 'Location', 'Location.partOf')) !== estab_id() ? $pa : null,
           'grupo_uso_medico' => null, 'clase_iso14644' => null, 'presion_relativa' => null, 'renovaciones_h' => null];
     foreach ((array) ($j['extension'] ?? []) as $e) {
         if (($e['url'] ?? '') === sd('pim-grupo-uso-medico')) {
@@ -120,9 +144,11 @@ function loc_desde(array $j): array {
             $f['grupo_uso_medico'] = $g;
         }
         if (($e['url'] ?? '') === sd('pim-ambiente-controlado')) foreach ((array) ($e['extension'] ?? []) as $x) {
-            if (($x['url'] ?? '') === 'claseISO14644') $f['clase_iso14644'] = mb_substr((string) $x['valueString'], 0, 10);
-            if (($x['url'] ?? '') === 'presionRelativa' && in_array($x['valueCode'] ?? '', ['+', '-', '0'], true)) $f['presion_relativa'] = $x['valueCode'];
-            if (($x['url'] ?? '') === 'renovacionesHora') $f['renovaciones_h'] = (float) $x['valueDecimal'];
+            $u = $x['url'] ?? '';
+            if ($u === 'claseISO' || $u === 'claseISO14644') $f['clase_iso14644'] = mb_substr((string) ($x['valueString'] ?? ''), 0, 10);
+            if ($u === 'presionRelativa') { $pr = (string) ($x['valueCode'] ?? ''); $pr = array_search($pr, PRESION, true) ?: $pr;
+                if (!isset(PRESION[$pr])) throw new Fallo(422, 'code-invalid', 'presionRelativa: positiva | negativa | neutra'); $f['presion_relativa'] = $pr; }
+            if ($u === 'renovacionesHora') $f['renovaciones_h'] = (float) ($x['valueQuantity']['value'] ?? $x['valueDecimal'] ?? 0);
         }
     }
     return $f;
@@ -143,38 +169,58 @@ function iru(array $r, ?string $estadoDeclarado = null): ?array {
     return ['F' => (int) $r['iru_f'], 'R' => $R, 'M' => (int) $r['iru_m'], 'A' => $A, 'total' => $total, 'banda' => $bandas[$i], 'ajuste' => $ajuste];
 }
 
+function alcance(array $r): ?string {
+    if (!empty($r['categoria_alcance'])) return $r['categoria_alcance'];
+    if ($r['clase'] === 'equipo-medico') return 'A';
+    return $r['clase'] === 'sistema' ? (SISTEMA_ALCANCE[$r['tipo_codigo'] ?? ''] ?? null) : null;
+}
+function iru_ext(array $i): array {
+    return ['url' => sd('pim-iru'), 'extension' => [
+        ['url' => 'F', 'valueInteger' => $i['F']], ['url' => 'R', 'valueInteger' => $i['R']], ['url' => 'M', 'valueInteger' => $i['M']],
+        ['url' => 'A', 'valueInteger' => $i['A']], ['url' => 'total', 'valueInteger' => $i['total']],
+        ['url' => 'banda', 'valueCoding' => coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])]]];
+}
 function dev_fhir(array $r): array {
-    $perfil = ['sistema' => 'pim-sistema', 'activo' => 'pim-activo', 'equipo-medico' => 'pim-equipo-medico'][$r['clase']];
+    $perfil = ['sistema' => 'pim-sistema', 'activo' => 'pim-activo', 'equipo-medico' => 'pim-pma'][$r['clase']];
     $ext = [];
+    if ($al = alcance($r)) $ext[] = ['url' => sd('pim-categoria-alcance'), 'valueCoding' => coding(cs('pim-categoria-alcance'), $al)];
+    if (!empty($r['clase_riesgo_pm'])) $ext[] = ['url' => sd('pim-clase-riesgo-pm'), 'valueCoding' => coding(cs('pim-clase-riesgo-pm'), $r['clase_riesgo_pm'])];
+    if (!empty($r['puesta_en_marcha'])) $ext[] = ['url' => sd('pim-puesta-en-marcha'), 'valueDateTime' => $r['puesta_en_marcha']];
+    if (!empty($r['pertenencia'])) $ext[] = ['url' => sd('pim-pertenencia'), 'valueCoding' => coding(cs('pim-valores'), $r['pertenencia'])];
     if ($r['categoria_riesgo'] !== null) $ext[] = ['url' => sd('pim-categoria-riesgo'), 'valueCoding' => coding(cs('pim-categoria-riesgo'), (string) $r['categoria_riesgo'])];
     if ($r['redundancia'] !== null) $ext[] = ['url' => sd('pim-redundancia'), 'valueCode' => $r['redundancia']];
-    if ($i = iru($r)) $ext[] = ['url' => sd('pim-iru'), 'extension' => [
-        ['url' => 'F', 'valueInteger' => $i['F']], ['url' => 'R', 'valueInteger' => $i['R']], ['url' => 'M', 'valueInteger' => $i['M']],
-        ['url' => 'A', 'valueInteger' => $i['A']], ['url' => 'total', 'valueInteger' => $i['total']], ['url' => 'banda', 'valueCode' => $i['banda']]]];
-    $q = pdo()->prepare('SELECT punto, unidad, minimo, maximo, genera_orden FROM pim_punto WHERE activo_id = ? ORDER BY punto'); $q->execute([$r['id']]);
-    foreach ($q->fetchAll() as $pt) $ext[] = ['url' => sd('pim-punto-medicion'), 'extension' => array_values(quitar_nulos([
-        ['url' => 'punto', 'valueCode' => $pt['punto']], ['url' => 'unidad', 'valueCode' => $pt['unidad']],
-        $pt['minimo'] !== null ? ['url' => 'minimo', 'valueDecimal' => (float) $pt['minimo']] : null,
-        $pt['maximo'] !== null ? ['url' => 'maximo', 'valueDecimal' => (float) $pt['maximo']] : null,
-        ['url' => 'generaOrden', 'valueBoolean' => (bool) $pt['genera_orden']]]))];
+    if ($i = iru($r)) $ext[] = iru_ext($i);
+    $ids = [['use' => 'official', 'system' => sid('activo'), 'value' => $r['codigo']]];
+    if (!empty($r['anmat_pm'])) $ids[] = ['system' => sid('anmat-pm'), 'value' => $r['anmat_pm']];
+    if (!empty($r['eui64'])) $ids[] = ['system' => sid('eui64'), 'value' => $r['eui64']];
     $tipo = null;
-    if ($r['tipo_codigo']) $tipo = ['coding' => [coding($r['clase'] === 'equipo-medico' ? cs('clase-equipo') : cs('pim-sistema'), $r['tipo_codigo'], SISTEMAS[$r['tipo_codigo']] ?? null)], 'text' => $r['tipo_texto']];
+    if ($r['tipo_codigo']) $tipo = quitar_nulos(['coding' => [coding($r['clase'] === 'equipo-medico' ? cs_local('clase-equipo') : cs('pim-sistema'), $r['tipo_codigo'], $r['clase'] === 'equipo-medico' ? null : (SISTEMAS[$r['tipo_codigo']] ?? null))], 'text' => $r['tipo_texto']]);
+    elseif ($r['tipo_texto']) $tipo = ['text' => $r['tipo_texto']];
     return quitar_nulos(['resourceType' => 'Device', 'id' => $r['id'], 'meta' => meta($r, $perfil), 'extension' => $ext ?: null,
-        'identifier' => [['use' => 'official', 'system' => sid('activo'), 'value' => $r['codigo']]],
-        'status' => $r['estado'], 'manufacturer' => $r['fabricante'], 'serialNumber' => $r['serie'], 'modelNumber' => $r['modelo'],
+        'identifier' => $ids,
+        'status' => $r['estado'], 'manufacturer' => $r['fabricante'], 'manufactureDate' => $r['fecha_fabricacion'] ?? null,
+        'serialNumber' => $r['serie'], 'modelNumber' => $r['modelo'],
         'deviceName' => [['name' => $r['nombre'], 'type' => 'user-friendly-name']], 'type' => $tipo,
         'owner' => org_ref($r['propietario_id'] ?: org_organismo_id()), 'location' => loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id'])),
         'parent' => dev_ref($r['padre_id'], nombre_de('pim_activo', $r['padre_id']))]);
 }
 function dev_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'Device') throw new Fallo(422, 'invalid', 'Se esperaba Device');
+    sin_pacientes($j);
     $perfil = (string) ($j['meta']['profile'][0] ?? sd('pim-activo'));
-    $clase = str_ends_with($perfil, 'pim-sistema') ? 'sistema' : (str_ends_with($perfil, 'pim-equipo-medico') ? 'equipo-medico' : 'activo');
-    $cod = null; foreach ((array) ($j['identifier'] ?? []) as $i) if (es_sistema((string) ($i['system'] ?? ''), 'activo')) $cod = trim((string) ($i['value'] ?? ''));
+    $clase = str_ends_with($perfil, 'pim-sistema') ? 'sistema' : (str_ends_with($perfil, 'pim-pma') ? 'equipo-medico' : 'activo');
+    $cod = null; $anmat = null; $eui = null;
+    foreach ((array) ($j['identifier'] ?? []) as $i) {
+        $sys = (string) ($i['system'] ?? ''); $val = trim((string) ($i['value'] ?? ''));
+        if (es_sistema($sys, 'activo')) $cod = $val;
+        if (es_sistema($sys, 'anmat-pm')) { if (!preg_match('/^PM-\d{4}-\d{4}$/', $val)) throw new Fallo(422, 'invalid', 'N.º de producto ANMAT: PM-NNNN-NNNN', 'Device.identifier'); $anmat = $val; }
+        if (es_sistema($sys, 'eui64')) { $val = strtoupper($val); if (!preg_match('/^[0-9A-F]{16}$/', $val)) throw new Fallo(422, 'invalid', 'EUI-64: 16 dígitos hexadecimales', 'Device.identifier'); $eui = $val; }
+    }
     if (!$cod) throw new Fallo(422, 'required', 'identifier con system ' . sid('activo') . ' es obligatorio', 'Device.identifier');
     $nombre = trim((string) ($j['deviceName'][0]['name'] ?? '')); if ($nombre === '') throw new Fallo(422, 'required', 'deviceName.name es obligatorio', 'Device.deviceName');
     $tc = $j['type']['coding'][0]['code'] ?? null;
     if ($clase === 'sistema' && (!$tc || !isset(SISTEMAS[$tc]))) throw new Fallo(422, 'code-invalid', 'pim-sistema exige type con un código de ' . cs('pim-sistema') . ' (Anexo B)', 'Device.type');
+    $fab = $j['manufactureDate'] ?? null; if ($fab !== null && !preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $fab)) throw new Fallo(422, 'invalid', 'manufactureDate: AAAA-MM-DD', 'Device.manufactureDate');
     $f = ['clase' => $clase, 'codigo' => mb_substr($cod, 0, 60), 'nombre' => mb_substr($nombre, 0, 200), 'tipo_codigo' => $tc ? mb_substr((string) $tc, 0, 40) : null,
           'tipo_texto' => isset($j['type']['text']) ? mb_substr((string) $j['type']['text'], 0, 160) : null,
           'estado' => in_array($j['status'] ?? 'active', ['active', 'inactive', 'entered-in-error'], true) ? ($j['status'] ?? 'active') : 'active',
@@ -182,12 +228,19 @@ function dev_desde(array $j): array {
           'local_id' => isset($j['location']['reference']) ? ref_id($j['location']['reference'], 'Location', 'Device.location') : null,
           'padre_id' => isset($j['parent']['reference']) ? ref_id($j['parent']['reference'], 'Device', 'Device.parent') : null,
           'propietario_id' => isset($j['owner']['reference']) ? ref_id($j['owner']['reference'], 'Organization', 'Device.owner') : null,
-          'categoria_riesgo' => null, 'redundancia' => null, 'iru_f' => null, 'iru_r' => null, 'iru_m' => null, 'iru_a' => null];
+          'categoria_riesgo' => null, 'redundancia' => null, 'iru_f' => null, 'iru_r' => null, 'iru_m' => null, 'iru_a' => null,
+          'categoria_alcance' => null, 'anmat_pm' => $anmat, 'eui64' => $eui, 'fecha_fabricacion' => $fab ? substr((string) $fab, 0, 10) : null,
+          'puesta_en_marcha' => null, 'pertenencia' => null, 'clase_riesgo_pm' => null];
+    foreach ((array) ($j['meta']['tag'] ?? []) as $t) if (($t['code'] ?? '') === 'mem-dmc') $f['_origen'] = 'mem-dmc';
     foreach ((array) ($j['extension'] ?? []) as $e) {
         $u = $e['url'] ?? '';
         if ($u === sd('pim-categoria-riesgo')) { $c = (int) ($e['valueCoding']['code'] ?? 0); if ($c < 1 || $c > 4) throw new Fallo(422, 'code-invalid', 'Categoría NFPA 99: 1 a 4'); $f['categoria_riesgo'] = $c; }
         if ($u === sd('pim-redundancia')) { if (!in_array($e['valueCode'] ?? '', ['N', 'N+1', '2N'], true)) throw new Fallo(422, 'code-invalid', 'Redundancia: N, N+1 o 2N'); $f['redundancia'] = $e['valueCode']; }
-        if ($u === sd('pim-punto-medicion')) {
+        if ($u === sd('pim-categoria-alcance')) { $c = (string) ($e['valueCoding']['code'] ?? ''); if (!in_array($c, ['A', 'B', 'C', 'D'], true)) throw new Fallo(422, 'code-invalid', 'Categoría de alcance: A, B, C o D'); $f['categoria_alcance'] = $c; }
+        if ($u === sd('pim-clase-riesgo-pm')) { $c = (string) ($e['valueCoding']['code'] ?? ''); if (!in_array($c, ['I', 'II', 'III', 'IV'], true)) throw new Fallo(422, 'code-invalid', 'Clase de riesgo: I a IV'); $f['clase_riesgo_pm'] = $c; }
+        if ($u === sd('pim-puesta-en-marcha')) { $d = (string) ($e['valueDateTime'] ?? ''); if (!preg_match('/^\d{4}-\d{2}-\d{2}/', $d)) throw new Fallo(422, 'invalid', 'Puesta en marcha: AAAA-MM-DD'); $f['puesta_en_marcha'] = substr($d, 0, 10); }
+        if ($u === sd('pim-pertenencia')) $f['pertenencia'] = mb_substr((string) ($e['valueCoding']['code'] ?? ''), 0, 40) ?: null;
+        if ($u === sd('pim-punto-medicion')) {          // configuración de puntos (forma de la v1.0, se sigue aceptando): rango aceptable de PIM-TEL
             $pt = ['punto' => null, 'unidad' => null, 'minimo' => null, 'maximo' => null, 'genera_orden' => 1];
             foreach ((array) ($e['extension'] ?? []) as $x) match ($x['url'] ?? '') {
                 'punto' => $pt['punto'] = (string) ($x['valueCode'] ?? ''), 'unidad' => $pt['unidad'] = (string) ($x['valueCode'] ?? ''),
@@ -210,6 +263,38 @@ function dev_desde(array $j): array {
         if ($f[$k] !== null && !existe($t, $f[$k])) throw new Fallo(422, 'not-found', "Referencia inexistente en $k");
     return $f;
 }
+
+// ================================================================== DeviceMetric (pim-punto)
+/** ID público del punto: determinístico a partir del activo y el código del punto. */
+function dm_id(string $activo, string $punto): string { return ulid_legado('punto', $activo . '|' . $punto); }
+/** Los puntos creados por versiones anteriores no tienen id: se completa al primer uso. */
+function completar_ids_punto(): void {
+    static $hecho = false; if ($hecho) return; $hecho = true;
+    $q = pdo()->query('SELECT activo_id, punto FROM pim_punto WHERE id IS NULL LIMIT 5000');
+    $u = pdo()->prepare('UPDATE pim_punto SET id = ? WHERE activo_id = ? AND punto = ?');
+    foreach ($q->fetchAll() as $r) $u->execute([dm_id($r['activo_id'], $r['punto']), $r['activo_id'], $r['punto']]);
+}
+/** Código FHIR de un punto: MDC (dígitos), sin código asignado (MDCX…) o pim-punto. */
+function punto_code(string $punto): array {
+    if (ctype_digit($punto)) return ['coding' => [coding(MDC, $punto)]];
+    if (str_starts_with($punto, 'MDCX')) return ['text' => $punto];
+    return ['coding' => [coding(cs('pim-punto'), $punto)]];
+}
+function dm_fhir(array $r): array {
+    $a = fila_activo_min($r['activo_id']);
+    return quitar_nulos(['resourceType' => 'DeviceMetric', 'id' => $r['id'] ?: dm_id($r['activo_id'], $r['punto']),
+        'meta' => quitar_nulos(['profile' => [sd('pim-punto')], 'tag' => ($r['origen'] ?? 'pim') === 'mem-dmc' ? [coding(cs('pim-origen'), 'mem-dmc')] : null]),
+        'identifier' => [['system' => sid('punto'), 'value' => ($a['codigo'] ?? $r['activo_id']) . '/' . $r['punto']]],
+        'type' => punto_code($r['punto']),
+        'unit' => $r['unidad'] !== '' && $r['unidad'] !== '1' ? ['coding' => [coding(UCUM, $r['unidad'])]] : null,
+        'source' => dev_ref($r['activo_id'], $a['nombre'] ?? null),
+        'operationalStatus' => 'on', 'category' => ctype_digit($r['punto']) || str_starts_with($r['punto'], 'MDCX') ? 'setting' : 'measurement']);
+}
+function fila_activo_min(string $id): ?array {
+    static $c = [];
+    if (!array_key_exists($id, $c)) { $q = pdo()->prepare('SELECT codigo, nombre FROM pim_activo WHERE id = ?'); $q->execute([$id]); $c[$id] = $q->fetch() ?: null; }
+    return $c[$id];
+}
 function rango(?int $v, int $min, int $max, string $n): ?int {
     if ($v === null) return null;
     if ($v < $min || $v > $max) throw new Fallo(422, 'value', "$n fuera de rango ($min a $max)");
@@ -219,18 +304,24 @@ function rango(?int $v, int $min, int $max, string $n): ?int {
 // ================================================================== ServiceRequest (pim-solicitud)
 function sr_fhir(array $r): array {
     $ext = [];
-    if ($r['estado_declarado']) $ext[] = ['url' => sd('pim-estado-declarado'), 'valueCode' => $r['estado_declarado']];
+    if ($r['estado_declarado']) $ext[] = ['url' => sd('pim-estado-declarado'), 'valueCoding' => coding(cs('pim-valores'), $r['estado_declarado'])];
     $q = pdo()->prepare('SELECT id FROM pim_orden WHERE solicitud_id = ? ORDER BY autoria LIMIT 1'); $q->execute([$r['id']]);
     if ($o = $q->fetchColumn()) $ext[] = ['url' => sd('pim-orden-generada'), 'valueReference' => ['reference' => 'Task/' . $o]];
     $subj = $r['activo_id'] ? dev_ref($r['activo_id'], nombre_de('pim_activo', $r['activo_id'])) : loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id']));
     return quitar_nulos(['resourceType' => 'ServiceRequest', 'id' => $r['id'], 'meta' => meta($r, 'pim-solicitud'), 'extension' => $ext ?: null,
         'identifier' => [['use' => 'official', 'system' => sid('solicitud'), 'value' => $r['numero']]],
         'status' => $r['estado'], 'intent' => 'order', 'priority' => $r['prioridad'],
-        'code' => $r['categoria_codigo'] || $r['categoria_texto'] ? quitar_nulos(['coding' => $r['categoria_codigo'] ? [coding(cs('pim-categoria'), $r['categoria_codigo'])] : null, 'text' => $r['categoria_texto']]) : null,
-        'subject' => $subj, 'locationReference' => $r['local_id'] ? [loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id']))] : null,
+        'code' => categoria($r),
+        'subject' => $subj, 'reasonReference' => !empty($r['observacion_id']) ? [['reference' => 'Observation/' . $r['observacion_id']]] : null, 'locationReference' => $r['local_id'] ? [loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id']))] : null,
         'authoredOn' => iso($r['autoria']), 'requester' => org_ref(org_organismo_id()),
         'note' => $r['descripcion'] && cfg()['exponer_detalle'] ? [['text' => $r['descripcion']]] : null,
         'reasonCode' => $r['solicitante'] ? [['text' => 'Solicitado por: ' . $r['solicitante']]] : null]);
+}
+/** Categoría del pedido o de la orden: código de pim-sistema si corresponde; si no, categoría local del nodo. Nunca vacía (pim-solicitud exige code). */
+function categoria(array $r): array {
+    $c = $r['categoria_codigo'] ?? null;
+    return quitar_nulos(['coding' => $c ? [coding(isset(SISTEMAS[$c]) ? cs('pim-sistema') : cs_local('categoria'), $c)] : null,
+        'text' => $r['categoria_texto'] ?: ($c ? null : 'Solicitud de mantenimiento')]);
 }
 function sr_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'ServiceRequest') throw new Fallo(422, 'invalid', 'Se esperaba ServiceRequest');
@@ -252,14 +343,29 @@ function sr_desde(array $j): array {
     if ($desc === '') throw new Fallo(422, 'required', 'note[0].text (descripción del problema) es obligatorio', 'ServiceRequest.note');
     $ed = null;
     foreach ((array) ($j['extension'] ?? []) as $e) if (($e['url'] ?? '') === sd('pim-estado-declarado')) {
-        $ed = (string) ($e['valueCode'] ?? ''); if (!in_array($ed, ESTADO_DECLARADO, true)) throw new Fallo(422, 'code-invalid', 'Estado declarado: ' . implode(' | ', ESTADO_DECLARADO));
+        $ed = (string) ($e['valueCoding']['code'] ?? ($e['valueCode'] ?? '')); if (!in_array($ed, ESTADO_DECLARADO, true)) throw new Fallo(422, 'code-invalid', 'Estado declarado: ' . implode(' | ', ESTADO_DECLARADO));
     }
     return ['prioridad' => $pr, 'categoria_codigo' => $cat ? mb_substr((string) $cat, 0, 40) : null, 'categoria_texto' => $catTxt ? mb_substr((string) $catTxt, 0, 160) : null,
             'descripcion' => mb_substr($desc, 0, 5000), 'local_id' => $local, 'activo_id' => $activo, 'estado_declarado' => $ed,
-            'solicitante' => isset($j['requester']['display']) ? mb_substr((string) $j['requester']['display'], 0, 160) : null];
+            'solicitante' => isset($j['requester']['display']) ? mb_substr((string) $j['requester']['display'], 0, 160) : null,
+            'observacion_id' => obs_motivo($j)];
+}
+
+/** reasonReference → Observation (orden pedida a partir de una medición o de un mensaje IHE PCD-15). */
+function obs_motivo(array $j): ?string {
+    foreach ((array) ($j['reasonReference'] ?? []) as $rr) if (tipo_ref((string) ($rr['reference'] ?? '')) === 'Observation') {
+        $id = ref_id((string) $rr['reference'], 'Observation', 'ServiceRequest.reasonReference');
+        if (!existe('pim_observacion', $id)) throw new Fallo(422, 'not-found', 'Observation inexistente', 'ServiceRequest.reasonReference');
+        return $id;
+    }
+    return null;
 }
 
 // ================================================================== Task (pim-orden)
+function obs_de_orden(array $r): ?string {
+    $q = pdo()->prepare('SELECT id FROM pim_observacion WHERE orden_id = ? ORDER BY instante LIMIT 1'); $q->execute([$r['id']]);
+    return $q->fetchColumn() ?: null;
+}
 function task_fhir(array $r): array {
     $ext = [];
     if ($r['tipo_mantenimiento']) $ext[] = ['url' => sd('pim-tipo-mantenimiento'), 'valueCoding' => coding(cs('pim-tipo-mantenimiento'), $r['tipo_mantenimiento'])];
@@ -275,8 +381,9 @@ function task_fhir(array $r): array {
         'status' => $r['estado'], 'statusReason' => $r['motivo_estado'] ? ['text' => $r['motivo_estado']] : null,
         'businessStatus' => ['coding' => [coding(cs('pim-estado-orden'), $r['estado_negocio'])], 'text' => $r['estado_negocio']],
         'intent' => 'order', 'priority' => $r['prioridad'],
-        'code' => $r['categoria_codigo'] || $r['categoria_texto'] ? quitar_nulos(['coding' => $r['categoria_codigo'] ? [coding(cs('pim-categoria'), $r['categoria_codigo'])] : null, 'text' => $r['categoria_texto']]) : null,
+        'code' => categoria($r),
         'description' => cfg()['exponer_detalle'] ? $r['descripcion'] : null,
+        'reasonReference' => ($ob = obs_de_orden($r)) ? ['reference' => 'Observation/' . $ob] : null,
         'focus' => dev_ref($r['activo_id'], nombre_de('pim_activo', $r['activo_id'])),
         'executionPeriod' => quitar_nulos(['start' => iso($r['inicio']), 'end' => iso($r['fin'])]) ?: null,
         'authoredOn' => iso($r['autoria']), 'lastModified' => iso($r['actualizado']),
@@ -286,12 +393,19 @@ function task_fhir(array $r): array {
 
 // ================================================================== Observation (pim-medicion)
 function obs_fhir(array $r): array {
-    $o = ['resourceType' => 'Observation', 'id' => $r['id'], 'meta' => ['lastUpdated' => iso($r['creado']), 'profile' => [sd('pim-medicion')]],
-        'status' => 'final', 'category' => [['coding' => [coding('http://terminology.hl7.org/CodeSystem/observation-category', 'survey', 'Survey')], 'text' => 'Medición de instalación']],
-        'code' => ['coding' => [coding(cs('pim-punto'), $r['punto'])]],
-        'device' => dev_ref($r['activo_id'], nombre_de('pim_activo', $r['activo_id'])),
-        'effectiveDateTime' => iso($r['instante']),
-        'valueQuantity' => ['value' => (float) $r['valor'], 'unit' => $r['unidad'], 'system' => 'http://unitsofmeasure.org', 'code' => $r['unidad']]];
+    $o = ['resourceType' => 'Observation', 'id' => $r['id'],
+        'meta' => quitar_nulos(['lastUpdated' => iso($r['creado']), 'profile' => [sd('pim-medicion')], 'tag' => ($r['origen'] ?? 'pim') === 'mem-dmc' ? [coding(cs('pim-origen'), 'mem-dmc')] : null]),
+        'status' => 'final', 'category' => [['coding' => [coding('http://terminology.hl7.org/CodeSystem/observation-category', 'survey', 'Survey')],
+            'text' => ($r['origen'] ?? '') === 'mem-dmc' ? 'Estado técnico de equipo médico (IHE MEM-DMC)' : 'Medición de instalación']],
+        'code' => punto_code($r['punto']),
+        'device' => dm_ref($r['activo_id'], $r['punto']),
+        'effectiveDateTime' => iso($r['instante'])];
+    switch ($r['valor_tipo'] ?? 'q') {
+        case 'c': $o['valueCodeableConcept'] = ['text' => (string) $r['valor_texto']]; break;
+        case 's': $o['valueString'] = (string) $r['valor_texto']; break;
+        case 'b': $o['valueBoolean'] = $r['valor_texto'] === 'true'; break;
+        default:  $o['valueQuantity'] = quitar_nulos(['value' => (float) $r['valor'], 'unit' => $r['unidad'], 'system' => $r['unidad'] ? UCUM : null, 'code' => $r['unidad']]);
+    }
     if ($r['interpretacion']) $o['interpretation'] = [['coding' => [coding('http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation', $r['interpretacion'])]]];
     $rr = quitar_nulos(['low' => $r['minimo'] !== null ? ['value' => (float) $r['minimo'], 'unit' => $r['unidad']] : null,
                         'high' => $r['maximo'] !== null ? ['value' => (float) $r['maximo'], 'unit' => $r['unidad']] : null]);
@@ -299,35 +413,57 @@ function obs_fhir(array $r): array {
     if ($r['orden_id']) $o['extension'] = [['url' => sd('pim-orden-generada'), 'valueReference' => ['reference' => 'Task/' . $r['orden_id']]]];
     return $o;
 }
+/** Punto de una medición: device → DeviceMetric (pim-punto, 1.1) o Device + code (forma de la 1.0). */
+function punto_de_ref(string $ref, array $code): array {
+    if (tipo_ref($ref) === 'DeviceMetric') {
+        completar_ids_punto();
+        $id = ref_id($ref, 'DeviceMetric', 'Observation.device');
+        $q = pdo()->prepare('SELECT activo_id, punto FROM pim_punto WHERE id = ?'); $q->execute([$id]);
+        $p = $q->fetch() ?: throw new Fallo(422, 'not-found', 'DeviceMetric inexistente', 'Observation.device');
+        return [$p['activo_id'], $p['punto']];
+    }
+    $act = ref_id($ref, 'Device', 'Observation.device'); if (!existe('pim_activo', $act)) throw new Fallo(422, 'not-found', 'Device inexistente', 'Observation.device');
+    $c = $code['coding'][0] ?? null;
+    $punto = $c ? (string) ($c['code'] ?? '') : strtoupper(preg_replace('/[^A-Za-z0-9_\-]/', '_', (string) ($code['text'] ?? '')));
+    if (!preg_match('/^[A-Z0-9_\-]{1,40}$/', $punto)) throw new Fallo(422, 'code-invalid', 'code: punto de medición (pim-punto, p. ej. PRES-LINEA, o código MDC)', 'Observation.code');
+    return [$act, $punto];
+}
 function obs_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'Observation') throw new Fallo(422, 'invalid', 'Se esperaba Observation');
     sin_pacientes($j);
-    if (isset($j['subject'])) throw new Fallo(422, 'business-rule', 'pim-medicion no usa subject: el activo va en device', 'Observation.subject');
+    if (isset($j['subject'])) throw new Fallo(422, 'business-rule', 'pim-medicion no usa subject: el punto va en device', 'Observation.subject');
     $dref = (string) ($j['device']['reference'] ?? ''); if ($dref === '') throw new Fallo(422, 'required', 'device es obligatorio', 'Observation.device');
-    $act = ref_id($dref, 'Device', 'Observation.device'); if (!existe('pim_activo', $act)) throw new Fallo(422, 'not-found', 'Device inexistente', 'Observation.device');
-    $punto = (string) ($j['code']['coding'][0]['code'] ?? ''); if (!preg_match('/^[A-Z0-9\-]{2,40}$/', $punto)) throw new Fallo(422, 'code-invalid', 'code: punto de medición (pim-punto, p. ej. PRES-LINEA)', 'Observation.code');
-    $vq = $j['valueQuantity'] ?? null;
-    if (!is_array($vq) || !is_numeric($vq['value'] ?? null)) throw new Fallo(422, 'required', 'valueQuantity.value es obligatorio', 'Observation.valueQuantity');
-    $u = (string) ($vq['code'] ?? $vq['unit'] ?? ''); if ($u === '' || mb_strlen($u) > 20) throw new Fallo(422, 'required', 'valueQuantity.code (unidad UCUM) es obligatorio', 'Observation.valueQuantity.code');
-    $t = a_local($j['effectiveDateTime'] ?? null, 'Observation.effectiveDateTime') ?? throw new Fallo(422, 'required', 'effectiveDateTime es obligatorio', 'Observation.effectiveDateTime');
-    $min = $j['referenceRange'][0]['low']['value'] ?? null; $max = $j['referenceRange'][0]['high']['value'] ?? null;
-    return ['activo_id' => $act, 'punto' => $punto, 'valor' => (float) $vq['value'], 'unidad' => $u, 'instante' => $t,
-            'minimo' => is_numeric($min) ? (float) $min : null, 'maximo' => is_numeric($max) ? (float) $max : null];
+    [$act, $punto] = punto_de_ref($dref, (array) ($j['code'] ?? []));
+    $t = a_local($j['effectiveDateTime'] ?? ($j['effectiveInstant'] ?? null), 'Observation.effectiveDateTime') ?? throw new Fallo(422, 'required', 'effectiveDateTime es obligatorio', 'Observation.effectiveDateTime');
+    $f = ['activo_id' => $act, 'punto' => $punto, 'instante' => $t, 'valor' => null, 'unidad' => null, 'valor_tipo' => 'q', 'valor_texto' => null, 'minimo' => null, 'maximo' => null,
+          'origen' => in_array('mem-dmc', array_column((array) ($j['meta']['tag'] ?? []), 'code'), true) ? 'mem-dmc' : 'pim'];
+    if (isset($j['valueQuantity'])) {
+        $vq = $j['valueQuantity'];
+        if (!is_numeric($vq['value'] ?? null)) throw new Fallo(422, 'required', 'valueQuantity.value es obligatorio', 'Observation.valueQuantity');
+        $u = (string) ($vq['code'] ?? $vq['unit'] ?? ''); if ($u === '' || mb_strlen($u) > 20) throw new Fallo(422, 'required', 'valueQuantity.code (unidad UCUM) es obligatorio', 'Observation.valueQuantity.code');
+        $f['valor'] = (float) $vq['value']; $f['unidad'] = $u;
+        $min = $j['referenceRange'][0]['low']['value'] ?? null; $max = $j['referenceRange'][0]['high']['value'] ?? null;
+        $f['minimo'] = is_numeric($min) ? (float) $min : null; $f['maximo'] = is_numeric($max) ? (float) $max : null;
+    } elseif (isset($j['valueCodeableConcept'])) {
+        $cc = $j['valueCodeableConcept'];
+        $f['valor_tipo'] = 'c'; $f['valor_texto'] = mb_substr((string) ($cc['text'] ?? ($cc['coding'][0]['code'] ?? ($cc['coding'][0]['display'] ?? ''))), 0, 200);
+    } elseif (isset($j['valueString'])) { $f['valor_tipo'] = 's'; $f['valor_texto'] = mb_substr((string) $j['valueString'], 0, 200); }
+    elseif (isset($j['valueBoolean'])) { $f['valor_tipo'] = 'b'; $f['valor_texto'] = $j['valueBoolean'] ? 'true' : 'false'; }
+    else throw new Fallo(422, 'required', 'value[x] es obligatorio (Quantity, CodeableConcept, string o boolean)', 'Observation.value[x]');
+    return $f;
 }
 
 // ================================================================== RiskAssessment (pim-riesgo) y Group
 function riesgo_fhir(array $a): ?array {
     $i = iru($a); if (!$i) return null;
-    $comp = fn($n, $v) => ['url' => $n, 'valueInteger' => $v];
     return quitar_nulos(['resourceType' => 'RiskAssessment', 'id' => $a['id'] . '-iru', 'meta' => ['lastUpdated' => iso($a['actualizado']), 'profile' => [sd('pim-riesgo')]],
         'status' => 'final', 'method' => ['coding' => [coding(cs('pim-metodo-riesgo'), 'iru', 'Índice de Riesgo Unificado')]],
         'subject' => ['reference' => 'Group/' . $a['id'] . '-g', 'display' => $a['nombre']],
         'occurrenceDateTime' => iso($a['actualizado']), 'performer' => ['reference' => 'Organization/' . org_organismo_id()],
         'basis' => [dev_ref($a['id'], $a['nombre'])],
-        'prediction' => [['qualitativeRisk' => ['coding' => [coding(cs('pim-banda-iru'), $i['banda'])], 'text' => 'Banda ' . $i['banda'] . ' (IRU ' . $i['total'] . ')'],
+        'prediction' => [['qualitativeRisk' => ['coding' => [coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])], 'text' => 'Banda ' . $i['banda'] . ' (IRU ' . $i['total'] . ')'],
             'rationale' => 'IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ($i['ajuste'] ? ' · ' . $i['ajuste'] : '')]],
-        'extension' => [['url' => sd('pim-iru'), 'extension' => [$comp('F', $i['F']), $comp('R', $i['R']), $comp('M', $i['M']), $comp('A', $i['A']), $comp('total', $i['total']),
-            ['url' => 'banda', 'valueCode' => $i['banda']]]]],
+        'extension' => [iru_ext($i)],
         'mitigation' => $i['ajuste']]);
 }
 function grupo_fhir(array $a): array {

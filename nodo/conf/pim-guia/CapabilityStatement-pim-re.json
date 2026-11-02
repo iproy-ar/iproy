@@ -1,0 +1,45 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "pim-re",
+  "url": "https://iproy.com.ar/fhir/CapabilityStatement/pim-re",
+  "title": "Actor PIM — Registro estatal",
+  "description": "Registro del Estado (REFES) que obtiene los datos mínimos de los PMA con la operación Device/$refes (PIM-9).",
+  "name": "PimRegistroEstatal",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-11-02",
+  "publisher": "Ovidio Francisco Arias (autor)",
+  "kind": "requirements",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "json"
+  ],
+  "implementationGuide": [
+    "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim"
+  ],
+  "rest": [
+    {
+      "mode": "client",
+      "resource": [
+        {
+          "type": "Device",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-pma"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "operation": [
+            {
+              "name": "refes",
+              "definition": "https://iproy.com.ar/fhir/OperationDefinition/Device-refes"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

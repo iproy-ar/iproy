@@ -65,11 +65,11 @@ final class PimCliente {
     /** PIM-SOL atajo: crea la solicitud (y el servidor crea la orden). Devuelve [ServiceRequest, 'Task/<id>']. */
     public function solicitar(string $sujeto, string $categoria, string $descripcion, ?string $estadoDeclarado = null, ?string $prioridad = null, ?string $solicitante = null): array {
         $sr = ['resourceType' => 'ServiceRequest', 'status' => 'active', 'intent' => 'order', 'subject' => ['reference' => $sujeto],
-               'code' => ['coding' => [['system' => 'https://iproy.com.ar/fhir/CodeSystem/pim-categoria', 'code' => $categoria]], 'text' => $categoria],
+               'code' => ['text' => $categoria],
                'note' => [['text' => $descripcion]]];
         if ($prioridad) $sr['priority'] = $prioridad;
         if ($solicitante) $sr['requester'] = ['display' => $solicitante];
-        if ($estadoDeclarado) $sr['extension'] = [['url' => 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', 'valueCode' => $estadoDeclarado]];
+        if ($estadoDeclarado) $sr['extension'] = [['url' => 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', 'valueCoding' => ['system' => 'https://iproy.com.ar/fhir/CodeSystem/pim-valores', 'code' => $estadoDeclarado]]];
         [$r, $cab] = $this->http('POST', 'ServiceRequest', $sr);
         return [$r, $cab['x-pim-task'] ?? null];
     }

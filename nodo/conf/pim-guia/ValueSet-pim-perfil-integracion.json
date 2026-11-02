@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimPerfilIntegracionVS",
+  "id": "pim-perfil-integracion",
+  "title": "PIM — Perfiles de integración (VS)",
+  "description": "Perfiles de integración.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-perfil-integracion",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-perfil-integracion"
+      }
+    ]
+  }
+}

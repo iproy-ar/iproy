@@ -1,0 +1,23 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimPertenenciaVS",
+  "id": "pim-pertenencia",
+  "title": "PIM — Pertenencia del PMA",
+  "description": "Pertenencia del PMA (REFES). Valores definitivos a confirmar con la DNSIS.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-pertenencia",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-valores",
+        "filter": [
+          {
+            "property": "concept",
+            "op": "descendent-of",
+            "value": "pertenencia"
+          }
+        ]
+      }
+    ]
+  }
+}

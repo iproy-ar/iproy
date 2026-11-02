@@ -1,0 +1,57 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-orden-generada",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden-generada",
+  "name": "OrdenGenerada",
+  "title": "Orden generada",
+  "status": "draft",
+  "description": "Orden de trabajo que el Gestor generó a partir de esta solicitud o medición. Es una navegación de conveniencia: la referencia normativa es Task.basedOn (solicitud) o Task.reasonReference (medición).",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "ServiceRequest",
+      "type": "element"
+    },
+    {
+      "expression": "Observation",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Orden generada",
+        "definition": "Orden de trabajo que el Gestor generó a partir de esta solicitud o medición. Es una navegación de conveniencia: la referencia normativa es Task.basedOn (solicitud) o Task.reasonReference (medición)."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden-generada"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

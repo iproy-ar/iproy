@@ -1,0 +1,34 @@
+{
+  "resourceType": "OperationDefinition",
+  "id": "Device-refes",
+  "url": "https://iproy.com.ar/fhir/OperationDefinition/Device-refes",
+  "title": "Operación $refes",
+  "description": "Devuelve, por cada PMA, los cinco datos mínimos del REFES (Res. SGS 532/2026) y la lista de los que faltan. A nivel de tipo devuelve todos los PMA del organismo.",
+  "name": "DeviceRefes",
+  "status": "draft",
+  "kind": "operation",
+  "code": "refes",
+  "resource": [
+    "Device"
+  ],
+  "system": false,
+  "type": true,
+  "instance": true,
+  "parameter": [
+    {
+      "name": "completos",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "type": "boolean",
+      "documentation": "true: solo los PMA con los cinco datos; false: solo los incompletos."
+    },
+    {
+      "name": "return",
+      "use": "out",
+      "min": 1,
+      "max": "1",
+      "type": "Parameters"
+    }
+  ]
+}

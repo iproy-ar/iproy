@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimMetodoRiesgoVS",
+  "id": "pim-metodo-riesgo",
+  "title": "PIM — Método de riesgo (VS)",
+  "description": "Métodos de evaluación de riesgo.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-metodo-riesgo",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-metodo-riesgo"
+      }
+    ]
+  }
+}

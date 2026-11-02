@@ -1,0 +1,82 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "pim-ej",
+  "url": "https://iproy.com.ar/fhir/CapabilityStatement/pim-ej",
+  "title": "Actor PIM — Ejecutor",
+  "description": "Cliente de la empresa o área que ejecuta: consulta sus órdenes (PIM-4), las actualiza (PIM-5) e informa ensayos (PIM-10).",
+  "name": "PimEjecutor",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-11-02",
+  "publisher": "Ovidio Francisco Arias (autor)",
+  "kind": "requirements",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "json"
+  ],
+  "implementationGuide": [
+    "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim"
+  ],
+  "rest": [
+    {
+      "mode": "client",
+      "resource": [
+        {
+          "type": "Task",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "update",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DiagnosticReport",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-informe-ensayo"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "MAY"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "MAY"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

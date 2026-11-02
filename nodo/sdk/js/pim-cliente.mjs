@@ -62,10 +62,10 @@ export class PimCliente {
   /** Devuelve { solicitud, orden: 'Task/<id>' } */
   async solicitar({ sujeto, categoria, descripcion, estadoDeclarado, prioridad, solicitante }) {
     const sr = { resourceType: 'ServiceRequest', status: 'active', intent: 'order', subject: { reference: sujeto },
-      code: { coding: [{ system: `${NS}/CodeSystem/pim-categoria`, code: categoria }], text: categoria }, note: [{ text: descripcion }] };
+      code: { text: categoria }, note: [{ text: descripcion }] };
     if (prioridad) sr.priority = prioridad;
     if (solicitante) sr.requester = { display: solicitante };
-    if (estadoDeclarado) sr.extension = [{ url: `${NS}/StructureDefinition/pim-estado-declarado`, valueCode: estadoDeclarado }];
+    if (estadoDeclarado) sr.extension = [{ url: `${NS}/StructureDefinition/pim-estado-declarado`, valueCoding: { system: `${NS}/CodeSystem/pim-valores`, code: estadoDeclarado } }];
     const r = await this.#http('POST', 'ServiceRequest', sr);
     return { solicitud: r.cuerpo, orden: r.cabeceras.get('x-pim-task') };
   }

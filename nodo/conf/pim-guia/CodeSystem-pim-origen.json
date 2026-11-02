@@ -1,0 +1,29 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimOrigen",
+  "id": "pim-origen",
+  "title": "PIM — Origen del dato",
+  "description": "Etiqueta (meta.tag) que indica de dónde viene un recurso.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-origen",
+  "concept": [
+    {
+      "code": "pim",
+      "display": "PIM",
+      "definition": "Creado en el servidor PIM."
+    },
+    {
+      "code": "legado",
+      "display": "Sistema anterior",
+      "definition": "Reflejado de un sistema anterior: solo lectura en PIM."
+    },
+    {
+      "code": "mem-dmc",
+      "display": "MEM-DMC",
+      "definition": "Creado a partir de un mensaje IHE PCD-15."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 3
+}

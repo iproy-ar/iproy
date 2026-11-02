@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-redundancia",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-redundancia",
+  "name": "Redundancia",
+  "title": "Redundancia",
+  "status": "draft",
+  "description": "Redundancia del sistema.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Device",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Redundancia",
+        "definition": "Redundancia del sistema."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-redundancia"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-redundancia"
+        }
+      }
+    ]
+  }
+}

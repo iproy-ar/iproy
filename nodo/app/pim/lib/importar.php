@@ -4,7 +4,7 @@
  *
  * Lee SOLO las vistas iproy_fhir.* (sin datos personales; las mismas que publica la API /fhir v0.3) y refleja en iproy_pim:
  *   organismo y empresas/áreas → Organization · servicios (catálogo + inventario SIRE) → Location
- *   equipos SIRE → Device (pim-equipo-medico) · órdenes Req_IPROY → Task (pim-orden), en solo lectura (origen «legado»)
+ *   equipos SIRE → Device (pim-pma) · órdenes Req_IPROY → Task (pim-orden), en solo lectura (origen «legado»)
  * Idempotente: cada registro guarda la huella de sus datos de origen; solo cambia (nueva versión + Provenance) si iProy cambió.
  * Los IDs son los mismos ULID determinísticos de la API v0.3: un sistema externo ve el mismo recurso en /fhir y en /pim.
  * Nunca escribe en iProy.

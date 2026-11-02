@@ -1,0 +1,70 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-vinculo",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-vinculo",
+  "name": "PimVinculo",
+  "title": "PIM — Vínculo institucional",
+  "status": "draft",
+  "description": "Vínculo elegido y aceptado entre dos nodos o instituciones de la red colmena, firmado por ambas partes. Del acta se registra su huella SHA-256.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Contract",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Contract",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Contract.status",
+        "path": "Contract.status",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Contract.applies",
+        "path": "Contract.applies",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Contract.type",
+        "path": "Contract.type",
+        "min": 1,
+        "mustSupport": true,
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-tipo-vinculo"
+        }
+      },
+      {
+        "id": "Contract.term",
+        "path": "Contract.term",
+        "mustSupport": true
+      },
+      {
+        "id": "Contract.signer",
+        "path": "Contract.signer",
+        "min": 2,
+        "mustSupport": true
+      },
+      {
+        "id": "Contract.signer.party",
+        "path": "Contract.signer.party",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo",
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-empresa"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Contract.signer.signature",
+        "path": "Contract.signer.signature",
+        "mustSupport": true
+      }
+    ]
+  }
+}

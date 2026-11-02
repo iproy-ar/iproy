@@ -1,0 +1,502 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "pim-gm",
+  "url": "https://iproy.com.ar/fhir/CapabilityStatement/pim-gm",
+  "title": "Actor PIM — Gestor de mantenimiento",
+  "description": "Requisitos del servidor PIM. Se agrupa con IHE mCSD Directory (ITI-90) y, con la opción mcsd-update, con Directory Update (ITI-91). Con PIM-EQM se agrupa con IHE MEM DMIC (PCD-15) y LOC (PCD-16).",
+  "name": "PimGestor",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-11-02",
+  "publisher": "Ovidio Francisco Arias (autor)",
+  "kind": "requirements",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "json"
+  ],
+  "implementationGuide": [
+    "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim"
+  ],
+  "imports": [
+    "https://profiles.ihe.net/ITI/mCSD/CapabilityStatement/IHE.mCSD.Directory",
+    "https://profiles.ihe.net/ITI/mCSD/CapabilityStatement/IHE.mCSD.Directory.Update"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "documentation": "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría compatible con IHE BALP.",
+      "security": {
+        "service": [
+          {
+            "coding": [
+              {
+                "code": "SMART-on-FHIR",
+                "system": "http://terminology.hl7.org/CodeSystem/restful-security-service"
+              }
+            ]
+          }
+        ]
+      },
+      "resource": [
+        {
+          "type": "Organization",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo",
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-empresa"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "history-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "identifier",
+              "type": "token"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "partof",
+              "type": "reference"
+            },
+            {
+              "name": "type",
+              "type": "token"
+            },
+            {
+              "name": "active",
+              "type": "token"
+            }
+          ]
+        },
+        {
+          "type": "Location",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-local",
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-establecimiento"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "history-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "identifier",
+              "type": "token"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "partof",
+              "type": "reference"
+            },
+            {
+              "name": "organization",
+              "type": "reference"
+            },
+            {
+              "name": "type",
+              "type": "token"
+            },
+            {
+              "name": "status",
+              "type": "token"
+            }
+          ]
+        },
+        {
+          "type": "Device",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-pma",
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-sistema",
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-activo"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "update",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "identifier",
+              "type": "token"
+            },
+            {
+              "name": "location",
+              "type": "reference"
+            },
+            {
+              "name": "type",
+              "type": "token"
+            },
+            {
+              "name": "categoria-alcance",
+              "type": "token"
+            }
+          ],
+          "operation": [
+            {
+              "name": "refes",
+              "definition": "https://iproy.com.ar/fhir/OperationDefinition/Device-refes"
+            }
+          ]
+        },
+        {
+          "type": "DeviceMetric",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-punto"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "source",
+              "type": "reference"
+            },
+            {
+              "name": "type",
+              "type": "token"
+            }
+          ]
+        },
+        {
+          "type": "ServiceRequest",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-solicitud"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Task",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "update",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            },
+            {
+              "code": "history-instance",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "business-status",
+              "type": "token"
+            },
+            {
+              "name": "owner",
+              "type": "reference"
+            },
+            {
+              "name": "focus",
+              "type": "reference"
+            },
+            {
+              "name": "based-on",
+              "type": "reference"
+            }
+          ],
+          "operation": [
+            {
+              "name": "transicion",
+              "definition": "https://iproy.com.ar/fhir/OperationDefinition/Task-transicion"
+            }
+          ]
+        },
+        {
+          "type": "Observation",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-medicion"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHOULD"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "RiskAssessment",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-riesgo"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHOULD"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Provenance",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-procedencia"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHOULD"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "interaction": [
+        {
+          "code": "history-system",
+          "documentation": "PIM-8 Sincronizar cambios: _history con _since para todos los recursos (semántica de IHE ITI-91)."
+        }
+      ]
+    }
+  ]
+}

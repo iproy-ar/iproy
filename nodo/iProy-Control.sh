@@ -19,7 +19,7 @@
 #    fhir-cliente alta <id> <jwks.json> ["system/*.read"]   registra un sistema externo (API FHIR)
 #    fhir-cliente baja <id> | lista | demo | token <id> <clave_privada.pem>
 #    pim importar         refleja ahora iProy en el Servidor PIM (el worker lo hace solo cada 5 min)
-#    pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI> [organización] ["system/*.cruds"]   registra un sistema en PIM
+#    pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI|RE> [organización] ["system/*.cruds"]   registra un sistema en PIM
 #    pim cliente baja <id> | lista · pim token <id> <clave_privada.pem> [alcances] · pim prueba · pim verificar · pim consola
 #    pim remoto https://<IP>:8443/pim/r4 <client_id> <clave.pem>   prueba la API PIM de otro nodo de la colmena
 #    Consola PIM: http://localhost:<puerto>/pim/  ·  API: /pim/r4/metadata  (manual: docs/pim/)
@@ -78,7 +78,7 @@ cliente() { "$(mdb_bin mariadb mysql)" --defaults-file="$DATA/my.cnf" --socket="
 # sin este control, start creía que FrankenPHP ya corría y decía «Listo» sin servidor.
 vivo() {
   local p pat; [[ -f "$RUN/$1.pid" ]] || return 1; p="$(cat "$RUN/$1.pid")"; kill -0 "$p" 2>/dev/null || return 1
-  case "$1" in mariadb) pat=mariadbd;; frankenphp) pat=frankenphp;; residente) pat=residente.php;; *) pat=Control;; esac
+  case "$1" in mariadb) pat=mariadbd;; frankenphp) pat=frankenphp;; residente) pat='residente.php mqtt';; residente_mem) pat='residente.php mem';; *) pat=Control;; esac
   [[ -r "/proc/$p/cmdline" ]] || return 0
   tr '\0' ' ' < "/proc/$p/cmdline" | grep -q "$pat"
 }
@@ -361,7 +361,7 @@ cmd_pim_cliente() {
       local id="${1:-}" jwks="${2:-}" rol="${3:-}" org="${4:-}" scopes="${5:-}"
       [[ "$id" =~ ^[A-Za-z0-9._-]{3,64}$ ]] || fallo "client_id inválido (3-64 caracteres: letras, números, . _ -)"
       [[ "$id" == "consola-local" ]] && fallo "consola-local es el cliente interno de la Consola"
-      [[ "$rol" =~ ^(GM|EJ|SO|FT|CI)$ ]] || fallo "rol PIM: GM (gestor) | EJ (ejecutor) | SO (solicitante) | FT (telemetría) | CI (consulta)"
+      [[ "$rol" =~ ^(GM|EJ|SO|FT|CI|RE)$ ]] || fallo "rol PIM: GM (gestor) | EJ (ejecutor) | SO (solicitante) | FT (telemetría) | CI (consulta) | RE (registro estatal)"
       [[ "$rol" == "EJ" && -z "$org" ]] && fallo "un Ejecutor necesita su organización (código de la empresa o área, p. ej. \"MANT\")"
       { [[ -f "$jwks" ]] && grep -q '"keys"' "$jwks"; } || fallo "falta el archivo JWKS con las claves públicas del sistema"
       grep -q '"d"' "$jwks" && fallo "el JWKS contiene una clave PRIVADA (campo d): pedí solo la pública"
@@ -705,6 +705,11 @@ cmd_start() {
     "$FP" php-cli "$RAIZ/tools/residente.php" mqtt >> "$DATA/logs/residente.log" 2>&1 &
     echo $! > "$RUN/residente.pid"; log "residente MQTT ✔"
   fi
+  # servidor MLLP de IHE PCD-15 (módulo mem; si está deshabilitado, espera sin abrir el puerto)
+  if [[ -d "$RAIZ/modulos/mem" ]] && ! vivo residente_mem; then
+    "$FP" php-cli "$RAIZ/tools/residente.php" mem >> "$DATA/logs/residente_mem.log" 2>&1 &
+    echo $! > "$RUN/residente_mem.pid"; log "residente MLLP (IHE PCD-15) ✔"
+  fi
   asegurar_nucleo
   probar_iproy
   # Con red, deja en el nodo librerías, APIs y archivos estáticos que usa iProy (en segundo plano)
@@ -718,6 +723,7 @@ cmd_stop() {
   cargar_env
   if vivo worker; then kill "$(cat "$RUN/worker.pid")" 2>/dev/null || true; rm -f "$RUN/worker.pid"; log "worker detenido"; fi
   if vivo residente; then kill "$(cat "$RUN/residente.pid")" 2>/dev/null || true; rm -f "$RUN/residente.pid"; log "residente MQTT detenido"; fi
+  if vivo residente_mem; then kill "$(cat "$RUN/residente_mem.pid")" 2>/dev/null || true; rm -f "$RUN/residente_mem.pid"; log "residente MLLP detenido"; fi
   if vivo frankenphp; then kill "$(cat "$RUN/frankenphp.pid")"; for _ in $(seq 1 20); do vivo frankenphp || break; sleep 0.5; done; rm -f "$RUN/frankenphp.pid"; log "FrankenPHP detenido"; fi
   cmd_respaldo --silencioso || true
   detener_mariadb
@@ -726,7 +732,7 @@ cmd_stop() {
 cmd_status() {
   cargar_env
   printf 'Nodo %s · «%s» · modo %s · v%s\n' "$IPROY_NODE" "$IPROY_NOMBRE" "$IPROY_MODO" "$IPROY_VERSION"
-  for p in mariadb frankenphp worker residente; do printf '  %-11s %s\n' "$p" "$(vivo $p && echo "● activo (pid $(cat "$RUN/$p.pid"))" || echo '○ detenido')"; done
+  for p in mariadb frankenphp worker residente residente_mem; do printf '  %-13s %s\n' "$p" "$(vivo $p && echo "● activo (pid $(cat "$RUN/$p.pid"))" || echo '○ detenido')"; done
   printf '  http        %s\n' "$(curl -s -m 5 "http://127.0.0.1:$IPROY_PUERTO/_iproy/estado.php?fmt=txt" || echo 'sin respuesta')"
 }
 

@@ -5,7 +5,7 @@
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
 #    iProy-Control.bat diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
 #    iProy-Control.bat fhir-cliente alta <id> <jwks.json> ["system/*.read"] | baja <id> | lista | demo | token <id> <clave.xml>
-#    iProy-Control.bat pim importar | pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI> [organización] [alcances] | pim cliente baja <id> | pim cliente lista
+#    iProy-Control.bat pim importar | pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI|RE> [organización] [alcances] | pim cliente baja <id> | pim cliente lista
 #    iProy-Control.bat pim token <id> <clave.xml> [alcances] | pim prueba | pim verificar | pim consola      (Consola PIM: http://localhost:8080/pim/)
 #    iProy-Control.bat red [estado] | red modo local|lan · precargar · nombre "PC Taller" · clave-auth [--borrar]   (panel: http://localhost:8080/_iproy/red.php)
 #    iProy-Control.bat nucleo estado|arranque|tick|tareas|diario|verificar · modulo activar|desactivar|config <id> · usuario alta <u> <rol> | lista
@@ -105,7 +105,7 @@ function Vivo($n) {
   $f = "$RUN\$n.pid"; if (-not (Test-Path $f)) { return $false }
   $id = 0; if (-not [int]::TryParse("$(Get-Content $f -TotalCount 1)".Trim(), [ref]$id)) { return $false }
   $p = Get-Process -Id $id -ErrorAction SilentlyContinue
-  return [bool]($p -and $p.ProcessName -eq @{ mariadb = 'mariadbd'; frankenphp = 'frankenphp'; worker = 'powershell'; residente = 'frankenphp' }[$n])
+  return [bool]($p -and $p.ProcessName -eq @{ mariadb = 'mariadbd'; frankenphp = 'frankenphp'; worker = 'powershell'; residente = 'frankenphp'; residente_mem = 'frankenphp' }[$n])
 }
 function Ping { try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 "http://127.0.0.1:$($E.IPROY_PUERTO)/_iproy/ping.php").StatusCode -eq 200 } catch { $false } }
 
@@ -183,7 +183,7 @@ function CmdPimCliente([string]$acc, [string]$id, [string]$jwksF, [string]$rol, 
     'alta' {
       if ($id -notmatch '^[A-Za-z0-9._-]{3,64}$') { Fallo 'client_id inválido (3-64 caracteres: letras, números, . _ -)' }
       if ($id -eq 'consola-local') { Fallo 'consola-local es el cliente interno de la Consola' }
-      if ($rol -notmatch '^(GM|EJ|SO|FT|CI)$') { Fallo 'rol PIM: GM (gestor) | EJ (ejecutor) | SO (solicitante) | FT (telemetría) | CI (consulta)' }
+      if ($rol -notmatch '^(GM|EJ|SO|FT|CI|RE)$') { Fallo 'rol PIM: GM (gestor) | EJ (ejecutor) | SO (solicitante) | FT (telemetría) | CI (consulta) | RE (registro estatal)' }
       if ($rol -eq 'EJ' -and -not $org) { Fallo 'un Ejecutor necesita su organización (código de la empresa o área, p. ej. "MANT")' }
       if (-not (Test-Path $jwksF) -or ([IO.File]::ReadAllText($jwksF) -notmatch '"keys"')) { Fallo 'falta el archivo JWKS con las claves públicas del sistema' }
       $jwks = [IO.File]::ReadAllText($jwksF)
@@ -663,6 +663,10 @@ function CmdStart {
     $r = Start-Process -FilePath $FP -WorkingDirectory $FPDIR -ArgumentList 'php-cli', """$RAIZ\tools\residente.php""", 'mqtt' -WindowStyle Hidden -PassThru -RedirectStandardError "$DATA\logs\residente.log"
     Set-Content "$RUN\residente.pid" $r.Id; Log 'residente MQTT OK'
   }
+  if ((Test-Path "$RAIZ\modulos\mem") -and -not (Vivo 'residente_mem')) {   # servidor MLLP de IHE PCD-15 (módulo mem)
+    $r = Start-Process -FilePath $FP -WorkingDirectory $FPDIR -ArgumentList 'php-cli', """$RAIZ\tools\residente.php""", 'mem' -WindowStyle Hidden -PassThru -RedirectStandardError "$DATA\logs\residente_mem.log"
+    Set-Content "$RUN\residente_mem.pid" $r.Id; Log 'residente MLLP (IHE PCD-15) OK'
+  }
   AsegurarNucleo
   ProbariProy
   # Con red, deja en el nodo librerías, APIs y archivos estáticos que usa iProy (en segundo plano, ventana oculta)
@@ -675,7 +679,7 @@ function CmdStart {
 
 function CmdStop {
   CargarEnv
-  foreach ($n in 'residente', 'worker', 'frankenphp') {
+  foreach ($n in 'residente', 'residente_mem', 'worker', 'frankenphp') {
     if (Vivo $n) { Stop-Process -Id (Get-Content "$RUN\$n.pid") -Force; Remove-Item "$RUN\$n.pid"; Log "$n detenido" }
   }
   try { CmdRespaldo -Silencioso } catch { }

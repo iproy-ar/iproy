@@ -1,0 +1,64 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimEnsayo",
+  "id": "pim-ensayo",
+  "title": "PIM — Ensayos reglamentarios y verificaciones técnicas",
+  "description": "Contenido inicial del catálogo de ensayos (PIM-PROP-001, Tabla 8-2). Cada código cita la norma que lo exige.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-ensayo",
+  "concept": [
+    {
+      "code": "VT-PMA",
+      "display": "Verificación técnica de PMA",
+      "definition": "Seguridad eléctrica y desempeño (Ley 26.906; Dec. 517/2023, art. 9)."
+    },
+    {
+      "code": "IT-MON",
+      "display": "Monitor de aislamiento de red IT",
+      "definition": "Verificación del monitor y sus alarmas (AEA 90364-7-710:2024)."
+    },
+    {
+      "code": "GM-PRES",
+      "display": "Gases medicinales",
+      "definition": "Presión, pureza, alarmas y válvulas de zona (ISO 7396-1)."
+    },
+    {
+      "code": "SC-DP",
+      "display": "Salas controladas",
+      "definition": "Presión diferencial, renovaciones por hora y partículas (ISO 14644)."
+    },
+    {
+      "code": "ES-VAL",
+      "display": "Esterilización",
+      "definition": "Validación y recalificación de esterilizadores (ISO 17665)."
+    },
+    {
+      "code": "AD-CAL",
+      "display": "Agua para diálisis",
+      "definition": "Calidad del agua y del fluido para hemodiálisis (ISO 23500-1:2024)."
+    },
+    {
+      "code": "PC-RES",
+      "display": "Pisos conductivos",
+      "definition": "Resistencia de pisos conductivos o disipativos [norma a confirmar]."
+    },
+    {
+      "code": "GE-CARGA",
+      "display": "Grupo electrógeno",
+      "definition": "Prueba con carga y tiempo de transferencia (AEA 90364-7-710; NFPA 110)."
+    },
+    {
+      "code": "UPS-AUT",
+      "display": "UPS",
+      "definition": "Autonomía y transferencia de UPS de locales médicos."
+    },
+    {
+      "code": "IN-RED",
+      "display": "Incendio",
+      "definition": "Red de incendio y detección (normativa local)."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 10
+}

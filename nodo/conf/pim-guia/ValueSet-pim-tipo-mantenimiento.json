@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimTipoMantenimientoVS",
+  "id": "pim-tipo-mantenimiento",
+  "title": "PIM — Tipo de mantenimiento (VS)",
+  "description": "Tipos de mantenimiento.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-tipo-mantenimiento",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-tipo-mantenimiento"
+      }
+    ]
+  }
+}

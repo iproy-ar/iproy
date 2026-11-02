@@ -3,7 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
 /**
  * Procesos residentes del nodo (los lanza y detiene <Prod>-Control junto con el worker):
- *   frankenphp php-cli tools/residente.php mqtt
+ *   frankenphp php-cli tools/residente.php mqtt     conexión permanente con el broker MQTT
+ *   frankenphp php-cli tools/residente.php mem      servidor MLLP de IHE PCD-15 (módulo «mem», actor DMIC de MEM-DMC)
  * MQTT necesita una conexión permanente: el worker de 15 s solo escucha unos segundos por ciclo y, con brokers sin sesiones
  * persistentes, se perderían mensajes. El residente mantiene la sesión, publica cada mensaje en el bus al instante y deja
  * un latido; mientras el latido esté fresco, la tarea «mqtt:escuchar» del planificador no hace nada.
@@ -19,9 +20,31 @@ use function Modulos\Mqtt\{interpretar_tema, interpretar_carga};
 use function Nucleo\{publicar, filas, q, estado, cfg_modulo, modulo, incluir, nodo, olvidar_cache, tema_coincide};
 
 $que = $argv[1] ?? '';
-if ($que !== 'mqtt') { fwrite(STDERR, "uso: residente.php mqtt\n"); exit(2); }
+if (!in_array($que, ['mqtt', 'mem'], true)) { fwrite(STDERR, "uso: residente.php mqtt|mem\n"); exit(2); }
 $parar = false;
 if (function_exists('pcntl_async_signals')) { pcntl_async_signals(true); pcntl_signal(SIGTERM, function () use (&$parar) { $parar = true; }); pcntl_signal(SIGINT, function () use (&$parar) { $parar = true; }); }
+if ($que === 'mem') {                                    // MLLP: cada 60 s relee la configuración (puerto, IP permitidas, habilitado)
+    $espera = 2;
+    while (!$parar) {
+        try {
+            olvidar_cache();
+            if (!modulo('mem')) { estado('mem_residente', ['ts' => time(), 'pid' => getmypid(), 'estado' => 'módulo no cargado']); sleep(30); continue; }
+            incluir('mem');
+            $c = cfg_modulo('mem');
+            if (empty($c['habilitado'])) { estado('mem_residente', ['ts' => time(), 'pid' => getmypid(), 'estado' => 'deshabilitado']); sleep(20); continue; }
+            $total = 0;
+            Modulos\Mem\servir($c, 60, function (int $n) use ($c, &$total) {
+                estado('mem_residente', ['ts' => time(), 'pid' => getmypid(), 'estado' => 'escuchando', 'mllp' => "{$c['host']}:{$c['puerto']}", 'mensajes' => $total + $n]); },
+                function () use (&$parar) { return $parar; });
+            $espera = 2;
+        } catch (Throwable $e) {
+            estado('mem_residente', ['ts' => time(), 'pid' => getmypid(), 'estado' => 'error', 'error' => $e->getMessage()]);
+            sleep($espera); $espera = min(60, $espera * 2);
+        }
+    }
+    estado('mem_residente', ['ts' => 0, 'pid' => getmypid(), 'estado' => 'detenido']);
+    exit(0);
+}
 $espera = 2;
 while (!$parar) {
     try {

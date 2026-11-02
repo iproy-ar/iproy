@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-estado-declarado",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado",
+  "name": "EstadoDeclarado",
+  "title": "Estado declarado del activo",
+  "status": "draft",
+  "description": "Estado del activo según quien solicita. Sube o baja la prioridad calculada con el IRU.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "ServiceRequest",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Estado declarado del activo",
+        "definition": "Estado del activo según quien solicita. Sube o baja la prioridad calculada con el IRU."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-estado-declarado"
+        }
+      }
+    ]
+  }
+}

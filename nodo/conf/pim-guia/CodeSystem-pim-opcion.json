@@ -1,0 +1,44 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimOpcion",
+  "id": "pim-opcion",
+  "title": "PIM — Opciones de los perfiles de integración",
+  "description": "Opciones que un actor puede declarar además de lo obligatorio.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-opcion",
+  "concept": [
+    {
+      "code": "mqtt",
+      "display": "MQTT",
+      "definition": "PIM-TEL: mediciones por MQTT 3.1.1 además de REST."
+    },
+    {
+      "code": "colmena",
+      "display": "Colmena",
+      "definition": "PIM-FED y PIM-OT entre nodos por el protocolo colmena/1 (sobres firmados y sellados)."
+    },
+    {
+      "code": "mem-dmc",
+      "display": "MEM-DMC",
+      "definition": "PIM-EQM: recibe IHE PCD-15 (ORU^R44) por MLLP."
+    },
+    {
+      "code": "mem-ls",
+      "display": "MEM-LS",
+      "definition": "PIM-EQM: recibe IHE PCD-16 (ORU^R45) por MLLP."
+    },
+    {
+      "code": "mcsd-update",
+      "display": "Actualización mCSD",
+      "definition": "PIM-INV: responde IHE ITI-91 (_history con _since) para Organization y Location."
+    },
+    {
+      "code": "transicion",
+      "display": "Operación $transicion",
+      "definition": "PIM-OT: cambios de estado por operación, además de PUT."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 6
+}

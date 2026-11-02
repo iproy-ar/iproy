@@ -1,0 +1,86 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-riesgo",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-riesgo",
+  "name": "PimRiesgo",
+  "title": "PIM — Evaluación de riesgo",
+  "status": "draft",
+  "description": "Evaluación de riesgo explicable de un activo. En R4, subject solo admite Patient o Group: se usa pim-grupo-activo.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "RiskAssessment",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/RiskAssessment",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "RiskAssessment.extension",
+        "path": "RiskAssessment.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "ordered": false,
+          "rules": "open"
+        }
+      },
+      {
+        "id": "RiskAssessment.extension:iru",
+        "path": "RiskAssessment.extension",
+        "sliceName": "iru",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-iru"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "RiskAssessment.status",
+        "path": "RiskAssessment.status",
+        "mustSupport": true
+      },
+      {
+        "id": "RiskAssessment.method",
+        "path": "RiskAssessment.method",
+        "min": 1,
+        "mustSupport": true,
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-metodo-riesgo"
+        }
+      },
+      {
+        "id": "RiskAssessment.subject",
+        "path": "RiskAssessment.subject",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-grupo-activo"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "RiskAssessment.basis",
+        "path": "RiskAssessment.basis",
+        "mustSupport": true
+      },
+      {
+        "id": "RiskAssessment.prediction",
+        "path": "RiskAssessment.prediction",
+        "mustSupport": true
+      }
+    ]
+  }
+}

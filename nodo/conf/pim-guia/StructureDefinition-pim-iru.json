@@ -1,0 +1,210 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-iru",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-iru",
+  "name": "Iru",
+  "title": "Índice de Riesgo Unificado (IRU)",
+  "status": "draft",
+  "description": "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Device",
+      "type": "element"
+    },
+    {
+      "expression": "RiskAssessment",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Índice de Riesgo Unificado (IRU)",
+        "definition": "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "min": 6
+      },
+      {
+        "id": "Extension.extension:F",
+        "path": "Extension.extension",
+        "sliceName": "F",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:F.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:F.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "F"
+      },
+      {
+        "id": "Extension.extension:F.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "integer"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:R",
+        "path": "Extension.extension",
+        "sliceName": "R",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:R.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:R.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "R"
+      },
+      {
+        "id": "Extension.extension:R.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "integer"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:M",
+        "path": "Extension.extension",
+        "sliceName": "M",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:M.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:M.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "M"
+      },
+      {
+        "id": "Extension.extension:M.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "integer"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:A",
+        "path": "Extension.extension",
+        "sliceName": "A",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:A.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:A.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "A"
+      },
+      {
+        "id": "Extension.extension:A.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "integer"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:total",
+        "path": "Extension.extension",
+        "sliceName": "total",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:total.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:total.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "total"
+      },
+      {
+        "id": "Extension.extension:total.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "integer"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:banda",
+        "path": "Extension.extension",
+        "sliceName": "banda",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:banda.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:banda.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "banda"
+      },
+      {
+        "id": "Extension.extension:banda.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-banda-iru"
+        }
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-iru"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

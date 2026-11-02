@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-grupo-uso-medico",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-grupo-uso-medico",
+  "name": "GrupoUsoMedico",
+  "title": "Grupo de uso médico del local",
+  "status": "draft",
+  "description": "Grupo del local según AEA 90364-7-710:2024.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Location",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Grupo de uso médico del local",
+        "definition": "Grupo del local según AEA 90364-7-710:2024."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-grupo-uso-medico"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-grupo-local"
+        }
+      }
+    ]
+  }
+}

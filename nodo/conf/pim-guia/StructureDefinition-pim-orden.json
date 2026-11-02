@@ -1,0 +1,196 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-orden",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden",
+  "name": "PimOrden",
+  "title": "PIM — Orden de trabajo",
+  "status": "draft",
+  "description": "Orden de trabajo. Su ciclo de vida es la definición de flujo de trabajo PIM-OT (capa 3 del modelo IHE XDW, sobre FHIR Task): businessStatus lleva el estado PIM y status el estado FHIR equivalente.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Task",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Task",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Task",
+        "path": "Task",
+        "constraint": [
+          {
+            "key": "pim-orden-objeto",
+            "severity": "error",
+            "human": "La orden debe referirse a un activo (focus) o a un local (location).",
+            "expression": "focus.exists() or location.exists()",
+            "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          },
+          {
+            "key": "pim-orden-tipo",
+            "severity": "warning",
+            "human": "Una orden finalizada debe informar el tipo de mantenimiento (EN 13306).",
+            "expression": "status != 'completed' or extension('https://iproy.com.ar/fhir/StructureDefinition/pim-tipo-mantenimiento').exists()",
+            "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          },
+          {
+            "key": "pim-sin-paciente",
+            "severity": "error",
+            "human": "Ningún recurso PIM se refiere a un paciente.",
+            "expression": "descendants().ofType(Reference).where(reference.startsWith('Patient/')).empty()",
+            "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          }
+        ]
+      },
+      {
+        "id": "Task.extension",
+        "path": "Task.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "ordered": false,
+          "rules": "open"
+        }
+      },
+      {
+        "id": "Task.extension:tipoMantenimiento",
+        "path": "Task.extension",
+        "sliceName": "tipoMantenimiento",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-tipo-mantenimiento"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Task.extension:modoFalla",
+        "path": "Task.extension",
+        "sliceName": "modoFalla",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-modo-falla"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Task.identifier",
+        "path": "Task.identifier",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Task.basedOn",
+        "path": "Task.basedOn",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-solicitud"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Task.status",
+        "path": "Task.status",
+        "mustSupport": true
+      },
+      {
+        "id": "Task.businessStatus",
+        "path": "Task.businessStatus",
+        "min": 1,
+        "mustSupport": true,
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-estado-orden"
+        }
+      },
+      {
+        "id": "Task.intent",
+        "path": "Task.intent",
+        "patternCode": "order"
+      },
+      {
+        "id": "Task.priority",
+        "path": "Task.priority",
+        "mustSupport": true
+      },
+      {
+        "id": "Task.focus",
+        "path": "Task.focus",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-pma",
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-sistema",
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-activo"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Task.for",
+        "path": "Task.for",
+        "max": "0"
+      },
+      {
+        "id": "Task.executionPeriod",
+        "path": "Task.executionPeriod",
+        "mustSupport": true
+      },
+      {
+        "id": "Task.authoredOn",
+        "path": "Task.authoredOn",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Task.lastModified",
+        "path": "Task.lastModified",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Task.owner",
+        "path": "Task.owner",
+        "mustSupport": true
+      },
+      {
+        "id": "Task.location",
+        "path": "Task.location",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-local"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Task.reasonReference",
+        "path": "Task.reasonReference",
+        "mustSupport": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "fragment",
+  "name": "PimModoFalla",
+  "id": "pim-modo-falla",
+  "title": "PIM — Modo de falla",
+  "description": "Modos de falla basados en ISO 14224:2016, Anexo B. Contenido parcial: cada código se confirma con el texto oficial antes de publicar.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-modo-falla",
+  "concept": [
+    {
+      "code": "FTS",
+      "display": "No arranca cuando se lo requiere",
+      "definition": "Ejemplo inicial [a confirmar con ISO 14224]."
+    },
+    {
+      "code": "ELP",
+      "display": "Fuga externa de fluido de proceso",
+      "definition": "Ejemplo inicial [a confirmar con ISO 14224]."
+    },
+    {
+      "code": "VIB",
+      "display": "Vibración alta",
+      "definition": "Ejemplo inicial [a confirmar con ISO 14224]."
+    },
+    {
+      "code": "OHE",
+      "display": "Sobrecalentamiento",
+      "definition": "Ejemplo inicial [a confirmar con ISO 14224]."
+    }
+  ],
+  "caseSensitive": true
+}

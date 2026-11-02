@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimCategoriaAlcanceVS",
+  "id": "pim-categoria-alcance",
+  "title": "PIM — Categoría de alcance (VS)",
+  "description": "Todas las categorías de alcance.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-categoria-alcance",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-categoria-alcance"
+      }
+    ]
+  }
+}

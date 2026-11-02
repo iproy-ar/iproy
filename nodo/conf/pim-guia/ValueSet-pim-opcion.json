@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimOpcionVS",
+  "id": "pim-opcion",
+  "title": "PIM — Opciones (VS)",
+  "description": "Opciones de los perfiles de integración.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-opcion",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-opcion"
+      }
+    ]
+  }
+}

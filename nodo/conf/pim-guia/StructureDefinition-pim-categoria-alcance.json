@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-categoria-alcance",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-alcance",
+  "name": "CategoriaAlcance",
+  "title": "Categoría de alcance PIM",
+  "status": "draft",
+  "description": "Categoría A a D del activo (sección 3.3): A producto médico activo; B instalación específica de salud; C instalación general que sostiene servicios críticos; D instalación general.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Device",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Categoría de alcance PIM",
+        "definition": "Categoría A a D del activo (sección 3.3): A producto médico activo; B instalación específica de salud; C instalación general que sostiene servicios críticos; D instalación general."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-alcance"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-categoria-alcance"
+        }
+      }
+    ]
+  }
+}

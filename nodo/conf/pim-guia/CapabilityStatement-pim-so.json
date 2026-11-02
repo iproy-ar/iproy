@@ -1,0 +1,73 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "pim-so",
+  "url": "https://iproy.com.ar/fhir/CapabilityStatement/pim-so",
+  "title": "Actor PIM — Solicitante",
+  "description": "Cliente que registra solicitudes (PIM-3) y consulta su estado (PIM-4).",
+  "name": "PimSolicitante",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-11-02",
+  "publisher": "Ovidio Francisco Arias (autor)",
+  "kind": "requirements",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "json"
+  ],
+  "implementationGuide": [
+    "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim"
+  ],
+  "rest": [
+    {
+      "mode": "client",
+      "resource": [
+        {
+          "type": "ServiceRequest",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-solicitud"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Task",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-orden"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

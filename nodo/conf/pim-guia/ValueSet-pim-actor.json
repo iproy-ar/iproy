@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimActorVS",
+  "id": "pim-actor",
+  "title": "PIM — Actores (VS)",
+  "description": "Actores del marco técnico.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-actor",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-actor"
+      }
+    ]
+  }
+}

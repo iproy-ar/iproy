@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-tipo-mantenimiento",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-tipo-mantenimiento",
+  "name": "TipoMantenimiento",
+  "title": "Tipo de mantenimiento",
+  "status": "draft",
+  "description": "Tipo de mantenimiento de la orden (EN 13306 y códigos PIM).",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Task",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Tipo de mantenimiento",
+        "definition": "Tipo de mantenimiento de la orden (EN 13306 y códigos PIM)."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-tipo-mantenimiento"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-tipo-mantenimiento"
+        }
+      }
+    ]
+  }
+}

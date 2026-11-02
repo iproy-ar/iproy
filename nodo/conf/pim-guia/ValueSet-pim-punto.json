@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimPuntoVS",
+  "id": "pim-punto",
+  "title": "PIM — Tipo de punto (VS)",
+  "description": "Tipos de punto de medición.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-punto",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-punto"
+      }
+    ]
+  }
+}

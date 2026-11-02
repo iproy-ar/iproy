@@ -61,7 +61,7 @@
         const sr = { resourceType: 'ServiceRequest', status: 'active', intent: 'order', subject: { reference: 'Device/' + a.id },
           code: { coding: [{ code: d.categoria }], text: d.categoria }, note: [{ text: d.descripcion }], requester: { display: Nucleo.sesion.usuario.nombre } };
         if (d.prioridad) sr.priority = d.prioridad;
-        if (d.estadoDeclarado) sr.extension = [{ url: 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', valueCode: d.estadoDeclarado }];
+        if (d.estadoDeclarado) sr.extension = [{ url: 'https://iproy.com.ar/fhir/StructureDefinition/pim-estado-declarado', valueCoding: { system: 'https://iproy.com.ar/fhir/CodeSystem/pim-valores', code: d.estadoDeclarado } }];
         const r = await pim('POST', 'ServiceRequest', sr);
         aviso(m, 'ok', `Solicitud ${r.cuerpo.identifier?.[0]?.value || r.cuerpo.id} registrada; se generó la orden ${r.cab.get('X-PIM-Task') || ''}.`);
       })}</div>`;

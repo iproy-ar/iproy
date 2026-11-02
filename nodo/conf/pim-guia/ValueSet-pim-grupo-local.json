@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimGrupoLocalVS",
+  "id": "pim-grupo-local",
+  "title": "PIM — Grupo de uso médico (VS)",
+  "description": "Grupos 0, 1, 2a y 2b.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-grupo-local",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-grupo-local"
+      }
+    ]
+  }
+}

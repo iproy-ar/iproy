@@ -1,0 +1,133 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-ambiente-controlado",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-ambiente-controlado",
+  "name": "AmbienteControlado",
+  "title": "Ambiente controlado",
+  "status": "draft",
+  "description": "Condiciones de diseño de un local con ambiente controlado (ISO 14644).",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Location",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Ambiente controlado",
+        "definition": "Condiciones de diseño de un local con ambiente controlado (ISO 14644)."
+      },
+      {
+        "id": "Extension.extension:presionRelativa",
+        "path": "Extension.extension",
+        "sliceName": "presionRelativa",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:presionRelativa.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:presionRelativa.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "presionRelativa"
+      },
+      {
+        "id": "Extension.extension:presionRelativa.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-presion-relativa"
+        }
+      },
+      {
+        "id": "Extension.extension:renovacionesHora",
+        "path": "Extension.extension",
+        "sliceName": "renovacionesHora",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:renovacionesHora.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:renovacionesHora.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "renovacionesHora"
+      },
+      {
+        "id": "Extension.extension:renovacionesHora.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Quantity"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:renovacionesHora.value[x].system",
+        "path": "Extension.extension.value[x].system",
+        "fixedUri": "http://unitsofmeasure.org"
+      },
+      {
+        "id": "Extension.extension:renovacionesHora.value[x].code",
+        "path": "Extension.extension.value[x].code",
+        "fixedCode": "/h"
+      },
+      {
+        "id": "Extension.extension:claseISO",
+        "path": "Extension.extension",
+        "sliceName": "claseISO",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:claseISO.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:claseISO.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "claseISO"
+      },
+      {
+        "id": "Extension.extension:claseISO.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-ambiente-controlado"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

@@ -186,7 +186,12 @@ function exigir(string $tipo, string $op): array {
     $cli = cliente((string) ($pl['sub'] ?? ''));
     if (!$cli) responder(401, oo('login', 'Cliente dado de baja'), MIME, ['WWW-Authenticate' => 'Bearer error="invalid_token"']);
     foreach (explode(' ', (string) ($pl['scope'] ?? '')) as $sc) {
-        if (alcance_cubre($sc, "system/$tipo.$op")) { $cli['id'] = (string) $pl['sub']; $cli['rol'] = strtoupper((string) ($cli['rol'] ?? 'GM')); return $cli; }
+        if (alcance_cubre($sc, "system/$tipo.$op")) {
+            $cli['id'] = (string) $pl['sub']; $cli['rol'] = strtoupper((string) ($cli['rol'] ?? 'GM'));
+            if ($cli['rol'] === 'RE' && ($tipo !== 'Device' || !in_array($op, ['r', 's'], true)))      // Registro Estatal: solo PMA (PIM-REG)
+                responder(403, oo('forbidden', 'El rol RE (registro estatal) solo lee Device y usa Device/$refes'));
+            return $cli;
+        }
     }
     responder(403, oo('forbidden', "El token no incluye el alcance system/$tipo.$op"));
 }

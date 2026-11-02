@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimClaseRiesgoPM",
+  "id": "pim-clase-riesgo-pm",
+  "title": "PIM — Clase de riesgo del producto médico",
+  "description": "Clases de riesgo de los productos médicos según la Disp. ANMAT 64/2025 (Res. GMC 25/21).",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-clase-riesgo-pm",
+  "concept": [
+    {
+      "code": "I",
+      "display": "Clase I",
+      "definition": "Clase de riesgo I."
+    },
+    {
+      "code": "II",
+      "display": "Clase II",
+      "definition": "Clase de riesgo II."
+    },
+    {
+      "code": "III",
+      "display": "Clase III",
+      "definition": "Clase de riesgo III."
+    },
+    {
+      "code": "IV",
+      "display": "Clase IV",
+      "definition": "Clase de riesgo IV."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 4
+}

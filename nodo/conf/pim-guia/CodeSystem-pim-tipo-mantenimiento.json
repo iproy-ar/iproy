@@ -1,0 +1,56 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimTipoMantenimiento",
+  "id": "pim-tipo-mantenimiento",
+  "title": "PIM — Tipo de mantenimiento",
+  "description": "Tipos de mantenimiento basados en EN 13306, más códigos propios del PIM.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-tipo-mantenimiento",
+  "concept": [
+    {
+      "code": "correctivo-inmediato",
+      "display": "Correctivo inmediato",
+      "definition": "Corrección sin demora después de detectar la falla."
+    },
+    {
+      "code": "correctivo-diferido",
+      "display": "Correctivo diferido",
+      "definition": "Corrección postergada según reglas de prioridad."
+    },
+    {
+      "code": "preventivo-sistematico",
+      "display": "Preventivo sistemático",
+      "definition": "Preventivo según intervalos de tiempo o de uso."
+    },
+    {
+      "code": "preventivo-condicional",
+      "display": "Preventivo condicional",
+      "definition": "Preventivo basado en la condición del activo.",
+      "concept": [
+        {
+          "code": "predictivo",
+          "display": "Predictivo",
+          "definition": "Preventivo condicional basado en la proyección de la condición."
+        }
+      ]
+    },
+    {
+      "code": "mejora",
+      "display": "Mejora",
+      "definition": "Acción para mejorar la confiabilidad o la seguridad sin cambiar la función."
+    },
+    {
+      "code": "ensayo-reglamentario",
+      "display": "Ensayo reglamentario",
+      "definition": "Inspección o prueba exigida por una norma (código PIM)."
+    },
+    {
+      "code": "verificacion-tecnica-pma",
+      "display": "Verificación técnica de PMA",
+      "definition": "Verificación de aptitud técnica de un PMA (Ley 26.906; Dec. 517/2023, art. 9) (código PIM)."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 8
+}

@@ -1,0 +1,69 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimEstadoOrden",
+  "id": "pim-estado-orden",
+  "title": "PIM — Estado de negocio de la orden",
+  "description": "Estados de la máquina de estados de la orden de trabajo (PIM-PROP-001, Tabla 9-3).",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-estado-orden",
+  "concept": [
+    {
+      "code": "solicitada",
+      "display": "Solicitada",
+      "definition": "Alta desde una solicitud o un plan."
+    },
+    {
+      "code": "en-revision",
+      "display": "En revisión",
+      "definition": "Se verifica la prioridad."
+    },
+    {
+      "code": "asignada",
+      "display": "Asignada",
+      "definition": "Tiene empresa o área y responsable."
+    },
+    {
+      "code": "aceptada",
+      "display": "Aceptada",
+      "definition": "El ejecutor la tomó y comprometió un plazo."
+    },
+    {
+      "code": "lista",
+      "display": "Lista",
+      "definition": "Recursos y acceso disponibles."
+    },
+    {
+      "code": "en-ejecucion",
+      "display": "En ejecución",
+      "definition": "Trabajo en curso."
+    },
+    {
+      "code": "en-espera",
+      "display": "En espera",
+      "definition": "Detenida con motivo."
+    },
+    {
+      "code": "finalizada",
+      "display": "Finalizada",
+      "definition": "Trabajo terminado con evidencia."
+    },
+    {
+      "code": "conformada",
+      "display": "Conformada",
+      "definition": "Conformidad del servicio usuario."
+    },
+    {
+      "code": "rechazada",
+      "display": "Rechazada",
+      "definition": "No se ejecutará, con motivo."
+    },
+    {
+      "code": "anulada",
+      "display": "Anulada",
+      "definition": "Cancelada, con motivo. Sin borrado físico."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 11
+}

@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-pertenencia",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-pertenencia",
+  "name": "Pertenencia",
+  "title": "Pertenencia del PMA",
+  "status": "draft",
+  "description": "Pertenencia del PMA (dato mínimo del REFES, Res. SGS 532/2026).",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Device",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Pertenencia del PMA",
+        "definition": "Pertenencia del PMA (dato mínimo del REFES, Res. SGS 532/2026)."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-pertenencia"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "extensible",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-pertenencia"
+        }
+      }
+    ]
+  }
+}

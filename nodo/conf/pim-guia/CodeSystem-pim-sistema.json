@@ -1,0 +1,122 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimSistemaCS",
+  "id": "pim-sistema",
+  "title": "PIM — Clase de sistema de instalación",
+  "description": "Clases de sistemas de instalación (PIM-PROP-001, Anexo B).",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-sistema",
+  "concept": [
+    {
+      "code": "GAS-O2",
+      "display": "Oxígeno medicinal"
+    },
+    {
+      "code": "GAS-AIRE",
+      "display": "Aire medicinal"
+    },
+    {
+      "code": "GAS-VAC",
+      "display": "Vacío medicinal"
+    },
+    {
+      "code": "GAS-N2O",
+      "display": "Óxido nitroso"
+    },
+    {
+      "code": "GAS-CO2",
+      "display": "Dióxido de carbono"
+    },
+    {
+      "code": "GAS-AGSS",
+      "display": "Evacuación de gases anestésicos"
+    },
+    {
+      "code": "ELE-ITM",
+      "display": "Red IT médica con monitor de aislamiento"
+    },
+    {
+      "code": "HVAC-QX",
+      "display": "Climatización de quirófanos y áreas críticas"
+    },
+    {
+      "code": "HVAC-AIS",
+      "display": "Aislamientos con presión positiva o negativa"
+    },
+    {
+      "code": "FIL-HEPA",
+      "display": "Filtración absoluta"
+    },
+    {
+      "code": "EST-VAP",
+      "display": "Esterilización y generación de vapor"
+    },
+    {
+      "code": "AGU-DIAL",
+      "display": "Tratamiento de agua para hemodiálisis"
+    },
+    {
+      "code": "AGU-OSM",
+      "display": "Circuitos de ósmosis"
+    },
+    {
+      "code": "PIS-COND",
+      "display": "Pisos conductivos o disipativos"
+    },
+    {
+      "code": "ELE-EMER",
+      "display": "Energía de emergencia"
+    },
+    {
+      "code": "ELE-UPS",
+      "display": "UPS de locales médicos o PMA"
+    },
+    {
+      "code": "TIC-CPD",
+      "display": "Centro de datos con sistemas clínicos"
+    },
+    {
+      "code": "INC-DET",
+      "display": "Detección de incendio"
+    },
+    {
+      "code": "INC-EXT",
+      "display": "Extinción de incendio"
+    },
+    {
+      "code": "FRIO-CONS",
+      "display": "Frío de conservación"
+    },
+    {
+      "code": "ELE-NORM",
+      "display": "Distribución eléctrica normal e iluminación"
+    },
+    {
+      "code": "HVAC-GRAL",
+      "display": "Climatización de confort"
+    },
+    {
+      "code": "AGU-SAN",
+      "display": "Agua sanitaria"
+    },
+    {
+      "code": "DES-CLO",
+      "display": "Desagües cloacales y pluviales"
+    },
+    {
+      "code": "EDI-GRAL",
+      "display": "Edificio y obra civil"
+    },
+    {
+      "code": "EDI-ABE",
+      "display": "Aberturas"
+    },
+    {
+      "code": "TRV-ASC",
+      "display": "Transporte vertical"
+    }
+  ],
+  "caseSensitive": true,
+  "count": 27
+}

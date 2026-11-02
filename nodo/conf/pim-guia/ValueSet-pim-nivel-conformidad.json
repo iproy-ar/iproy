@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimNivelConformidadVS",
+  "id": "pim-nivel-conformidad",
+  "title": "PIM — Nivel de conformidad (VS)",
+  "description": "Niveles de conformidad.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-nivel-conformidad",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-nivel-conformidad"
+      }
+    ]
+  }
+}

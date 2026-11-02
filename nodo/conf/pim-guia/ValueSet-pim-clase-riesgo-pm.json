@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimClaseRiesgoPMVS",
+  "id": "pim-clase-riesgo-pm",
+  "title": "PIM — Clase de riesgo del producto médico (VS)",
+  "description": "Clases I a IV.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-clase-riesgo-pm",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-clase-riesgo-pm"
+      }
+    ]
+  }
+}

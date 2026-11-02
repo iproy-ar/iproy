@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimSistemaVS",
+  "id": "pim-sistema",
+  "title": "PIM — Clase de sistema (VS)",
+  "description": "Clases de sistemas de instalación.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-sistema",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-sistema"
+      }
+    ]
+  }
+}

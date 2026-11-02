@@ -1,0 +1,29 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimTipoVinculo",
+  "id": "pim-tipo-vinculo",
+  "title": "PIM — Tipo de vínculo entre nodos",
+  "description": "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.2].",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-tipo-vinculo",
+  "concept": [
+    {
+      "code": "local",
+      "display": "Local",
+      "definition": "Nodos de una misma institución."
+    },
+    {
+      "code": "institucional",
+      "display": "Institucional",
+      "definition": "Instituciones distintas."
+    },
+    {
+      "code": "central",
+      "display": "Central",
+      "definition": "Un organismo central y los actores que admite."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 3
+}

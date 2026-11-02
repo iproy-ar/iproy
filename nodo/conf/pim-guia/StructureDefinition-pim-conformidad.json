@@ -1,0 +1,193 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-conformidad",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-conformidad",
+  "name": "Conformidad",
+  "title": "Conformidad PIM declarada",
+  "status": "draft",
+  "description": "Nivel de conformidad, perfiles de integración y opciones que declara un sistema en su CapabilityStatement. Es la versión computable de la Declaración de Integración PIM (Parte 6).",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "CapabilityStatement",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Conformidad PIM declarada",
+        "definition": "Nivel de conformidad, perfiles de integración y opciones que declara un sistema en su CapabilityStatement. Es la versión computable de la Declaración de Integración PIM (Parte 6)."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "min": 3
+      },
+      {
+        "id": "Extension.extension:nivel",
+        "path": "Extension.extension",
+        "sliceName": "nivel",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:nivel.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:nivel.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "nivel"
+      },
+      {
+        "id": "Extension.extension:nivel.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-nivel-conformidad"
+        }
+      },
+      {
+        "id": "Extension.extension:perfilIntegracion",
+        "path": "Extension.extension",
+        "sliceName": "perfilIntegracion",
+        "min": 1,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:perfilIntegracion.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:perfilIntegracion.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "perfilIntegracion"
+      },
+      {
+        "id": "Extension.extension:perfilIntegracion.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-perfil-integracion"
+        }
+      },
+      {
+        "id": "Extension.extension:actor",
+        "path": "Extension.extension",
+        "sliceName": "actor",
+        "min": 1,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:actor.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:actor.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "actor"
+      },
+      {
+        "id": "Extension.extension:actor.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-actor"
+        }
+      },
+      {
+        "id": "Extension.extension:opcion",
+        "path": "Extension.extension",
+        "sliceName": "opcion",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:opcion.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:opcion.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "opcion"
+      },
+      {
+        "id": "Extension.extension:opcion.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "extensible",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-opcion"
+        }
+      },
+      {
+        "id": "Extension.extension:perfilIHE",
+        "path": "Extension.extension",
+        "sliceName": "perfilIHE",
+        "short": "Perfil y actor IHE agrupado, p. ej. «ITI mCSD · Directory» o «DEV MEM-DMC · DMIC»",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:perfilIHE.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:perfilIHE.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "perfilIHE"
+      },
+      {
+        "id": "Extension.extension:perfilIHE.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-conformidad"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

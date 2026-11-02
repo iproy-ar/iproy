@@ -221,7 +221,7 @@
         var l = lista(b);
         $('.bL', cont).innerHTML = l.length ? '<table><tbody>' + l.map(function (r) {
           var n = tipo === 'Device' ? r.deviceName[0].name : r.name, iru = tipo === 'Device' ? ext(r, 'pim-iru') : null;
-          var banda = iru ? iru.extension.filter(function (x) { return x.url === 'banda'; })[0].valueCode : '';
+          var bb = iru ? iru.extension.filter(function (x) { return x.url === 'banda'; })[0] : null, banda = bb ? String(bb.valueCoding ? bb.valueCoding.code : bb.valueCode).replace('banda-', '') : '';
           return '<tr class="clic" data-r="' + tipo + '/' + esc(r.id) + '" data-n="' + esc(n) + '"><td>' + esc(n) + '</td><td class="mini">' + esc(r.identifier[0].value) + '</td><td class="mini">' + esc(r.location ? nombre(r.location) : '') + '</td><td>' + (banda ? '<span class="et ' + banda + '">IRU ' + banda + '</span>' : '') + '</td></tr>';
         }).join('') + '</tbody></table>' : '<div class="mini">Sin resultados.</div>';
       });
@@ -247,10 +247,10 @@
       var c = $('#sC').value.trim(), d = $('#sT').value.trim();
       if (!c || !d) return aviso($('#sM'), 'mal', 'Completá la categoría y la descripción.');
       var sr = { resourceType: 'ServiceRequest', status: 'active', intent: 'order', subject: { reference: sujeto },
-        code: { coding: [{ system: CS + 'pim-categoria', code: c.replace(/\s+/g, '-').toUpperCase().slice(0, 40) }], text: c }, note: [{ text: d }] };
+        code: { text: c }, note: [{ text: d }] };
       if ($('#sP').value) sr.priority = $('#sP').value;
       if ($('#sS').value.trim()) sr.requester = { display: $('#sS').value.trim() };
-      if ($('#sD').value) sr.extension = [{ url: SD + 'pim-estado-declarado', valueCode: $('#sD').value }];
+      if ($('#sD').value) sr.extension = [{ url: SD + 'pim-estado-declarado', valueCoding: { system: CS + 'pim-valores', code: $('#sD').value } }];
       $('#sOk').disabled = true;
       api('POST', 'ServiceRequest', sr).then(function (r) {
         $('#sOk').disabled = false;
@@ -276,9 +276,9 @@
         var l = lista(b);
         if (!l.length) return aviso($('#iL'), 'info', 'Sin resultados.');
         if (sub === 'Device') $('#iL').innerHTML = '<div class="mini">' + b.total + ' en total</div><table><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Local</th><th>NFPA</th><th>IRU</th><th></th></tr></thead><tbody>' + l.map(function (d) {
-          var i = ext(d, 'pim-iru'), c = ext(d, 'pim-categoria-riesgo'), v = function (k) { return i ? (i.extension.filter(function (x) { return x.url === k; })[0] || {}) : {}; };
+          var i = ext(d, 'pim-iru'), c = ext(d, 'pim-categoria-riesgo'), v = function (k) { return i ? (i.extension.filter(function (x) { return x.url === k; })[0] || {}) : {}; }, bandaDe = function () { var b = v('banda'); return String(b.valueCoding ? b.valueCoding.code : (b.valueCode || '')).replace('banda-', ''); };
           return '<tr><td>' + esc(d.identifier[0].value) + '</td><td>' + esc(d.deviceName[0].name) + '</td><td class="mini">' + esc(d.type ? (d.type.text || d.type.coding[0].display || d.type.coding[0].code) : '') + '</td><td>' + esc(nombre(d.location)) + '</td>'
-            + '<td>' + esc(c ? c.valueCoding.code : '') + '</td><td>' + (i ? '<span class="et ' + v('banda').valueCode + '">' + v('banda').valueCode + ' · ' + v('total').valueInteger + '</span>' : '') + '</td><td>' + (legado(d) ? '<span class="et leg">iProy</span>' : '') + '</td></tr>';
+            + '<td>' + esc(c ? c.valueCoding.code : '') + '</td><td>' + (i ? '<span class="et ' + bandaDe() + '">' + bandaDe() + ' · ' + v('total').valueInteger + '</span>' : '') + '</td><td>' + (legado(d) ? '<span class="et leg">iProy</span>' : '') + '</td></tr>';
         }).join('') + '</tbody></table>';
         else if (sub === 'Location') $('#iL').innerHTML = '<div class="mini">' + b.total + ' en total</div><table><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Grupo</th><th>Estado</th><th></th></tr></thead><tbody>' + l.map(function (x) {
           var g = ext(x, 'pim-grupo-uso-medico');
@@ -299,7 +299,7 @@
     if (tipo === 'Organization') h += '<div><label>Tipo</label><select id="aT"><option value="bus">Empresa contratista</option><option value="dept">Área interna</option></select></div>';
     if (tipo === 'Location') h += '<div><label>Tipo físico</label><select id="aT"><option value="area">Área</option><option value="bu">Edificio</option><option value="lvl">Nivel</option><option value="ro">Local / sala</option></select></div>'
       + '<div><label>Grupo de uso médico</label><select id="aG"><option value="">—</option><option>0</option><option>1</option><option>2a</option><option>2b</option></select></div>';
-    if (tipo === 'Device') h += '<div><label>Clase</label><select id="aK"><option value="pim-sistema">Sistema de instalación</option><option value="pim-activo">Activo / componente</option><option value="pim-equipo-medico">Equipo médico</option></select></div>'
+    if (tipo === 'Device') h += '<div><label>Clase</label><select id="aK"><option value="pim-sistema">Sistema de instalación</option><option value="pim-activo">Activo / componente</option><option value="pim-pma">Producto médico activo (PMA)</option></select></div>'
       + '<div><label>Sistema (Anexo B) o tipo</label><input id="aT" list="sis2" placeholder="p. ej. GAS-O2"><datalist id="sis2"></datalist></div>'
       + '<div><label>Local</label><select id="aL"><option value="">—</option></select></div>'
       + '<div><label>Categoría NFPA 99</label><select id="aR"><option value="">—</option><option value="1">1 · lesión grave</option><option value="2">2 · lesión menor</option><option value="3">3 · molestia</option><option value="4">4 · sin impacto</option></select></div>'
@@ -323,7 +323,7 @@
       if (tipo === 'Device') {
         var e = [], iru = [];
         r = { resourceType: 'Device', meta: { profile: [SD + $('#aK').value] }, identifier: [{ system: NS + '/sid/activo', value: c }], deviceName: [{ name: n, type: 'user-friendly-name' }], status: 'active' };
-        if ($('#aT').value.trim()) r.type = { coding: [{ system: CS + ($('#aK').value === 'pim-equipo-medico' ? 'clase-equipo' : 'pim-sistema'), code: $('#aT').value.trim() }] };
+        if ($('#aT').value.trim()) r.type = $('#aK').value === 'pim-pma' ? { coding: [{ code: $('#aT').value.trim() }], text: $('#aT').value.trim() } : { coding: [{ system: CS + 'pim-sistema', code: $('#aT').value.trim() }] };
         if ($('#aL').value) r.location = { reference: 'Location/' + $('#aL').value };
         if ($('#aR').value) e.push({ url: SD + 'pim-categoria-riesgo', valueCoding: { code: $('#aR').value } });
         if ($('#aRe').value) e.push({ url: SD + 'pim-redundancia', valueCode: $('#aRe').value });

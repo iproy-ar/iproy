@@ -1,12 +1,14 @@
 <?php
 /**
- * iProy · Servidor PIM v1.0 (Protocolo de Interoperabilidad de Mantenimiento v0.9 sobre HL7 FHIR R4) · 30-10-2026
+ * iProy · Servidor PIM v1.1 (Protocolo de Interoperabilidad de Mantenimiento 0.9.2 sobre HL7 FHIR R4, alineado con IHE) · 02-11-2026
  *
  * Sistema PARALELO: base propia «iproy_pim», clientes y claves propios. No toca iProy ni la API /fhir v0.3.
  *
  *   GET    /pim/r4/metadata                              CapabilityStatement (público)
  *   GET    /pim/r4/.well-known/smart-configuration       descubrimiento OAuth2 (público)
- *   GET    /pim/r4/CodeSystem/{id}                       catálogos PIM (público)
+ *   GET    /pim/r4/{CodeSystem|ValueSet|StructureDefinition|CapabilityStatement|OperationDefinition}[/{id}]   guía PIM 0.9.2 (público)
+ *   GET    /pim/r4/Device/$refes · Device/{id}/$refes     datos mínimos del REFES (PIM-9; roles GM, RE, CI)
+ *   GET    /pim/declaracion                              Declaración de Integración PIM (JSON, público)
  *   POST   /pim/auth/token                               SMART Backend Services → access_token (5 min)
  *   GET    /pim/r4/{Tipo}?…  ·  POST /pim/r4/{Tipo}/_search   búsqueda
  *   GET    /pim/r4/{Tipo}/{id}  ·  …/_history/{v}         lectura y lectura de versión
@@ -33,6 +35,7 @@ try {
 
     if ($ruta === '/pim' || $ruta === '/pim/consola') { header('Location: /pim/consola/', true, 302); exit; }
     if ($ruta === '/pim/auth/token') emitir_token();
+    if ($ruta === '/pim/declaracion') responder(200, declaracion(), 'application/json; charset=utf-8');
     if (!str_starts_with($ruta . '/', '/pim/r4/')) responder(404, oo('not-found', 'La API PIM está en /pim/r4 (ver /pim/r4/metadata)'));
     $p = array_values(array_filter(explode('/', substr($ruta, strlen('/pim/r4'))), 'strlen'));
     $n = count($p);
@@ -43,10 +46,13 @@ try {
     }
     if ($p === ['metadata']) { $metodo === 'GET' || responder(405, oo('not-supported', 'Solo GET')); responder(200, capability()); }
     if ($p === ['.well-known', 'smart-configuration']) responder(200, smart_config(), 'application/json; charset=utf-8');
-    if ($p[0] === 'CodeSystem') {
-        if ($n === 1) responder(200, codesystems_bundle());
-        responder(200, codesystem($p[1]) ?? throw new Fallo(404, 'not-found', "CodeSystem/{$p[1]} no existe"));
+    if (in_array($p[0], ARTEFACTOS, true)) {                                // artefactos de la guía: públicos y de solo lectura
+        $metodo === 'GET' || responder(405, oo('not-supported', 'Los artefactos de la guía son de solo lectura'));
+        if ($n === 1) responder(200, artefactos_bundle($p[0]));
+        responder(200, artefacto($p[0], $p[1]) ?? throw new Fallo(404, 'not-found', "{$p[0]}/{$p[1]} no existe"));
     }
+    if ($p[0] === 'Device' && ($p[1] ?? '') === '$refes' && $n === 2 && $metodo === 'GET') op_refes(null);
+    if ($p[0] === 'Device' && ($p[2] ?? '') === '$refes' && $n === 3 && $metodo === 'GET') op_refes($p[1]);
 
     $tipo = $p[0];
     if (!isset(RECURSOS[$tipo])) responder(404, oo('not-supported', "Recurso no soportado: $tipo. Soportados: " . implode(', ', array_keys(RECURSOS))));

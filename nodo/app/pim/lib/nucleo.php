@@ -1,6 +1,6 @@
 <?php
 /**
- * iProy · Servidor PIM v1.0 · núcleo · 30-10-2026
+ * iProy · Servidor PIM v1.1 · núcleo · 02-11-2026 (PIM 0.9.2, alineado con IHE)
  * Configuración, conexión a la base propia iproy_pim, respuestas FHIR, OperationOutcome, fechas, ULID,
  * versiones con huella encadenada (Provenance/_history) y auditoría (AuditEvent).
  * Sistema paralelo: no lee ni escribe tablas de iProy (solo la importación lee las vistas iproy_fhir).
@@ -11,8 +11,18 @@ namespace IproyPim;
 
 use PDO;
 
-const VERSION_API = '1.0.0';
-const VERSION_PIM = '0.9';
+const VERSION_API = '1.1.0';
+const VERSION_PIM = '0.9.2';
+const MDC = 'urn:iso:std:iso:11073:10101';                          // nomenclatura ISO/IEEE 11073-10101 (IHE MEM-DMC)
+const UCUM = 'http://unitsofmeasure.org';
+const MCSD_TIPOS = 'https://profiles.ihe.net/ITI/mCSD/CodeSystem/IHE.mCSD.Organization.Location.Types';
+/** Ids de extensiones y perfiles de versiones anteriores → id vigente (PIM 0.9.2, Anexo J7). Se aplican al recibir. */
+const ALIAS_SD = [
+    'grupoUsoMedico' => 'pim-grupo-uso-medico', 'ambienteControlado' => 'pim-ambiente-controlado', 'categoriaAlcance' => 'pim-categoria-alcance',
+    'claseRiesgoPM' => 'pim-clase-riesgo-pm', 'puestaEnMarcha' => 'pim-puesta-en-marcha', 'pertenencia' => 'pim-pertenencia',
+    'categoriaRiesgo' => 'pim-categoria-riesgo', 'redundancia' => 'pim-redundancia', 'tipoMantenimiento' => 'pim-tipo-mantenimiento',
+    'modoFalla' => 'pim-modo-falla', 'estadoDeclarado' => 'pim-estado-declarado', 'componentesIRU' => 'pim-iru', 'pim-equipo-medico' => 'pim-pma',
+];
 const FHIR_VERSION = '4.0.1';
 const MIME = 'application/fhir+json; charset=utf-8';
 
@@ -36,6 +46,9 @@ function cfg(): array {
     $c['organismo'] = array_replace($def['organismo'], is_array($c['organismo']) ? $c['organismo'] : []);
     $c['ns'] = rtrim((string) $c['ns'], '/');
     $c['ns_alias'] = array_values(array_map(fn($x) => rtrim((string) $x, '/'), (array) $c['ns_alias']));
+    if ($c['ns'] === 'https://iproy.com.ar/pim') {                  // nodos creados con la 1.0: el canónico es /fhir y /pim queda como alias
+        $c['ns'] = 'https://iproy.com.ar/fhir'; $c['ns_alias'] = array_values(array_unique(array_merge(['https://iproy.com.ar/pim'], $c['ns_alias'])));
+    }
     $p = raiz() . '/data/php/pim.php';
     $c['priv'] = is_file($p) ? (require $p) : [];
     return $c;
@@ -44,6 +57,8 @@ function cfg(): array {
 function sid(string $t): string { return cfg()['ns'] . '/sid/' . $t; }
 function cs(string $n): string { return cfg()['ns'] . '/CodeSystem/' . $n; }
 function sd(string $n): string { return cfg()['ns'] . '/StructureDefinition/' . $n; }
+/** Sistema de códigos local del nodo (categorías propias, clases de equipo): no es parte del estándar. */
+function cs_local(string $n): string { return 'urn:iproy:' . strtolower(nodo_id()) . ':' . $n; }
 function es_sistema(string $s, string $t): bool {
     foreach (array_merge([cfg()['ns']], cfg()['ns_alias']) as $ns) if ($s === $ns . '/sid/' . $t) return true;
     return false;

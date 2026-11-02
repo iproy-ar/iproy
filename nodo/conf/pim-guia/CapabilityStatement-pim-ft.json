@@ -1,0 +1,55 @@
+{
+  "resourceType": "CapabilityStatement",
+  "id": "pim-ft",
+  "url": "https://iproy.com.ar/fhir/CapabilityStatement/pim-ft",
+  "title": "Actor PIM — Fuente de telemetría",
+  "description": "Gateway, PLC o sensor que envía mediciones (PIM-6) por REST o, con la opción mqtt, por MQTT.",
+  "name": "PimFuenteTelemetria",
+  "status": "draft",
+  "experimental": false,
+  "date": "2026-11-02",
+  "publisher": "Ovidio Francisco Arias (autor)",
+  "kind": "requirements",
+  "fhirVersion": "4.0.1",
+  "format": [
+    "json"
+  ],
+  "implementationGuide": [
+    "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim"
+  ],
+  "rest": [
+    {
+      "mode": "client",
+      "resource": [
+        {
+          "type": "Observation",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-medicion"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHALL"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHALL"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "interaction": [
+        {
+          "code": "batch"
+        }
+      ]
+    }
+  ]
+}

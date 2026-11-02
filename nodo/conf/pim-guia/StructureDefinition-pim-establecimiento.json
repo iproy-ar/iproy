@@ -1,0 +1,57 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-establecimiento",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-establecimiento",
+  "name": "PimEstablecimiento",
+  "title": "PIM — Establecimiento (sitio físico)",
+  "status": "draft",
+  "description": "Sitio físico del establecimiento. Junto con pim-organismo forma el «Facility» de IHE mCSD. Es la raíz de la jerarquía de locales.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Location",
+  "baseDefinition": "https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.mCSD.FacilityLocation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Location.identifier",
+        "path": "Location.identifier",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.status",
+        "path": "Location.status",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.name",
+        "path": "Location.name",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.address",
+        "path": "Location.address",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.position",
+        "path": "Location.position",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.managingOrganization",
+        "path": "Location.managingOrganization",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo"
+            ]
+          }
+        ],
+        "mustSupport": true
+      }
+    ]
+  }
+}

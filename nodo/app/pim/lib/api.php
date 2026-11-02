@@ -1,7 +1,10 @@
 <?php
 /**
- * iProy · Servidor PIM v1.0 · operaciones REST (lectura, búsqueda, alta, modificación, transición, historial) · 30-10-2026
- * Perfiles de integración implementados (PIM v0.9, Tabla 9-1):
+ * iProy · Servidor PIM v1.1 · operaciones REST (lectura, búsqueda, alta, modificación, transición, historial) · 02-11-2026
+ * Perfiles de integración implementados (PIM 0.9.2, Tabla 9-4) y transacciones (Tabla 9-3):
+ *   PIM-INV  también ITI-90 (mCSD) para Organization y Location; ITI-91 con _history?_since
+ *   PIM-REG  operación Device/$refes y rol RE
+ *   PIM-EQM  lo traduce el módulo «mem» (PCD-15 → Device + DeviceMetric + Observation) usando esta API
  *   PIM-INV  Organization, Location, Device: leer, buscar; GM además da de alta y modifica (If-Match)
  *   PIM-SOL  POST ServiceRequest → crea la Task (orden) y la devuelve enlazada
  *   PIM-OT   Task: leer, buscar, PUT con If-Match y operación $transicion con la máquina de estados (Tabla 9-2)
@@ -20,6 +23,7 @@ const RECURSOS = [
     'ServiceRequest' => ['tabla' => 'pim_solicitud',    'fhir' => 'IproyPim\sr_fhir',   'alta' => ['GM', 'SO'], 'modif' => []],
     'Task'           => ['tabla' => 'pim_orden',        'fhir' => 'IproyPim\task_fhir', 'alta' => [],           'modif' => ['GM', 'EJ']],
     'Observation'    => ['tabla' => 'pim_observacion',  'fhir' => 'IproyPim\obs_fhir',  'alta' => ['GM', 'FT'], 'modif' => []],
+    'DeviceMetric'   => ['tabla' => 'pim_punto',        'fhir' => 'IproyPim\dm_fhir',   'alta' => [],           'modif' => []],
     'RiskAssessment' => ['tabla' => null, 'fhir' => null, 'alta' => [], 'modif' => []],
     'Group'          => ['tabla' => null, 'fhir' => null, 'alta' => [], 'modif' => []],
     'Provenance'     => ['tabla' => null, 'fhir' => null, 'alta' => [], 'modif' => []],
@@ -36,10 +40,11 @@ function cuerpo_json(): array {
  *  toda URL que empiece con un ns_alias (extensiones, perfiles, CodeSystems, sid) se lee como si fuera del ns propio. */
 function normalizar_ns(array $j): array {
     $propio = cfg()['ns']; $alias = array_values(array_filter(cfg()['ns_alias'], fn($a) => $a !== '' && $a !== $propio));
-    if (!$alias) return $j;
-    array_walk_recursive($j, function (&$v) use ($propio, $alias) {
+    $pref = $propio . '/StructureDefinition/';
+    array_walk_recursive($j, function (&$v) use ($propio, $alias, $pref) {
         if (!is_string($v)) return;
-        foreach ($alias as $a) if (str_starts_with($v, $a . '/')) { $v = $propio . substr($v, strlen($a)); return; }
+        foreach ($alias as $a) if (str_starts_with($v, $a . '/')) { $v = $propio . substr($v, strlen($a)); break; }
+        if (str_starts_with($v, $pref) && isset(ALIAS_SD[$n = substr($v, strlen($pref))])) $v = $pref . ALIAS_SD[$n];   // ids de la 0.9.1 y de la 1.0
     });
     return $j;
 }
@@ -86,6 +91,8 @@ function leer(string $tipo, string $id, ?string $vid = null): never {
         'RiskAssessment' => ($a = fila('pim_activo', preg_replace('/-iru$/', '', $id))) ? riesgo_fhir($a) : null,
         'Group' => ($a = fila('pim_activo', preg_replace('/-g$/', '', $id))) ? grupo_fhir($a) : null,
         'Provenance' => null,
+        'Location' => $id === estab_id() ? estab_fhir() : (($r = fila('pim_local', $id)) ? loc_fhir($r) : null),
+        'DeviceMetric' => (function () use ($id) { completar_ids_punto(); return ($r = fila('pim_punto', $id)) ? dm_fhir($r) : null; })(),
         default => ($r = fila(RECURSOS[$tipo]['tabla'], $id)) ? (RECURSOS[$tipo]['fhir'])($r) : null,
     };
     if (!$res) throw new Fallo(404, 'not-found', "$tipo/$id no existe");
@@ -101,18 +108,20 @@ function restringir_ej(array $cli, string $tipo, array $res): void {
 
 // ================================================================== búsqueda
 const PARAMS = [
-    'Organization'   => ['_id' => 'id', 'identifier' => 'codigo', 'name' => 'nombre', 'type' => 'tipo'],
-    'Location'       => ['_id' => 'id', 'identifier' => 'codigo', 'name' => 'nombre', 'status' => 'estado', 'partof' => 'parte_de'],
+    'Organization'   => ['_id' => 'id', 'identifier' => 'codigo', 'name' => 'nombre', 'type' => 'tipo', 'partof' => 'parte_de', 'active' => 'activo'],
+    'Location'       => ['_id' => 'id', 'identifier' => 'codigo', 'name' => 'nombre', 'status' => 'estado', 'partof' => 'parte_de',
+                         'organization' => 'organization', 'type' => 'loc_tipo'],
     'Device'         => ['_id' => 'id', 'identifier' => 'codigo', 'device-name' => 'nombre', 'location' => 'local_id', 'type' => 'tipo_codigo',
-                         'status' => 'estado', 'parent' => 'padre_id', 'manufacturer' => 'fabricante'],
+                         'status' => 'estado', 'parent' => 'padre_id', 'manufacturer' => 'fabricante', 'categoria-alcance' => 'alcance'],
     'ServiceRequest' => ['_id' => 'id', 'identifier' => 'numero', 'status' => 'estado', 'priority' => 'prioridad', 'subject' => 'subject', 'authored' => 'autoria'],
     'Task'           => ['_id' => 'id', 'identifier' => 'numero', 'status' => 'estado', 'business-status' => 'estado_negocio', 'owner' => 'responsable_id',
                          'priority' => 'prioridad', 'location' => 'local_id', 'focus' => 'activo_id', 'based-on' => 'solicitud_id',
                          'authored-on' => 'autoria', 'modified' => 'actualizado', '_lastUpdated' => 'actualizado', 'code' => 'categoria_codigo'],
     'Observation'    => ['_id' => 'id', 'device' => 'activo_id', 'code' => 'punto', 'date' => 'instante', 'interpretation' => 'interpretacion'],
+    'DeviceMetric'   => ['_id' => 'id'],
 ];
 const FECHAS = ['autoria', 'actualizado', 'instante'];
-const REFERENCIAS = ['parte_de' => ['Organization', 'Location'], 'local_id' => 'Location', 'padre_id' => 'Device', 'responsable_id' => 'Organization',
+const REFERENCIAS = ['parte_de' => ['Organization', 'Location'], 'organization' => 'Organization', 'local_id' => 'Location', 'padre_id' => 'Device', 'responsable_id' => 'Organization',
                      'activo_id' => 'Device', 'solicitud_id' => 'ServiceRequest'];
 
 function params(): array {
@@ -128,6 +137,8 @@ function buscar(string $tipo): never {
     $max = (int) cfg()['max_count']; $count = (int) cfg()['count_def']; $offset = 0; $soloTotal = false; $sinTotal = false; $sort = null; $usados = [];
     $w = []; $a = [];
     if ($tipo === 'RiskAssessment' || $tipo === 'Provenance' || $tipo === 'Group') { buscar_especial($tipo, $ps, $cli); }
+    if ($tipo === 'DeviceMetric') buscar_puntos($ps);
+    $estab = $tipo === 'Location' ? incluir_establecimiento($ps) : false;
     foreach ($ps as [$k, $v]) {
         [$nombre, $mod] = array_pad(explode(':', $k, 2), 2, null);
         switch ($nombre) {
@@ -150,17 +161,36 @@ function buscar(string $tipo): never {
             } elseif ($col === 'subject') {
                 $t = tipo_ref($uno); $id = ref_id($uno, ['Location', 'Device'], 'subject');
                 $c[] = $t === 'Device' ? 'activo_id = ?' : 'local_id = ?'; $a[] = $id;
+            } elseif ($tipo === 'Observation' && $nombre === 'device' && tipo_ref($uno) === 'DeviceMetric') {
+                completar_ids_punto(); $q0 = pdo()->prepare('SELECT activo_id, punto FROM pim_punto WHERE id = ?'); $q0->execute([ref_id($uno, 'DeviceMetric', 'device')]);
+                $pp = $q0->fetch(); $c[] = $pp ? '(activo_id = ? AND punto = ?)' : '1 = 0'; if ($pp) { $a[] = $pp['activo_id']; $a[] = $pp['punto']; }
+            } elseif ($col === 'organization') {                                // todos los locales son del organismo del nodo
+                $c[] = ref_id($uno, 'Organization', $nombre) === org_organismo_id() ? '1 = 1' : '1 = 0';
+            } elseif ($col === 'parte_de' && $tipo === 'Location' && ref_id($uno, 'Location', $nombre) === estab_id()) {
+                $c[] = 'parte_de IS NULL';                                          // hijos directos del establecimiento
             } elseif (isset(REFERENCIAS[$col])) {
                 $c[] = "$col = ?"; $a[] = ref_id($uno, REFERENCIAS[$col], $nombre);
+            } elseif ($col === 'loc_tipo') {                                      // type: facility → solo el establecimiento; texto → tipo físico
+                [, $val] = token($uno); $tf = array_search(mb_strtolower($val), array_map('mb_strtolower', TIPO_FISICO_ES), true);
+                $c[] = $tf !== false ? 'tipo_fisico = ?' : '1 = 0'; if ($tf !== false) $a[] = $tf;
+            } elseif ($col === 'alcance') {
+                $x = strtoupper($uno); $cods = array_keys(SISTEMA_ALCANCE, $x, true);
+                $c[] = '(categoria_alcance = ?' . ($x === 'A' ? " OR (categoria_alcance IS NULL AND clase = 'equipo-medico')" : '')
+                     . ($cods ? " OR (categoria_alcance IS NULL AND clase = 'sistema' AND tipo_codigo IN (" . implode(',', array_fill(0, count($cods), '?')) . '))' : '') . ')';
+                $a[] = $x; array_push($a, ...$cods);
+            } elseif ($col === 'activo') {
+                $c[] = 'activo = ?'; $a[] = $uno === 'false' ? 0 : 1;
             } elseif ($nombre === 'identifier') {
-                [, $val] = token($uno); $c[] = "$col = ?"; $a[] = $val;
-            } elseif (in_array($nombre, ['business-status', 'code', 'type', 'interpretation'], true)) {
+                [$sys, $val] = token($uno);
+                $colId = $tipo === 'Device' && $sys !== null ? (es_sistema($sys, 'eui64') ? 'eui64' : (es_sistema($sys, 'anmat-pm') ? 'anmat_pm' : $col)) : $col;
+                $c[] = "$colId = ?"; $a[] = $colId === 'eui64' ? strtoupper($val) : $val;
+            } elseif (in_array($nombre, ['business-status', 'code', 'type', 'interpretation'], true) && !in_array($tipo, ['Organization', 'Location'], true)) {
                 [, $val] = token($uno); $c[] = "$col = ?"; $a[] = $val;
             } elseif (in_array($nombre, ['name', 'device-name', 'manufacturer'], true)) {
                 if ($mod === 'exact') { $c[] = "$col = ?"; $a[] = $uno; }
                 else { $c[] = "$col LIKE ?"; $a[] = ($mod === 'contains' ? '%' : '') . addcslashes($uno, '%_') . '%'; }
             } elseif ($nombre === 'type' && $tipo === 'Organization') {
-                $c[] = 'tipo = ?'; $a[] = ['prov' => 'organismo', 'dept' => 'area', 'bus' => 'empresa'][$uno] ?? $uno;
+                [, $val] = token($uno); $c[] = 'tipo = ?'; $a[] = ['prov' => 'organismo', 'facility' => 'organismo', 'dept' => 'area', 'bus' => 'empresa'][$val] ?? $val;
             } else { $c[] = "$col = ?"; $a[] = $uno; }
         }
         if ($c) $w[] = '(' . implode(' OR ', $c) . ')';
@@ -179,6 +209,7 @@ function buscar(string $tipo): never {
         $q = pdo()->prepare("SELECT * FROM $tabla$where ORDER BY $orden LIMIT $count OFFSET $offset"); $q->execute($a);
         $lista = array_map(RECURSOS[$tipo]['fhir'], $q->fetchAll());
     }
+    if ($estab) { $total++; if (!$soloTotal && $offset === 0 && $count > 0) array_unshift($lista, estab_fhir()); }
     bundle_busqueda($tipo, $lista, $total, $usados, $count, $offset, $soloTotal, $sinTotal);
 }
 function bundle_busqueda(string $tipo, array $lista, int $total, array $usados, int $count, int $offset, bool $soloTotal, bool $sinTotal): never {
@@ -193,6 +224,80 @@ function bundle_busqueda(string $tipo, array $lista, int $total, array $usados, 
     $b['link'] = $links;
     if (!$soloTotal) $b['entry'] = array_map(fn($r) => ['fullUrl' => base() . '/' . $r['resourceType'] . '/' . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']], $lista);
     responder(200, $b);
+}
+/** ¿La búsqueda de Location alcanza al establecimiento (pim-establecimiento, mCSD FacilityLocation)? Sí si no filtra o si filtra por él. */
+function incluir_establecimiento(array $ps): bool {
+    $o = cfg()['organismo']; $ok = true;
+    foreach ($ps as [$k, $v]) {
+        [$n, $m] = array_pad(explode(':', $k, 2), 2, null);
+        $ok = $ok && match ($n) {
+            '_count', '_offset', '_summary', '_total', '_sort', '_format' => true,
+            '_id' => in_array(estab_id(), explode(',', $v), true),
+            'identifier' => in_array($o['codigo'], array_map(fn($x) => token($x)[1], explode(',', $v)), true),
+            'type' => in_array('facility', array_map(fn($x) => token($x)[1], explode(',', $v)), true),
+            'status' => in_array('active', explode(',', $v), true),
+            'organization' => ref_id($v, 'Organization', 'organization') === org_organismo_id(),
+            'name' => $m === 'exact' ? $v === $o['nombre'] : str_contains(normalizar($o['nombre']), normalizar($v)),
+            default => false };
+    }
+    return $ok;
+}
+/** DeviceMetric?source=Device/x · type=<código> · identifier=<activo>/<punto> · _id */
+function buscar_puntos(array $ps): never {
+    completar_ids_punto();
+    $w = []; $a = []; $count = (int) cfg()['count_def']; $offset = 0; $usados = [];
+    foreach ($ps as [$k, $v]) {
+        $n = explode(':', $k)[0];
+        match ($n) {
+            '_count' => $count = max(0, min((int) cfg()['max_count'], (int) $v)), '_offset' => $offset = max(0, (int) $v),
+            '_id' => [$w[] = 'id = ?', $a[] = $v],
+            'source' => [$w[] = 'activo_id = ?', $a[] = ref_id($v, 'Device', 'source')],
+            'type' => [$w[] = 'punto = ?', $a[] = token($v)[1]],
+            'identifier' => (function () use ($v, &$w, &$a) { [$cod, $pt] = array_pad(explode('/', token($v)[1], 2), 2, '');
+                $w[] = 'punto = ? AND activo_id IN (SELECT id FROM pim_activo WHERE codigo = ?)'; $a[] = $pt; $a[] = $cod; })(),
+            default => null };
+        if (!str_starts_with($n, '_') || $n === '_id') $usados[] = [$k, $v];
+    }
+    $where = $w ? ' WHERE ' . implode(' AND ', $w) : '';
+    $q = pdo()->prepare("SELECT COUNT(*) FROM pim_punto$where"); $q->execute($a); $total = (int) $q->fetchColumn();
+    $q = pdo()->prepare("SELECT * FROM pim_punto$where ORDER BY activo_id, punto LIMIT $count OFFSET $offset"); $q->execute($a);
+    bundle_busqueda('DeviceMetric', array_map('IproyPim\dm_fhir', $q->fetchAll()), $total, $usados, $count, $offset, false, false);
+}
+/** PIM-REG (PIM-9): Device/$refes — los cinco datos mínimos del REFES (Res. SGS 532/2026) de cada PMA y lo que falta. */
+function op_refes(?string $id): never {
+    $cli = exigir('Device', $id ? 'r' : 's');
+    exigir_rol($cli, ['GM', 'RE', 'CI'], 'consultar los datos del REFES');
+    $completos = $_GET['completos'] ?? null;
+    $w = ["clase = 'equipo-medico'"]; $a = [];
+    if ($id) { $w[] = 'id = ?'; $a[] = $id; }
+    $q = pdo()->prepare('SELECT * FROM pim_activo WHERE ' . implode(' AND ', $w) . ' ORDER BY codigo LIMIT 5000'); $q->execute($a);
+    $par = []; $n = 0; $nc = 0;
+    foreach ($q->fetchAll() as $r) {
+        $falta = [];
+        if (!$r['fabricante']) $falta[] = 'marca';
+        if (!$r['modelo']) $falta[] = 'modelo';
+        if (!$r['fecha_fabricacion'] && !$r['puesta_en_marcha']) $falta[] = 'fecha de fabricación o de puesta en marcha';
+        if (!$r['pertenencia']) $falta[] = 'pertenencia';
+        if (!$r['anmat_pm']) $falta[] = 'n.º de producto ANMAT';
+        $ok = !$falta; $n++; if ($ok) $nc++;
+        if ($completos === 'true' && !$ok || $completos === 'false' && $ok) continue;
+        $par[] = ['name' => 'pma', 'part' => array_values(quitar_nulos([
+            ['name' => 'device', 'valueReference' => dev_ref($r['id'], $r['nombre'])],
+            ['name' => 'codigo', 'valueString' => $r['codigo']],
+            $r['fabricante'] ? ['name' => 'marca', 'valueString' => $r['fabricante']] : null,
+            $r['modelo'] ? ['name' => 'modelo', 'valueString' => $r['modelo']] : null,
+            $r['fecha_fabricacion'] ? ['name' => 'fechaFabricacion', 'valueDate' => $r['fecha_fabricacion']] : null,
+            $r['puesta_en_marcha'] ? ['name' => 'puestaEnMarcha', 'valueDate' => $r['puesta_en_marcha']] : null,
+            $r['pertenencia'] ? ['name' => 'pertenencia', 'valueCoding' => coding(cs('pim-valores'), $r['pertenencia'])] : null,
+            $r['anmat_pm'] ? ['name' => 'anmatPM', 'valueString' => $r['anmat_pm']] : null,
+            ['name' => 'completo', 'valueBoolean' => $ok],
+            ...array_map(fn($x) => ['name' => 'falta', 'valueString' => $x], $falta)]))];
+    }
+    if ($id && !$n) throw new Fallo(404, 'not-found', "Device/$id no es un producto médico activo");
+    $GLOBALS['iproy_pim_audit']['n'] = count($par);
+    responder(200, ['resourceType' => 'Parameters', 'parameter' => array_merge([
+        ['name' => 'total', 'valueInteger' => $n], ['name' => 'completos', 'valueInteger' => $nc],
+        ['name' => 'norma', 'valueString' => 'Res. SGS 532/2026: marca, modelo, fecha de fabricación o puesta en marcha, pertenencia y n.º de producto ANMAT']], $par)]);
 }
 /** RiskAssessment?subject=Group/x-g · RiskAssessment?banda=A · Provenance?target=Task/x · Group?member=Device/x */
 function buscar_especial(string $tipo, array $ps, array $cli): never {
@@ -232,7 +337,8 @@ function crear(string $tipo, ?array $j = null, bool $responder = true): array {
         switch ($tipo) {
             case 'Organization': $f = org_desde($j); $id = ulid(); insertar('pim_organizacion', ['id' => $id] + $f); $res = org_fhir(fila('pim_organizacion', $id)); break;
             case 'Location':     $f = loc_desde($j); $id = ulid(); insertar('pim_local', ['id' => $id] + $f); $res = loc_fhir(fila('pim_local', $id)); break;
-            case 'Device':       $f = dev_desde($j); $pts = $f['_puntos'] ?? []; unset($f['_puntos']); $id = ulid(); insertar('pim_activo', ['id' => $id] + $f);
+            case 'Device':       $f = dev_desde($j); $pts = $f['_puntos'] ?? []; if (isset($f['_origen'])) $f['origen'] = $f['_origen']; unset($f['_puntos'], $f['_origen']);
+                                 $id = ulid(); insertar('pim_activo', ['id' => $id] + $f);
                                  guardar_puntos($id, $pts); $res = dev_fhir(fila('pim_activo', $id)); break;
             case 'ServiceRequest': [$res, $task] = alta_solicitud(sr_desde($j), $cli); $extra = ['X-PIM-Task' => 'Task/' . $task['id']]; break;
             case 'Observation':  $res = alta_observacion(obs_desde($j), $cli); break;
@@ -250,13 +356,14 @@ function crear(string $tipo, ?array $j = null, bool $responder = true): array {
 }
 /** Puntos de medición del activo (rango aceptable para PIM-TEL). Reemplaza la lista; devuelve true si cambió. */
 function guardar_puntos(string $activo, array $pts): bool {
-    $q = pdo()->prepare('SELECT punto, unidad, minimo, maximo, genera_orden FROM pim_punto WHERE activo_id = ? ORDER BY punto'); $q->execute([$activo]);
+    $q = pdo()->prepare("SELECT punto, unidad, minimo, maximo, genera_orden FROM pim_punto WHERE activo_id = ? AND origen = 'pim' ORDER BY punto"); $q->execute([$activo]);
     $norm = fn(array $l) => json_encode(array_map(fn($p) => [$p['punto'], $p['unidad'], $p['minimo'] === null ? null : (float) $p['minimo'], $p['maximo'] === null ? null : (float) $p['maximo'], (int) $p['genera_orden']],
         (function ($l) { usort($l, fn($a, $b) => strcmp($a['punto'], $b['punto'])); return $l; })($l)));
     if ($norm($q->fetchAll()) === $norm($pts)) return false;
-    pdo()->prepare('DELETE FROM pim_punto WHERE activo_id = ?')->execute([$activo]);
-    $i = pdo()->prepare('INSERT INTO pim_punto (activo_id, punto, unidad, minimo, maximo, genera_orden) VALUES (?,?,?,?,?,?)');
-    foreach ($pts as $p) $i->execute([$activo, $p['punto'], $p['unidad'], $p['minimo'], $p['maximo'], $p['genera_orden']]);
+    pdo()->prepare("DELETE FROM pim_punto WHERE activo_id = ? AND origen = 'pim'")->execute([$activo]);
+    $i = pdo()->prepare("INSERT INTO pim_punto (id, activo_id, punto, unidad, minimo, maximo, genera_orden, origen) VALUES (?,?,?,?,?,?,?,'pim')
+        ON DUPLICATE KEY UPDATE unidad = VALUES(unidad), minimo = VALUES(minimo), maximo = VALUES(maximo), genera_orden = VALUES(genera_orden), origen = 'pim'");
+    foreach ($pts as $p) $i->execute([dm_id($activo, $p['punto']), $activo, $p['punto'], $p['unidad'], $p['minimo'], $p['maximo'], $p['genera_orden']]);
     return true;
 }
 function insertar(string $tabla, array $f): void {
@@ -277,7 +384,7 @@ function alta_solicitud(array $f, array $cli): array {
     $prio ??= 'routine';
     insertar('pim_solicitud', ['id' => $idS, 'numero' => $numS, 'prioridad' => $prio, 'categoria_codigo' => $f['categoria_codigo'], 'categoria_texto' => $f['categoria_texto'],
         'descripcion' => $f['descripcion'], 'local_id' => $f['local_id'], 'activo_id' => $f['activo_id'], 'estado_declarado' => $f['estado_declarado'],
-        'solicitante' => $f['solicitante'], 'cliente' => $cli['id']]);
+        'solicitante' => $f['solicitante'], 'cliente' => $cli['id'], 'observacion_id' => $f['observacion_id'] ?? null]);
     $sr = sr_fhir(fila('pim_solicitud', $idS));
     guardar_version('ServiceRequest', $idS, 1, 'create', $cli['id'], $sr);
     $resp = null;
@@ -288,6 +395,10 @@ function alta_solicitud(array $f, array $cli): array {
         'estado' => 'requested', 'estado_negocio' => 'solicitada', 'motivo_estado' => $motivoPrio, 'prioridad' => $prio,
         'categoria_codigo' => $f['categoria_codigo'], 'categoria_texto' => $f['categoria_texto'], 'descripcion' => $f['descripcion']]);
     $task = task_fhir(fila('pim_orden', $idT));
+    if (!empty($f['observacion_id'])) {                                        // Task.reasonReference → la medición que la originó
+        pdo()->prepare('UPDATE pim_observacion SET orden_id = ? WHERE id = ? AND orden_id IS NULL')->execute([$idT, $f['observacion_id']]);
+        $task = task_fhir(fila('pim_orden', $idT));
+    }
     guardar_version('Task', $idT, 1, 'create', $cli['id'], $task, 'Alta desde ServiceRequest/' . $idS);
     $sr = sr_fhir(fila('pim_solicitud', $idS));                                // ahora con la extensión pim-orden-generada
     return [$sr, $task];
@@ -297,11 +408,19 @@ function alta_solicitud(array $f, array $cli): array {
 function alta_observacion(array $f, array $cli): array {
     $q = pdo()->prepare('SELECT * FROM pim_punto WHERE activo_id = ? AND punto = ?'); $q->execute([$f['activo_id'], $f['punto']]);
     $pt = $q->fetch() ?: null;
-    $min = $f['minimo'] ?? ($pt['minimo'] ?? null); $max = $f['maximo'] ?? ($pt['maximo'] ?? null);
-    $interp = null;
-    if ($min !== null || $max !== null) $interp = ($min !== null && $f['valor'] < (float) $min) ? 'L' : (($max !== null && $f['valor'] > (float) $max) ? 'H' : 'N');
+    if (!$pt) {                                                                // el punto aparece con su primera medición (DeviceMetric automático)
+        $mdc = ctype_digit($f['punto']) || str_starts_with($f['punto'], 'MDCX');
+        pdo()->prepare('INSERT IGNORE INTO pim_punto (id, activo_id, punto, unidad, genera_orden, origen) VALUES (?,?,?,?,?,?)')
+            ->execute([dm_id($f['activo_id'], $f['punto']), $f['activo_id'], $f['punto'], $f['unidad'] ?: '1', $mdc ? 0 : 1, $f['origen'] === 'mem-dmc' ? 'mem-dmc' : 'auto']);
+    }
+    $interp = null; $min = null; $max = null;
+    if ($f['valor_tipo'] === 'q') {
+        $min = $f['minimo'] ?? ($pt['minimo'] ?? null); $max = $f['maximo'] ?? ($pt['maximo'] ?? null);
+        if ($min !== null || $max !== null) $interp = ($min !== null && $f['valor'] < (float) $min) ? 'L' : (($max !== null && $f['valor'] > (float) $max) ? 'H' : 'N');
+    }
     $id = ulid();
     insertar('pim_observacion', ['id' => $id, 'activo_id' => $f['activo_id'], 'punto' => $f['punto'], 'valor' => $f['valor'], 'unidad' => $f['unidad'],
+        'valor_tipo' => $f['valor_tipo'], 'valor_texto' => $f['valor_texto'], 'origen' => $f['origen'],
         'instante' => $f['instante'], 'interpretacion' => $interp, 'minimo' => $min, 'maximo' => $max, 'cliente' => $cli['id']]);
     if (in_array($interp, ['H', 'L'], true) && cfg()['regla_telemetria'] && (int) ($pt['genera_orden'] ?? 1) === 1) {
         $cat = 'TEL-' . $f['punto'];
@@ -313,7 +432,8 @@ function alta_observacion(array $f, array $cli): array {
             [, $task] = alta_solicitud(['prioridad' => null, 'categoria_codigo' => $cat, 'categoria_texto' => 'Medición fuera de rango · ' . $f['punto'],
                 'descripcion' => sprintf('Medición fuera de rango en %s: %s = %s %s (rango %s–%s) el %s', $a['nombre'], $f['punto'], rtrim(rtrim(number_format($f['valor'], 4, '.', ''), '0'), '.'),
                     $f['unidad'], $min ?? '—', $max ?? '—', $f['instante']),
-                'local_id' => $a['local_id'], 'activo_id' => $a['id'], 'estado_declarado' => 'degradado', 'solicitante' => 'Telemetría (' . $cli['id'] . ')'], $cli);
+                'local_id' => $a['local_id'], 'activo_id' => $a['id'], 'estado_declarado' => 'degradado', 'solicitante' => 'Telemetría (' . $cli['id'] . ')',
+                'observacion_id' => $id], $cli);
             $abierta = $task['id'];
         }
         pdo()->prepare('UPDATE pim_observacion SET orden_id = ? WHERE id = ?')->execute([$abierta, $id]);
@@ -361,7 +481,7 @@ function actualizar(string $tipo, string $id): never {
             [$set, $motivo] = task_cambios($j, $r, $cli);
         } else {
             $f = match ($tipo) { 'Organization' => org_desde($j), 'Location' => loc_desde($j), 'Device' => dev_desde($j) };
-            $pts = $f['_puntos'] ?? null; unset($f['_puntos']);
+            $pts = $f['_puntos'] ?? null; unset($f['_puntos'], $f['_origen']);
             if ($tipo === 'Device' && $pts !== null && guardar_puntos($id, $pts)) $f['actualizado'] = (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v');
             $set = array_diff_assoc(array_map(fn($x) => $x === null ? null : (string) $x, $f), array_map(fn($x) => $x === null ? null : (string) $x, array_intersect_key($r, $f)));
             $set = array_intersect_key($f, $set);

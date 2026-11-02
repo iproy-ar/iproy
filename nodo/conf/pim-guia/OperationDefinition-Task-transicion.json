@@ -1,0 +1,65 @@
+{
+  "resourceType": "OperationDefinition",
+  "id": "Task-transicion",
+  "url": "https://iproy.com.ar/fhir/OperationDefinition/Task-transicion",
+  "title": "Operación $transicion de una orden",
+  "description": "Cambia el estado de una orden según la definición de flujo PIM-OT (quién puede hacer cada transición, motivo obligatorio cuando corresponde).",
+  "name": "TaskTransicion",
+  "status": "draft",
+  "kind": "operation",
+  "code": "transicion",
+  "resource": [
+    "Task"
+  ],
+  "system": false,
+  "type": false,
+  "instance": true,
+  "parameter": [
+    {
+      "name": "estado",
+      "use": "in",
+      "min": 1,
+      "max": "1",
+      "type": "code",
+      "binding": {
+        "strength": "required",
+        "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-estado-orden"
+      }
+    },
+    {
+      "name": "motivo",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "type": "string"
+    },
+    {
+      "name": "responsable",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "type": "Reference"
+    },
+    {
+      "name": "tipoMantenimiento",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "type": "code"
+    },
+    {
+      "name": "modoFalla",
+      "use": "in",
+      "min": 0,
+      "max": "1",
+      "type": "code"
+    },
+    {
+      "name": "return",
+      "use": "out",
+      "min": 1,
+      "max": "1",
+      "type": "Task"
+    }
+  ]
+}

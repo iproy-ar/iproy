@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimCategoriaAlcance",
+  "id": "pim-categoria-alcance",
+  "title": "PIM — Categoría de alcance",
+  "description": "Categorías A a D del alcance del PIM (PIM-PROP-001, sección 3.3).",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-categoria-alcance",
+  "concept": [
+    {
+      "code": "A",
+      "display": "Producto médico activo",
+      "definition": "Producto médico activo en uso (Ley 26.906; Disp. ANMAT 64/2025)."
+    },
+    {
+      "code": "B",
+      "display": "Instalación específica de salud",
+      "definition": "Instalación regida por normas propias de los establecimientos de salud o que sostiene directamente un local de uso médico o un PMA."
+    },
+    {
+      "code": "C",
+      "display": "Instalación general que sostiene servicios críticos",
+      "definition": "Instalación general que cumple al menos un supuesto del criterio de inclusión de la sección 3.3."
+    },
+    {
+      "code": "D",
+      "display": "Instalación general",
+      "definition": "Instalación presente en el establecimiento, no propia de un entorno de salud. Intercambio opcional."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 4
+}

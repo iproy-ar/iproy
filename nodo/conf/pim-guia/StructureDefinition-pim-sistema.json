@@ -1,0 +1,152 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-sistema",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-sistema",
+  "name": "PimSistema",
+  "title": "PIM — Sistema de instalación",
+  "status": "draft",
+  "description": "Sistema de instalación (nivel 5 de ISO 14224) de categoría B, C o D.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Device",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Device",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Device",
+        "path": "Device",
+        "constraint": [
+          {
+            "key": "pim-sin-paciente",
+            "severity": "error",
+            "human": "Ningún recurso PIM se refiere a un paciente.",
+            "expression": "descendants().ofType(Reference).where(reference.startsWith('Patient/')).empty()",
+            "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-sistema"
+          }
+        ]
+      },
+      {
+        "id": "Device.extension",
+        "path": "Device.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "ordered": false,
+          "rules": "open"
+        },
+        "min": 1
+      },
+      {
+        "id": "Device.extension:categoriaAlcance",
+        "path": "Device.extension",
+        "sliceName": "categoriaAlcance",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-alcance"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Device.extension:categoriaRiesgo",
+        "path": "Device.extension",
+        "sliceName": "categoriaRiesgo",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-riesgo"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Device.extension:redundancia",
+        "path": "Device.extension",
+        "sliceName": "redundancia",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-redundancia"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Device.extension:iru",
+        "path": "Device.extension",
+        "sliceName": "iru",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-iru"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Device.identifier",
+        "path": "Device.identifier",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Device.status",
+        "path": "Device.status",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Device.type",
+        "path": "Device.type",
+        "min": 1,
+        "mustSupport": true,
+        "binding": {
+          "strength": "extensible",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-sistema"
+        }
+      },
+      {
+        "id": "Device.owner",
+        "path": "Device.owner",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Device.location",
+        "path": "Device.location",
+        "mustSupport": true
+      }
+    ]
+  }
+}

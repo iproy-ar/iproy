@@ -1,0 +1,130 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimValores",
+  "id": "pim-valores",
+  "title": "PIM — Valores de extensiones",
+  "description": "Sistema auxiliar con los valores codificados de las extensiones PIM, agrupados por extensión. Cada grupo se publica como un conjunto de valores.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-valores",
+  "concept": [
+    {
+      "code": "banda-iru",
+      "display": "Banda IRU",
+      "definition": "Grupo: bandas de prioridad del IRU.",
+      "concept": [
+        {
+          "code": "banda-A",
+          "display": "Banda A",
+          "definition": "IRU ≥ 18."
+        },
+        {
+          "code": "banda-B",
+          "display": "Banda B",
+          "definition": "IRU 14 a 17."
+        },
+        {
+          "code": "banda-C",
+          "display": "Banda C",
+          "definition": "IRU 10 a 13."
+        },
+        {
+          "code": "banda-D",
+          "display": "Banda D",
+          "definition": "IRU < 10."
+        }
+      ]
+    },
+    {
+      "code": "estado-declarado",
+      "display": "Estado declarado",
+      "definition": "Grupo: estado del activo declarado por el solicitante.",
+      "concept": [
+        {
+          "code": "operativo-con-falla",
+          "display": "Operativo con falla"
+        },
+        {
+          "code": "degradado",
+          "display": "Degradado"
+        },
+        {
+          "code": "fuera-de-servicio",
+          "display": "Fuera de servicio"
+        }
+      ]
+    },
+    {
+      "code": "presion-relativa",
+      "display": "Presión relativa",
+      "definition": "Grupo: presión del local respecto de los adyacentes.",
+      "concept": [
+        {
+          "code": "positiva",
+          "display": "Positiva"
+        },
+        {
+          "code": "negativa",
+          "display": "Negativa"
+        },
+        {
+          "code": "neutra",
+          "display": "Neutra"
+        }
+      ]
+    },
+    {
+      "code": "redundancia",
+      "display": "Redundancia",
+      "definition": "Grupo: redundancia del sistema.",
+      "concept": [
+        {
+          "code": "N",
+          "display": "N"
+        },
+        {
+          "code": "N+1",
+          "display": "N+1"
+        },
+        {
+          "code": "2N",
+          "display": "2N"
+        }
+      ]
+    },
+    {
+      "code": "conformidad",
+      "display": "Conformidad",
+      "definition": "Grupo: resultado de un ensayo o de una conformidad.",
+      "concept": [
+        {
+          "code": "conforme",
+          "display": "Conforme"
+        },
+        {
+          "code": "no-conforme",
+          "display": "No conforme"
+        },
+        {
+          "code": "conforme-con-observaciones",
+          "display": "Conforme con observaciones"
+        }
+      ]
+    },
+    {
+      "code": "pertenencia",
+      "display": "Pertenencia",
+      "definition": "Grupo: pertenencia del PMA. Los valores definitivos son los del desplegable de SISA [a confirmar con la DNSIS].",
+      "concept": [
+        {
+          "code": "desconocida",
+          "display": "Desconocida",
+          "definition": "Valor transitorio para la migración."
+        }
+      ]
+    }
+  ],
+  "caseSensitive": true,
+  "hierarchyMeaning": "grouped-by",
+  "count": 23
+}

@@ -1,0 +1,54 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimMemDmcVS",
+  "id": "pim-mem-dmc",
+  "title": "PIM — Códigos MDC de IHE MEM-DMC y MEM-LS",
+  "description": "Códigos de la nomenclatura ISO/IEEE 11073-10101 (MDC) que usan los mensajes IHE PCD-15 y PCD-16 (suplemento MEM-DMC Rev. 1.5). Los atributos de batería y autoprueba no tienen código asignado en el suplemento: llegan con código 0 y prefijo MDCX, y se conservan como texto.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-mem-dmc",
+  "compose": {
+    "include": [
+      {
+        "system": "urn:iso:std:iso:11073:10101",
+        "concept": [
+          {
+            "code": "69135",
+            "display": "MDC_OBS_MEM"
+          },
+          {
+            "code": "67880",
+            "display": "MDC_ATTR_ID_MODEL"
+          },
+          {
+            "code": "67972",
+            "display": "MDC_ATTR_SYS_ID"
+          },
+          {
+            "code": "67925",
+            "display": "MDC_ATTR_POWER_STAT"
+          },
+          {
+            "code": "68512",
+            "display": "MDC_ATTR_LS_NAME"
+          },
+          {
+            "code": "68513",
+            "display": "MDC_ATTR_LS_LOCATION"
+          },
+          {
+            "code": "68525",
+            "display": "MDC_ATTR_LS_COORD_X"
+          },
+          {
+            "code": "68526",
+            "display": "MDC_ATTR_LS_COORD_Y"
+          },
+          {
+            "code": "68527",
+            "display": "MDC_ATTR_LS_COORD_Z"
+          }
+        ]
+      }
+    ]
+  }
+}

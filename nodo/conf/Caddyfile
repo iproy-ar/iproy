@@ -32,9 +32,9 @@
 	rewrite @api /nucleo/index.php
 	@fhir path /fhir /fhir/*
 	rewrite @fhir /fhir/index.php
-	# Servidor PIM v1.0 (sistema paralelo, base propia iproy_pim): API REST y token por un único controlador;
+	# Servidor PIM v1.1 (sistema paralelo, base propia iproy_pim): API REST y token por un único controlador;
 	# la Consola (/pim/consola/) y el disparador de importación (/pim/admin/) son archivos propios.
-	@pim path /pim /pim/r4 /pim/r4/* /pim/auth/*
+	@pim path /pim /pim/r4 /pim/r4/* /pim/auth/* /pim/declaracion
 	rewrite @pim /pim/index.php
 	# En el nodo solo existe iProy: lo que la app todavía pida a /GestionMant/… se sirve desde /iProy/… (v0.4.2)
 	@gestionmant path_regexp gm ^/GestionMant(/.*)?$

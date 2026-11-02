@@ -1,0 +1,23 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimPresionRelativaVS",
+  "id": "pim-presion-relativa",
+  "title": "PIM — Presión relativa",
+  "description": "Presión del local respecto de los adyacentes.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-presion-relativa",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-valores",
+        "filter": [
+          {
+            "property": "concept",
+            "op": "descendent-of",
+            "value": "presion-relativa"
+          }
+        ]
+      }
+    ]
+  }
+}

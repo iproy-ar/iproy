@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimGrupoLocal",
+  "id": "pim-grupo-local",
+  "title": "PIM — Grupo de uso médico del local",
+  "description": "Grupos de locales para usos médicos según AEA 90364-7-710:2024 [a confirmar la nomenclatura exacta con el texto oficial].",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-grupo-local",
+  "concept": [
+    {
+      "code": "0",
+      "display": "Grupo 0",
+      "definition": "Local sin aplicación de partes aplicables."
+    },
+    {
+      "code": "1",
+      "display": "Grupo 1",
+      "definition": "Local con partes aplicables externas o invasivas no intracardíacas."
+    },
+    {
+      "code": "2a",
+      "display": "Grupo 2a",
+      "definition": "Local de grupo 2, variante a."
+    },
+    {
+      "code": "2b",
+      "display": "Grupo 2b",
+      "definition": "Local de grupo 2, variante b: procedimientos intracardíacos u operaciones vitales."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 4
+}

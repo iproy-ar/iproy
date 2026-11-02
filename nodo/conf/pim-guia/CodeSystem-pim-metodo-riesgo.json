@@ -1,0 +1,29 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimMetodoRiesgo",
+  "id": "pim-metodo-riesgo",
+  "title": "PIM — Método de evaluación de riesgo",
+  "description": "Métodos admitidos para evaluar el riesgo de un activo.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-metodo-riesgo",
+  "concept": [
+    {
+      "code": "fennigkoh-smith",
+      "display": "Fennigkoh y Smith (1989)",
+      "definition": "Método de puntaje por función, riesgo físico y requisitos de mantenimiento."
+    },
+    {
+      "code": "nfpa99",
+      "display": "NFPA 99",
+      "definition": "Categoría de riesgo según NFPA 99."
+    },
+    {
+      "code": "iru",
+      "display": "Índice de Riesgo Unificado",
+      "definition": "IRU = F + R + M + A (PIM-PROP-001, sección 8.2) [propuesta]."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 3
+}

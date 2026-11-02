@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimCategoriaRiesgo",
+  "id": "pim-categoria-riesgo",
+  "title": "PIM — Categoría de riesgo ante la falla",
+  "description": "Categorías de riesgo de NFPA 99, capítulo 4.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-categoria-riesgo",
+  "concept": [
+    {
+      "code": "1",
+      "display": "Categoría 1",
+      "definition": "La falla puede causar lesión grave o muerte."
+    },
+    {
+      "code": "2",
+      "display": "Categoría 2",
+      "definition": "La falla puede causar lesión menor."
+    },
+    {
+      "code": "3",
+      "display": "Categoría 3",
+      "definition": "La falla puede causar molestias."
+    },
+    {
+      "code": "4",
+      "display": "Categoría 4",
+      "definition": "La falla no tiene impacto en la atención."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 4
+}

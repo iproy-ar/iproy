@@ -1,0 +1,126 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-local",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-local",
+  "name": "PimLocal",
+  "title": "PIM — Local o ubicación",
+  "status": "draft",
+  "description": "Edificio, nivel, local, sala o cama, con su grupo de uso médico. Deriva de IHE mCSD Location (status, name y type obligatorios). La ubicación PL de HL7 v2 que informa IHE MEM-LS (establecimiento, edificio, piso, sala, cama) se corresponde con la cadena partOf.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Location",
+  "baseDefinition": "https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.mCSD.Location",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Location.extension",
+        "path": "Location.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "ordered": false,
+          "rules": "open"
+        }
+      },
+      {
+        "id": "Location.extension:grupoUsoMedico",
+        "path": "Location.extension",
+        "sliceName": "grupoUsoMedico",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-grupo-uso-medico"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Location.extension:ambienteControlado",
+        "path": "Location.extension",
+        "sliceName": "ambienteControlado",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-ambiente-controlado"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Location.identifier",
+        "path": "Location.identifier",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Location.status",
+        "path": "Location.status",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.name",
+        "path": "Location.name",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.type",
+        "path": "Location.type",
+        "mustSupport": true
+      },
+      {
+        "id": "Location.physicalType",
+        "path": "Location.physicalType",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Location.managingOrganization",
+        "path": "Location.managingOrganization",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
+        "id": "Location.partOf",
+        "path": "Location.partOf",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-local",
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-establecimiento"
+            ],
+            "extension": [
+              {
+                "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-hierarchy",
+                "valueBoolean": true
+              }
+            ]
+          }
+        ],
+        "mustSupport": true
+      }
+    ]
+  }
+}

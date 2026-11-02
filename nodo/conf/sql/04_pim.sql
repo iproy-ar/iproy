@@ -211,3 +211,22 @@ ALTER TABLE pim_organizacion ADD COLUMN IF NOT EXISTS origen_huella CHAR(40) NUL
 ALTER TABLE pim_local        ADD COLUMN IF NOT EXISTS origen_huella CHAR(40) NULL;
 ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS origen_huella CHAR(40) NULL;
 ALTER TABLE pim_orden        ADD COLUMN IF NOT EXISTS origen_huella CHAR(40) NULL;
+
+-- 1.1.0 (PIM 0.9.2): datos del REFES y EUI-64 del PMA (IHE MEM-DMC), categoría de alcance, valores no numéricos y origen de los puntos
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS categoria_alcance CHAR(1)     NULL COMMENT 'A | B | C | D (sección 3.3); NULL = se deduce del tipo';
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS anmat_pm          VARCHAR(12) NULL COMMENT 'PM-NNNN-NNNN';
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS eui64             VARCHAR(16) NULL COMMENT 'EUI-64 del equipo (IHE PCD-15)';
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS fecha_fabricacion DATE        NULL;
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS puesta_en_marcha  DATE        NULL;
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS pertenencia       VARCHAR(40) NULL COMMENT 'pim-valores (REFES)';
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS clase_riesgo_pm   VARCHAR(3)  NULL COMMENT 'I | II | III | IV';
+ALTER TABLE pim_activo       ADD UNIQUE INDEX IF NOT EXISTS uk_act_eui64 (eui64);
+ALTER TABLE pim_punto        ADD COLUMN IF NOT EXISTS origen VARCHAR(20) NOT NULL DEFAULT 'pim' COMMENT 'pim | auto (creado al recibir una medición) | mem-dmc';
+ALTER TABLE pim_observacion  MODIFY COLUMN valor DECIMAL(14,4) NULL;
+ALTER TABLE pim_observacion  MODIFY COLUMN unidad VARCHAR(20) NULL;
+ALTER TABLE pim_observacion  ADD COLUMN IF NOT EXISTS valor_tipo  CHAR(1)      NOT NULL DEFAULT 'q' COMMENT 'q Quantity · c CodeableConcept · s string · b boolean';
+ALTER TABLE pim_observacion  ADD COLUMN IF NOT EXISTS valor_texto VARCHAR(200)     NULL;
+ALTER TABLE pim_observacion  ADD COLUMN IF NOT EXISTS origen      VARCHAR(20)  NOT NULL DEFAULT 'pim';
+ALTER TABLE pim_solicitud    ADD COLUMN IF NOT EXISTS observacion_id CHAR(26) NULL COMMENT 'reasonReference → Observation (orden por telemetría o MEM-DMC)';
+ALTER TABLE pim_punto        ADD COLUMN IF NOT EXISTS id CHAR(26) NULL COMMENT 'DeviceMetric.id (determinístico: activo + punto)';
+ALTER TABLE pim_punto        ADD UNIQUE INDEX IF NOT EXISTS uk_punto_id (id);

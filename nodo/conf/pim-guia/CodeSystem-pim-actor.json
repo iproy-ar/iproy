@@ -1,0 +1,54 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimActor",
+  "id": "pim-actor",
+  "title": "PIM — Actores",
+  "description": "Actores del marco técnico PIM. En la colmena, cada actor cliente corresponde a un rol PIM.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-actor",
+  "concept": [
+    {
+      "code": "GM",
+      "display": "Gestor de mantenimiento",
+      "definition": "Sistema que custodia el inventario y las órdenes (servidor PIM). Se agrupa con IHE mCSD Directory y, opcionalmente, con IHE MEM DMIC y LOC."
+    },
+    {
+      "code": "SO",
+      "display": "Solicitante",
+      "definition": "Sistema o aplicación que registra solicitudes."
+    },
+    {
+      "code": "EJ",
+      "display": "Ejecutor",
+      "definition": "Empresa o área que ejecuta órdenes de su organización."
+    },
+    {
+      "code": "FT",
+      "display": "Fuente de telemetría",
+      "definition": "Gateway, PLC o sensor que envía mediciones."
+    },
+    {
+      "code": "CI",
+      "display": "Consumidor de información e indicadores",
+      "definition": "Sistema que consulta inventario, órdenes, riesgo e indicadores (ministerio, dirección del hospital). Se agrupa con IHE mCSD Query Client."
+    },
+    {
+      "code": "DA",
+      "display": "Destinatario de alarmas",
+      "definition": "Recibe y gestiona avisos técnicos (guardia técnica, mensajería). Se agrupa con IHE ACM Alert Communicator."
+    },
+    {
+      "code": "RE",
+      "display": "Registro estatal",
+      "definition": "Registro del Estado que recibe datos de PMA (REFES)."
+    },
+    {
+      "code": "DI",
+      "display": "Directorio",
+      "definition": "Publica los organismos, establecimientos, locales y endpoints. Es el actor Directory de IHE mCSD."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 8
+}

@@ -1,96 +1,145 @@
 <?php
 /**
- * iProy · Servidor PIM v1.0 · CapabilityStatement, SMART configuration y CodeSystems PIM · 30-10-2026
- * Declaración computable de conformidad: PIM v0.9 nivel Básico completo + perfiles INV, SOL, OT, RSG, TEL y FED.
+ * iProy · Servidor PIM v1.1 · CapabilityStatement, SMART configuration, artefactos de la guía y Declaración de Integración · 02-11-2026
+ *
+ * Los CodeSystems, ValueSets, StructureDefinitions, CapabilityStatements de actores y OperationDefinitions se sirven tal como los
+ * compila la especificación (conf/pim-guia/, copiados de especificacion/fsh-generated por herramientas/guia-al-nodo.sh): el servidor
+ * no tiene una copia propia de las terminologías y no se puede desalinear (lección L-329).
  */
 declare(strict_types=1);
 
 namespace IproyPim;
 
+const ARTEFACTOS = ['CodeSystem', 'ValueSet', 'StructureDefinition', 'CapabilityStatement', 'OperationDefinition', 'ImplementationGuide'];
+
+function dir_guia(): string { return raiz() . '/conf/pim-guia'; }
+function artefacto(string $tipo, string $id): ?array {
+    if (!in_array($tipo, ARTEFACTOS, true) || !es_id($id)) return null;
+    $f = dir_guia() . "/$tipo-$id.json";
+    return is_file($f) ? json_decode((string) file_get_contents($f), true) : null;
+}
+function artefactos_bundle(string $tipo): array {
+    $e = [];
+    foreach (glob(dir_guia() . "/$tipo-*.json") ?: [] as $f) {
+        $r = json_decode((string) file_get_contents($f), true);
+        if (is_array($r)) $e[] = ['fullUrl' => base() . "/$tipo/" . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']];
+    }
+    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e), 'entry' => $e];
+}
+function codesystem(string $id): ?array { return artefacto('CodeSystem', $id); }
+function codesystems_bundle(): array { return artefactos_bundle('CodeSystem'); }
+/** Códigos de un CodeSystem de la guía (incluye los anidados). */
+function codigos(string $id): array {
+    $cs = codesystem($id) ?? [];
+    $l = []; $rec = function (array $c) use (&$rec, &$l) { foreach ($c as $x) { $l[] = (string) $x['code']; if (!empty($x['concept'])) $rec($x['concept']); } };
+    $rec((array) ($cs['concept'] ?? []));
+    return $l;
+}
+
+/** Opciones y agrupamientos IHE que este nodo declara (según los módulos instalados). */
+function conformidad(): array {
+    $mod = fn(string $m) => is_file(raiz() . "/modulos/$m/modulo.json");
+    $perf = ['PIM-INV', 'PIM-SOL', 'PIM-OT', 'PIM-REG', 'PIM-RSG', 'PIM-TEL', 'PIM-FED'];
+    $op = ['mcsd-update', 'transicion', 'colmena'];
+    $ihe = ['ITI mCSD · Directory (ITI-90)', 'ITI mCSD · Directory, opción Update (ITI-91)'];
+    if ($mod('mqtt')) $op[] = 'mqtt';
+    if ($mod('mem')) { $perf[] = 'PIM-EQM'; $op[] = 'mem-dmc'; $ihe[] = 'DEV MEM-DMC · Device Management Information Consumer (PCD-15)'; }
+    if ($mod('alarmas')) $perf[] = 'PIM-ALR';
+    $nivel = 'basico';                                                    // Intermedio exige además PRV, ENS y KPI (pendientes en 1.1)
+    return ['nivel' => $nivel, 'perfiles' => $perf, 'opciones' => $op, 'ihe' => $ihe, 'actores' => ['GM', 'DI'],
+            'pendientes' => array_values(array_diff(['PIM-PRV', 'PIM-ENS', 'PIM-KPI', 'PIM-ALR', 'PIM-EQM'], $perf))];
+}
+
 function capability(): array {
     $sp = fn(string $n, string $t, string $doc) => ['name' => $n, 'type' => $t, 'documentation' => $doc];
     $int = fn(array $c) => array_map(fn($x) => ['code' => $x], $c);
-    $rec = function (string $tipo, array $perfiles, array $inter, array $params, string $doc, bool $versionado = true) use ($int) {
-        return array_filter(['type' => $tipo, 'profile' => sd($perfiles[0]), 'supportedProfile' => count($perfiles) > 1 ? array_map('IproyPim\sd', array_slice($perfiles, 1)) : null,
+    $rec = function (string $tipo, array $perfiles, array $inter, array $params, string $doc, bool $versionado = true, array $extra = []) use ($int) {
+        return array_filter(['type' => $tipo, 'profile' => null, 'supportedProfile' => array_map('IproyPim\sd', $perfiles),
             'documentation' => $doc, 'interaction' => $int($inter), 'versioning' => $versionado ? 'versioned-update' : 'no-version',
             'readHistory' => $versionado, 'updateCreate' => false, 'conditionalDelete' => 'not-supported',
-            'searchParam' => array_merge([['name' => '_id', 'type' => 'token', 'documentation' => 'ID lógico']], $params)], fn($x) => $x !== null);
+            'searchParam' => array_merge([['name' => '_id', 'type' => 'token', 'documentation' => 'ID lógico']], $params)] + $extra, fn($x) => $x !== null);
     };
-    $o = cfg()['organismo'];
+    $o = cfg()['organismo']; $c = conformidad();
+    $ext = [['url' => 'nivel', 'valueCode' => $c['nivel']]];
+    foreach ($c['perfiles'] as $p) $ext[] = ['url' => 'perfilIntegracion', 'valueCode' => $p];
+    foreach ($c['actores'] as $a) $ext[] = ['url' => 'actor', 'valueCode' => $a];
+    foreach ($c['opciones'] as $p) $ext[] = ['url' => 'opcion', 'valueCode' => $p];
+    foreach ($c['ihe'] as $p) $ext[] = ['url' => 'perfilIHE', 'valueString' => $p];
     return [
         'resourceType' => 'CapabilityStatement',
         'id' => 'pim-servidor-' . strtolower(nodo_id()),
         'url' => cfg()['ns'] . '/CapabilityStatement/pim-servidor',
         'version' => VERSION_API,
         'name' => 'ServidorPIM',
-        'title' => 'Servidor PIM ' . VERSION_API . ' · Protocolo de Interoperabilidad de Mantenimiento v' . VERSION_PIM,
-        'status' => 'active', 'experimental' => false, 'date' => '2026-10-30',
+        'title' => 'Servidor PIM ' . VERSION_API . ' · Protocolo de Interoperabilidad de Mantenimiento ' . VERSION_PIM,
+        'status' => 'active', 'experimental' => false, 'date' => '2026-11-02',
         'publisher' => $o['nombre'],
-        'description' => 'Servidor de referencia del Protocolo de Interoperabilidad de Mantenimiento (PIM v' . VERSION_PIM . ') sobre HL7 FHIR R4. '
-            . 'Gestiona inventario de instalaciones y equipos, solicitudes, órdenes de trabajo con máquina de estados, riesgo (IRU), '
-            . 'telemetría y trazabilidad (historial y procedencia con huella encadenada). No contiene datos de pacientes.',
+        'description' => 'Servidor de referencia del PIM ' . VERSION_PIM . ' sobre HL7 FHIR R4, alineado con IHE: directorio mCSD (ITI-90 e ITI-91), '
+            . 'puente con equipos médicos por IHE MEM-DMC (PCD-15) si el módulo «mem» está instalado. Inventario de PMA e instalaciones, solicitudes, '
+            . 'órdenes con la definición de flujo PIM-OT, riesgo (IRU), telemetría, informe al REFES y trazabilidad con huella encadenada. Sin datos de pacientes.',
         'kind' => 'instance',
+        'instantiates' => [cfg()['ns'] . '/CapabilityStatement/pim-gm'],
+        'imports' => ['https://profiles.ihe.net/ITI/mCSD/CapabilityStatement/IHE.mCSD.Directory', 'https://profiles.ihe.net/ITI/mCSD/CapabilityStatement/IHE.mCSD.Directory.Update'],
         'software' => ['name' => 'iProy · Servidor PIM', 'version' => VERSION_API],
         'implementation' => ['description' => 'Nodo ' . nodo_id() . ' · ' . $o['nombre'], 'url' => base()],
         'fhirVersion' => FHIR_VERSION,
         'format' => ['application/fhir+json', 'json'],
-        'implementationGuide' => [cfg()['ns'] . '/ImplementationGuide/pim|' . VERSION_PIM],
-        'extension' => [['url' => sd('pim-conformidad'), 'extension' => [
-            ['url' => 'nivel', 'valueCode' => 'basico'],
-            ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-INV'], ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-SOL'],
-            ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-OT'], ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-RSG'],
-            ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-TEL'], ['url' => 'perfilIntegracion', 'valueCode' => 'PIM-FED'],
-            ['url' => 'roles', 'valueString' => 'GM gestor · EJ ejecutor · SO solicitante · FT fuente de telemetría · CI consulta'],
-        ]]],
+        'implementationGuide' => [cfg()['ns'] . '/ImplementationGuide/ar.iproy.pim|' . VERSION_PIM],
+        'extension' => [['url' => sd('pim-conformidad'), 'extension' => $ext]],
         'rest' => [[
             'mode' => 'server',
-            'documentation' => 'OAuth2 SMART Backend Services (client_credentials + private_key_jwt RS384/ES384). Alcances SMART v1 y v2: '
-                . 'system/<Recurso>.read|write o system/<Recurso>.cruds. Token de ' . (int) cfg()['token_ttl'] . ' s. Cada cliente tiene un rol PIM '
-                . '(GM, EJ, SO, FT, CI) que limita qué puede dar de alta, modificar y qué transiciones de orden puede hacer. '
-                . 'Las modificaciones exigen If-Match (control de concurrencia). Nunca hay borrado físico.',
+            'documentation' => 'OAuth2 SMART Backend Services (client_credentials + private_key_jwt RS384/ES384). Alcances SMART v1 y v2. '
+                . 'Token de ' . (int) cfg()['token_ttl'] . ' s. Cada cliente tiene un rol PIM (actor): GM, EJ, SO, FT, CI o RE. '
+                . 'Las modificaciones exigen If-Match. Nunca hay borrado físico. Auditoría de cada acceso.',
             'security' => [
                 'cors' => false,
                 'service' => [['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/restful-security-service', 'code' => 'SMART-on-FHIR']]]],
                 'extension' => [['url' => 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
                     'extension' => [['url' => 'token', 'valueUri' => url_token()]]]],
-                'description' => 'TLS obligatorio fuera del propio equipo. Auditoría de cada acceso (AuditEvent interno).',
+                'description' => 'TLS obligatorio fuera del propio equipo. Auditoría de cada acceso.',
             ],
             'resource' => [
                 $rec('Organization', ['pim-organismo', 'pim-empresa'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
-                    [$sp('identifier', 'token', 'sid/organismo · sid/empresa'), $sp('name', 'string', 'Nombre'), $sp('type', 'token', 'prov | dept | bus')],
-                    'Organismo, áreas internas y empresas contratistas. Alta y modificación: rol GM.'),
-                $rec('Location', ['pim-local'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
-                    [$sp('identifier', 'token', 'sid/local'), $sp('name', 'string', 'Nombre'), $sp('status', 'token', 'active | inactive | suspended'), $sp('partof', 'reference', 'Location contenedora')],
-                    'Edificios, niveles, locales y áreas; grupo de uso médico (AEA 90364-7-710) y ambiente controlado.'),
-                $rec('Device', ['pim-activo', 'pim-sistema', 'pim-equipo-medico'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
-                    [$sp('identifier', 'token', 'sid/activo'), $sp('device-name', 'string', 'Nombre'), $sp('location', 'reference', 'Location'),
-                     $sp('type', 'token', 'pim-sistema (Anexo B) o clase de equipo'), $sp('status', 'token', 'active | inactive'), $sp('parent', 'reference', 'Device padre (ISO 14224)'),
-                     $sp('manufacturer', 'string', 'Fabricante')],
-                    'Sistemas de instalación, activos y equipos médicos con categoría de riesgo NFPA 99, redundancia e IRU.'),
+                    [$sp('identifier', 'token', 'sid/organismo · sid/empresa'), $sp('name', 'string', 'Nombre (:exact, :contains)'), $sp('type', 'token', 'facility | prov | dept | bus'),
+                     $sp('partof', 'reference', 'Organization contenedora'), $sp('active', 'token', 'true | false')],
+                    'PIM-INV y IHE ITI-90/91: organismo (mCSD FacilityOrganization), áreas internas y empresas (mCSD Organization). Alta y modificación: rol GM.'),
+                $rec('Location', ['pim-establecimiento', 'pim-local'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
+                    [$sp('identifier', 'token', 'sid/local'), $sp('name', 'string', 'Nombre (:exact, :contains)'), $sp('status', 'token', 'active | inactive | suspended'),
+                     $sp('partof', 'reference', 'Location contenedora (el establecimiento es la raíz)'), $sp('organization', 'reference', 'Organization responsable'),
+                     $sp('type', 'token', 'facility (establecimiento) o el tipo del local: Edificio, Ala, Nivel, Local, Cama, Área')],
+                    'PIM-INV y IHE ITI-90/91: establecimiento (mCSD FacilityLocation) y locales (mCSD Location) con grupo de uso médico y ambiente controlado.'),
+                $rec('Device', ['pim-pma', 'pim-sistema', 'pim-activo'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
+                    [$sp('identifier', 'token', 'sid/activo · sid/eui64 · sid/anmat-pm'), $sp('device-name', 'string', 'Nombre'), $sp('location', 'reference', 'Location'),
+                     $sp('type', 'token', 'pim-sistema o clase de equipo'), $sp('status', 'token', 'active | inactive'), $sp('parent', 'reference', 'Device padre (ISO 14224)'),
+                     $sp('manufacturer', 'string', 'Fabricante'), $sp('categoria-alcance', 'token', 'A | B | C | D')],
+                    'PMA (datos REFES y EUI-64), sistemas de instalación y activos, con categoría de alcance, riesgo NFPA 99, redundancia e IRU.', true,
+                    ['operation' => [['name' => 'refes', 'definition' => cfg()['ns'] . '/OperationDefinition/Device-refes',
+                        'documentation' => 'PIM-9: GET Device/$refes[?completos=true|false] o Device/{id}/$refes. Roles GM, RE y CI.']]]),
+                $rec('DeviceMetric', ['pim-punto'], ['read', 'search-type'],
+                    [$sp('source', 'reference', 'Device'), $sp('type', 'token', 'pim-punto o código MDC'), $sp('identifier', 'token', '<código del activo>/<punto>')],
+                    'Puntos de medición; se crean al configurarlos o con la primera medición.', false),
                 $rec('ServiceRequest', ['pim-solicitud'], ['read', 'vread', 'search-type', 'create', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/solicitud'), $sp('status', 'token', 'active | completed | revoked'), $sp('priority', 'token', 'routine | urgent | asap | stat'),
                      $sp('subject', 'reference', 'Location o Device'), $sp('authored', 'date', 'Fecha de alta')],
-                    'PIM-SOL: el alta crea la orden (Task) enlazada; la prioridad sale del IRU del activo si no se indica. Roles GM y SO.'),
+                    'PIM-SOL (PIM-3): el alta crea la orden (Task) enlazada; la prioridad sale del IRU del activo si no se indica. reasonReference admite una Observation. Roles GM y SO.'),
                 $rec('Task', ['pim-orden'], ['read', 'vread', 'search-type', 'update', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/orden'), $sp('status', 'token', 'Estado FHIR'), $sp('business-status', 'token', 'pim-estado-orden'),
                      $sp('owner', 'reference', 'Organization responsable'), $sp('priority', 'token', 'routine | urgent | asap | stat'), $sp('location', 'reference', 'Location'),
                      $sp('focus', 'reference', 'Device'), $sp('based-on', 'reference', 'ServiceRequest'), $sp('code', 'token', 'Categoría'),
                      $sp('authored-on', 'date', 'Alta'), $sp('modified', 'date', 'Última modificación'), $sp('_lastUpdated', 'date', 'Última modificación')],
-                    'PIM-OT: orden de trabajo con máquina de estados (Tabla 9-2). Cambios por PUT (If-Match) o por la operación $transicion. '
-                    . 'El rol EJ solo ve y opera las órdenes de su organización.'),
+                    'PIM-OT (PIM-4 y PIM-5): definición de flujo PIM-OT (Tabla 9-6). Cambios por PUT (If-Match) o $transicion. El rol EJ solo ve y opera las órdenes de su organización.', true,
+                    ['operation' => [['name' => 'transicion', 'definition' => cfg()['ns'] . '/OperationDefinition/Task-transicion']]]),
                 $rec('Observation', ['pim-medicion'], ['read', 'search-type', 'create'],
-                    [$sp('device', 'reference', 'Device'), $sp('code', 'token', 'pim-punto'), $sp('date', 'date', 'Instante'), $sp('interpretation', 'token', 'N | H | L')],
-                    'PIM-TEL: mediciones de instalaciones. Fuera de rango → solicitud y orden automáticas (sin duplicar órdenes abiertas). Roles GM y FT.', false),
+                    [$sp('device', 'reference', 'DeviceMetric (o Device)'), $sp('code', 'token', 'pim-punto o MDC'), $sp('date', 'date', 'Instante'), $sp('interpretation', 'token', 'N | H | L')],
+                    'PIM-TEL (PIM-6) y PIM-EQM: valor Quantity, CodeableConcept, string o boolean. Fuera de rango → solicitud y orden automáticas. Roles GM y FT.', false),
                 $rec('RiskAssessment', ['pim-riesgo'], ['read', 'search-type'],
                     [$sp('subject', 'reference', 'Group/{activo}-g o Device'), $sp('banda', 'token', 'A | B | C | D (parámetro PIM)')],
-                    'PIM-RSG: IRU explicado (F + R + M + A, banda y ajuste por redundancia).', false),
+                    'PIM-RSG (PIM-7): IRU explicado (F + R + M + A, banda y ajuste por redundancia).', false),
                 $rec('Group', ['pim-grupo-activo'], ['read', 'search-type'], [$sp('member', 'reference', 'Device')], 'Grupo de un activo (sujeto del RiskAssessment).', false),
                 $rec('Provenance', ['pim-procedencia'], ['search-type'], [$sp('target', 'reference', 'Tipo/id (obligatorio)')],
-                    'PIM-FED: una procedencia por versión, con huella SHA-256 encadenada a la anterior (detecta alteraciones).', false),
+                    'PIM-FED (PIM-8): una procedencia por versión, con huella SHA-256 encadenada a la anterior.', false),
             ],
             'interaction' => [['code' => 'batch', 'documentation' => 'Bundle batch con POST de Observation y ServiceRequest (máx. 500)']],
-            'operation' => [['name' => 'transicion', 'definition' => cfg()['ns'] . '/OperationDefinition/Task-transicion',
-                'documentation' => 'POST Task/{id}/$transicion con Parameters: estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota']],
         ]],
     ];
 }
@@ -108,27 +157,22 @@ function smart_config(): array {
     ];
 }
 
-/** Catálogos PIM publicados como CodeSystem (derivados de las constantes del modelo: nunca se desalinean). */
-function catalogos(): array {
-    $c = fn(array $m) => array_map(fn($k, $v) => ['code' => (string) $k, 'display' => $v], array_keys($m), $m);
+/** Declaración de Integración PIM (Anexo I del PIM 0.9.2), generada desde la conformidad que declara este servidor. */
+function declaracion(): array {
+    $c = conformidad();
+    $prod = is_file(raiz() . '/producto.json') ? (json_decode((string) file_get_contents(raiz() . '/producto.json'), true) ?: []) : [];
+    $opPorPerfil = ['PIM-INV' => ['mcsd-update'], 'PIM-OT' => ['transicion', 'colmena'], 'PIM-FED' => ['colmena'], 'PIM-TEL' => ['mqtt'], 'PIM-EQM' => ['mem-dmc']];
     return [
-        'pim-estado-orden' => ['Estado de la orden de trabajo (Tabla 9-2)', $c(array_combine(array_keys(ESTADOS_ORDEN), array_map(fn($k, $v) => "$k → Task.status $v", array_keys(ESTADOS_ORDEN), ESTADOS_ORDEN)))],
-        'pim-tipo-mantenimiento' => ['Tipo de mantenimiento (EN 13306)', $c(array_combine(TIPOS_MANT, TIPOS_MANT))],
-        'pim-sistema' => ['Sistemas de instalación hospitalaria (Anexo B)', $c(SISTEMAS)],
-        'pim-categoria-riesgo' => ['Categoría de riesgo NFPA 99', $c(['1' => 'Falla puede causar lesión grave o muerte', '2' => 'Lesión menor', '3' => 'Molestia sin lesión', '4' => 'Sin impacto en la atención'])],
-        'pim-banda-iru' => ['Banda del Índice de Riesgo Unificado', $c(['A' => 'IRU ≥ 18 · prioridad stat', 'B' => 'IRU 14–17 · asap', 'C' => 'IRU 10–13 · urgent', 'D' => 'IRU < 10 · routine'])],
-        'pim-grupo-local' => ['Grupo de uso médico del local (AEA 90364-7-710)', $c(['0' => 'Grupo 0', '1' => 'Grupo 1', '2a' => 'Grupo 2a', '2b' => 'Grupo 2b'])],
-        'pim-estado-declarado' => ['Estado declarado del activo al pedir', $c(array_combine(ESTADO_DECLARADO, ESTADO_DECLARADO))],
+        'documento' => 'Declaración de Integración PIM',
+        'basada_en' => 'IHE Integration Statement',
+        'producto' => ['nombre' => ($prod['nombre'] ?? 'iProy') . ' · Servidor PIM', 'version' => VERSION_API, 'proveedor' => $prod['autor'] ?? ($prod['nombre'] ?? 'iProy'),
+                       'fuente' => $prod['fuente'] ?? null, 'nodo' => nodo_id()],
+        'fecha' => date('Y-m-d'),
+        'version_pim' => VERSION_PIM,
+        'nivel' => $c['nivel'],
+        'perfiles' => array_map(fn($p) => ['perfil' => $p, 'actor' => 'GM', 'opciones' => array_values(array_intersect($opPorPerfil[$p] ?? [], $c['opciones']))], $c['perfiles']),
+        'perfiles_ihe' => array_map(fn($p) => ['perfil' => $p, 'agrupado_con' => 'GM'], $c['ihe']),
+        'pendientes' => $c['pendientes'],
+        'vinculos' => ['capability_statement' => base() . '/metadata', 'guia' => cfg()['ns'] . '/ImplementationGuide/ar.iproy.pim', 'pruebas' => 'pruebas/pim.sh y pruebas/mem.sh del repositorio'],
     ];
-}
-function codesystem(string $id): ?array {
-    $k = catalogos()[$id] ?? null;
-    if (!$k) return null;
-    return ['resourceType' => 'CodeSystem', 'id' => $id, 'url' => cs($id), 'version' => VERSION_PIM, 'name' => str_replace('-', '', ucwords($id, '-')),
-        'title' => $k[0], 'status' => 'active', 'content' => 'complete', 'caseSensitive' => true, 'count' => count($k[1]), 'concept' => $k[1]];
-}
-function codesystems_bundle(): array {
-    $e = [];
-    foreach (array_keys(catalogos()) as $id) $e[] = ['fullUrl' => base() . '/CodeSystem/' . $id, 'resource' => codesystem($id), 'search' => ['mode' => 'match']];
-    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e), 'entry' => $e];
 }

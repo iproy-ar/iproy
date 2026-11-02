@@ -1,0 +1,53 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-organismo",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo",
+  "name": "PimOrganismo",
+  "title": "PIM — Organismo o establecimiento de salud",
+  "status": "draft",
+  "description": "Establecimiento de salud como organización. Deriva de IHE mCSD FacilityOrganization: un sistema que entiende mCSD lo lee sin adaptaciones. Debe usar el código REFES cuando exista. Los ministerios y regiones sanitarias usan directamente IHE mCSD JurisdictionOrganization.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Organization",
+  "baseDefinition": "https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.mCSD.FacilityOrganization",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Organization",
+        "path": "Organization",
+        "constraint": [
+          {
+            "key": "pim-sin-paciente",
+            "severity": "error",
+            "human": "Ningún recurso PIM se refiere a un paciente.",
+            "expression": "descendants().ofType(Reference).where(reference.startsWith('Patient/')).empty()",
+            "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-organismo"
+          }
+        ]
+      },
+      {
+        "id": "Organization.identifier",
+        "path": "Organization.identifier",
+        "min": 1,
+        "mustSupport": true
+      },
+      {
+        "id": "Organization.type",
+        "path": "Organization.type",
+        "mustSupport": true
+      },
+      {
+        "id": "Organization.name",
+        "path": "Organization.name",
+        "mustSupport": true
+      },
+      {
+        "id": "Organization.partOf",
+        "path": "Organization.partOf",
+        "mustSupport": true
+      }
+    ]
+  }
+}

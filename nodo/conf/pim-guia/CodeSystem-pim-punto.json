@@ -1,0 +1,82 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimPuntoCS",
+  "id": "pim-punto",
+  "title": "PIM — Tipo de punto de medición",
+  "description": "Tipos de punto de medición; se mapean a clases de Brick y etiquetas de Project Haystack.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-punto",
+  "concept": [
+    {
+      "code": "PRES-LINEA",
+      "display": "Presión de línea"
+    },
+    {
+      "code": "PRES-DIF",
+      "display": "Presión diferencial"
+    },
+    {
+      "code": "TEMP-IMP",
+      "display": "Temperatura de impulsión"
+    },
+    {
+      "code": "HUM",
+      "display": "Humedad relativa"
+    },
+    {
+      "code": "AISL",
+      "display": "Resistencia de aislamiento"
+    },
+    {
+      "code": "TRANSF",
+      "display": "Estado de transferencia"
+    },
+    {
+      "code": "TEMP-AMB",
+      "display": "Temperatura ambiente"
+    },
+    {
+      "code": "TEMP-ACEITE",
+      "display": "Temperatura de aceite"
+    },
+    {
+      "code": "TENSION-L1",
+      "display": "Tensión de fase L1"
+    },
+    {
+      "code": "CORRIENTE",
+      "display": "Corriente"
+    },
+    {
+      "code": "CAUDAL",
+      "display": "Caudal"
+    },
+    {
+      "code": "NIVEL",
+      "display": "Nivel de tanque o reservorio"
+    },
+    {
+      "code": "CONDUCTIVIDAD",
+      "display": "Conductividad del agua"
+    },
+    {
+      "code": "PARTICULAS",
+      "display": "Concentración de partículas"
+    },
+    {
+      "code": "ALIMENTACION",
+      "display": "Fuente de alimentación (red o batería)"
+    },
+    {
+      "code": "BATERIA",
+      "display": "Carga de batería"
+    },
+    {
+      "code": "AUTOPRUEBA",
+      "display": "Resultado de autoprueba"
+    }
+  ],
+  "caseSensitive": true,
+  "count": 17
+}

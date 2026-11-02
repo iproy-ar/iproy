@@ -1,0 +1,54 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-categoria-riesgo",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-riesgo",
+  "name": "CategoriaRiesgo",
+  "title": "Categoría de riesgo NFPA 99",
+  "status": "draft",
+  "description": "Categoría de riesgo ante la falla del sistema o activo.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Device",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Categoría de riesgo NFPA 99",
+        "definition": "Categoría de riesgo ante la falla del sistema o activo."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-riesgo"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-categoria-riesgo"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimCategoriaRiesgoVS",
+  "id": "pim-categoria-riesgo",
+  "title": "PIM — Categoría de riesgo (VS)",
+  "description": "Categorías 1 a 4.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-categoria-riesgo",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-categoria-riesgo"
+      }
+    ]
+  }
+}

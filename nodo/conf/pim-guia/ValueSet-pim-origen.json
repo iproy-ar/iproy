@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimOrigenVS",
+  "id": "pim-origen",
+  "title": "PIM — Origen del dato (VS)",
+  "description": "Origen del dato.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-origen",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-origen"
+      }
+    ]
+  }
+}

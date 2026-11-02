@@ -16,7 +16,8 @@ declare(strict_types=1);
 namespace Nucleo;
 
 const ALCANCES_PIM = ['GM' => 'system/*.cruds', 'EJ' => 'system/*.rs system/Task.u', 'SO' => 'system/*.rs system/ServiceRequest.c',
-                      'FT' => 'system/Device.rs system/Observation.crs', 'CI' => 'system/*.rs'];
+                      'FT' => 'system/Device.rs system/Observation.crs', 'CI' => 'system/*.rs',
+                      'RE' => 'system/Device.rs'];
 
 function base_local(): string { return 'http://127.0.0.1:' . puerto_local(); }
 

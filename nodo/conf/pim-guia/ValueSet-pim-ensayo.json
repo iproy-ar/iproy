@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimEnsayoVS",
+  "id": "pim-ensayo",
+  "title": "PIM — Ensayos (VS)",
+  "description": "Ensayos reglamentarios y verificaciones técnicas.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-ensayo",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-ensayo"
+      }
+    ]
+  }
+}

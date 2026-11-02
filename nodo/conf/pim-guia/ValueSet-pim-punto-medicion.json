@@ -1,0 +1,21 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimPuntoMedicionVS",
+  "id": "pim-punto-medicion",
+  "title": "PIM — Puntos de medición (instalaciones y equipos médicos)",
+  "description": "Tipos de punto: códigos PIM para instalaciones y códigos MDC para los atributos que informan los equipos médicos por IHE MEM-DMC.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-punto-medicion",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-punto"
+      },
+      {
+        "valueSet": [
+          "https://iproy.com.ar/fhir/ValueSet/pim-mem-dmc"
+        ]
+      }
+    ]
+  }
+}

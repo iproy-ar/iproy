@@ -1,0 +1,29 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimNivelConformidad",
+  "id": "pim-nivel-conformidad",
+  "title": "PIM — Nivel de conformidad",
+  "description": "Niveles acumulativos de conformidad (Parte 6).",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-nivel-conformidad",
+  "concept": [
+    {
+      "code": "basico",
+      "display": "Básico",
+      "definition": "PIM-INV + PIM-SOL + PIM-OT."
+    },
+    {
+      "code": "intermedio",
+      "display": "Intermedio",
+      "definition": "Básico + PIM-REG, PIM-RSG, PIM-PRV, PIM-ENS y PIM-KPI."
+    },
+    {
+      "code": "avanzado",
+      "display": "Avanzado",
+      "definition": "Intermedio + PIM-TEL, PIM-ALR, PIM-FED y PIM-EQM."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 3
+}

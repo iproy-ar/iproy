@@ -1,0 +1,74 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimPerfilIntegracion",
+  "id": "pim-perfil-integracion",
+  "title": "PIM — Perfiles de integración",
+  "description": "Perfiles de integración del PIM (Parte 4). Cada uno es una «definición de flujo de trabajo» en el sentido de IHE XDW, montada sobre FHIR R4.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-perfil-integracion",
+  "concept": [
+    {
+      "code": "PIM-INV",
+      "display": "Inventario",
+      "definition": "Organismos, establecimientos, locales, activos y puntos de medición. Agrupa IHE ITI mCSD."
+    },
+    {
+      "code": "PIM-REG",
+      "display": "Registro estatal",
+      "definition": "Datos de PMA exigidos por el REFES (Res. SGS 532/2026)."
+    },
+    {
+      "code": "PIM-SOL",
+      "display": "Solicitud",
+      "definition": "Pedido de intervención sobre un local o un activo."
+    },
+    {
+      "code": "PIM-OT",
+      "display": "Orden de trabajo",
+      "definition": "Ciclo de la orden entre organismos (máquina de estados)."
+    },
+    {
+      "code": "PIM-RSG",
+      "display": "Riesgo y prioridad",
+      "definition": "IRU explicable."
+    },
+    {
+      "code": "PIM-PRV",
+      "display": "Preventivo",
+      "definition": "Planes y protocolos."
+    },
+    {
+      "code": "PIM-ENS",
+      "display": "Ensayo reglamentario",
+      "definition": "Informe de ensayo o verificación técnica con acta firmada."
+    },
+    {
+      "code": "PIM-KPI",
+      "display": "Indicadores",
+      "definition": "Definición y valores de indicadores (EN 15341)."
+    },
+    {
+      "code": "PIM-TEL",
+      "display": "Telemetría",
+      "definition": "Mediciones de instalaciones."
+    },
+    {
+      "code": "PIM-ALR",
+      "display": "Alarmas técnicas",
+      "definition": "Aviso y escalamiento. Puente con IHE DEV ACM."
+    },
+    {
+      "code": "PIM-FED",
+      "display": "Federación",
+      "definition": "Sincronización entre nodos. Semántica de IHE ITI-91 extendida a todos los recursos."
+    },
+    {
+      "code": "PIM-EQM",
+      "display": "Equipos médicos",
+      "definition": "Puente con IHE DEV MEM-DMC (PCD-15) y MEM-LS (PCD-16)."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 12
+}
