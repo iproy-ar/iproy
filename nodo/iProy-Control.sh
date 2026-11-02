@@ -413,7 +413,8 @@ asegurar_offline() {
 }
 escribir_ips() {
   local l="" ip
-  for ip in $(hostname -I 2>/dev/null || true); do [[ "$ip" == *:* ]] || l+="\"$ip\","; done
+  local ips; ips="$(hostname -I 2>/dev/null || ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 || true)"   # Arch/EndeavourOS: hostname sin -I
+  for ip in $ips; do [[ "$ip" == *:* ]] || l+="\"$ip\","; done
   printf '{"ipv4":[%s],"ts":"%s"}\n' "${l%,}" "$(date -u +%FT%TZ)" > "$DATA/run/ips.json"
 }
 # El modo elegido en el panel (data/red.json) tiene prioridad sobre el de iproy.env
@@ -683,7 +684,7 @@ cmd_start() {
     export IPROY_TLS_SITIOS="https://localhost:$IPROY_PUERTO_TLS, https://127.0.0.1:$IPROY_PUERTO_TLS"
     if [[ "$IPROY_MODO" == "lan" ]]; then
       IPROY_BIND="0.0.0.0"
-      local ip; for ip in $(hostname -I 2>/dev/null); do [[ "$ip" == *:* ]] || IPROY_TLS_SITIOS+=", https://$ip:$IPROY_PUERTO_TLS"; done
+      local ip; for ip in $(hostname -I 2>/dev/null || ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1); do [[ "$ip" == *:* ]] || IPROY_TLS_SITIOS+=", https://$ip:$IPROY_PUERTO_TLS"; done
       IPROY_TLS_SITIOS+=", https://nodo-${IPROY_NODE,,}.local:$IPROY_PUERTO_TLS"
     else IPROY_BIND="127.0.0.1"; fi
     "$FP" run --config "$RAIZ/conf/Caddyfile" --adapter caddyfile >> "$DATA/logs/frankenphp.out" 2>&1 &
