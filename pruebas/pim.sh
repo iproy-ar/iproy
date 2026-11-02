@@ -72,7 +72,7 @@ R=$(A GET "Device/$PMA/\$refes"); ver "PMA completo" "$R" '"name":"completo","va
 R=$(A GET "Device/$PMA2/\$refes"); ver "PMA incompleto: informa lo que falta" "$R" '"name":"falta","valueString":"n.º de producto ANMAT"'
 ver "a nivel de tipo, con total" "$(A GET 'Device/$refes?completos=false')" '"name":"total"'
 ver "un sistema no es PMA → 404" "$(A GET "Device/$O2/\$refes")" 'no es un producto médico activo'
-ver "archivo CSV de carga (_format=csv)" "$(A GET 'Device/$refes?_format=csv')" "\"EJ-PMA-$S\";\"Fabricante EJ\
+ver "archivo CSV de carga (_format=csv)" "$(A GET 'Device/$refes?_format=csv')" "\"EJ-PMA-$S\";\"Fabricante EJ\""
 
 echo "5) Telemetría: DeviceMetric + Observation"
 DM=$(A GET "DeviceMetric?source=Device/$O2" | id_de DeviceMetric)
