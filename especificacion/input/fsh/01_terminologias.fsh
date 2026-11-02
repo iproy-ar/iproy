@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (C) 2026 Ovidio Francisco Arias
-// ===== Sistemas de códigos del PIM (11) + valores de extensiones =====
+// ===== Sistemas de códigos del PIM (0.9.2: 11 de dominio + auxiliar + vínculo + 5 de conformidad y origen) =====
 
 CodeSystem: PimCategoriaAlcance
 Id: pim-categoria-alcance
@@ -174,6 +174,17 @@ Description: "Tipos de punto de medición; se mapean a clases de Brick y etiquet
 * #HUM "Humedad relativa"
 * #AISL "Resistencia de aislamiento"
 * #TRANSF "Estado de transferencia"
+* #TEMP-AMB "Temperatura ambiente"
+* #TEMP-ACEITE "Temperatura de aceite"
+* #TENSION-L1 "Tensión de fase L1"
+* #CORRIENTE "Corriente"
+* #CAUDAL "Caudal"
+* #NIVEL "Nivel de tanque o reservorio"
+* #CONDUCTIVIDAD "Conductividad del agua"
+* #PARTICULAS "Concentración de partículas"
+* #ALIMENTACION "Fuente de alimentación (red o batería)"
+* #BATERIA "Carga de batería"
+* #AUTOPRUEBA "Resultado de autoprueba"
 
 // Valores de extensiones: un único sistema auxiliar agrupado
 CodeSystem: PimValores
@@ -345,3 +356,134 @@ Title: "PIM — Pertenencia del PMA"
 Description: "Pertenencia del PMA (REFES). Valores definitivos a confirmar con la DNSIS."
 * ^status = #draft
 * include codes from system PimValores where concept descendent-of #pertenencia
+
+// ===== 0.9.2: conformidad en formato IHE, origen y códigos MDC usados por MEM-DMC =====
+Alias: $MDC = urn:iso:std:iso:11073:10101
+
+CodeSystem: PimNivelConformidad
+Id: pim-nivel-conformidad
+Title: "PIM — Nivel de conformidad"
+Description: "Niveles acumulativos de conformidad (Parte 6)."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #basico "Básico" "PIM-INV + PIM-SOL + PIM-OT."
+* #intermedio "Intermedio" "Básico + PIM-RSG, PIM-PRV, PIM-ENS y PIM-KPI."
+* #avanzado "Avanzado" "Intermedio + PIM-TEL, PIM-ALR, PIM-FED y PIM-EQM."
+
+CodeSystem: PimPerfilIntegracion
+Id: pim-perfil-integracion
+Title: "PIM — Perfiles de integración"
+Description: "Perfiles de integración del PIM (Parte 4). Cada uno es una «definición de flujo de trabajo» en el sentido de IHE XDW, montada sobre FHIR R4."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #PIM-INV "Inventario" "Organismos, establecimientos, locales, activos y puntos de medición. Agrupa IHE ITI mCSD."
+* #PIM-REG "Registro estatal" "Datos de PMA exigidos por el REFES (Res. SGS 532/2026)."
+* #PIM-SOL "Solicitud" "Pedido de intervención sobre un local o un activo."
+* #PIM-OT "Orden de trabajo" "Ciclo de la orden entre organismos (máquina de estados)."
+* #PIM-RSG "Riesgo y prioridad" "IRU explicable."
+* #PIM-PRV "Preventivo" "Planes y protocolos."
+* #PIM-ENS "Ensayo reglamentario" "Informe de ensayo o verificación técnica con acta firmada."
+* #PIM-KPI "Indicadores" "Definición y valores de indicadores (EN 15341)."
+* #PIM-TEL "Telemetría" "Mediciones de instalaciones."
+* #PIM-ALR "Alarmas técnicas" "Aviso y escalamiento. Puente con IHE DEV ACM."
+* #PIM-FED "Federación" "Sincronización entre nodos. Semántica de IHE ITI-91 extendida a todos los recursos."
+* #PIM-EQM "Equipos médicos" "Puente con IHE DEV MEM-DMC (PCD-15) y MEM-LS (PCD-16)."
+
+CodeSystem: PimActor
+Id: pim-actor
+Title: "PIM — Actores"
+Description: "Actores del marco técnico PIM. En la colmena, cada actor cliente corresponde a un rol PIM."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #GM "Gestor de mantenimiento" "Sistema que custodia el inventario y las órdenes (servidor PIM). Se agrupa con IHE mCSD Directory y, opcionalmente, con IHE MEM DMIC y LOC."
+* #SO "Solicitante" "Sistema o aplicación que registra solicitudes."
+* #EJ "Ejecutor" "Empresa o área que ejecuta órdenes de su organización."
+* #FT "Fuente de telemetría" "Gateway, PLC o sensor que envía mediciones."
+* #CI "Consumidor de información" "Sistema que consulta inventario, órdenes, riesgo e indicadores."
+* #RE "Registro estatal" "Registro del Estado que recibe datos de PMA (REFES)."
+
+CodeSystem: PimOpcion
+Id: pim-opcion
+Title: "PIM — Opciones de los perfiles de integración"
+Description: "Opciones que un actor puede declarar además de lo obligatorio."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #mqtt "MQTT" "PIM-TEL: mediciones por MQTT 3.1.1 además de REST."
+* #colmena "Colmena" "PIM-FED y PIM-OT entre nodos por el protocolo colmena/1 (sobres firmados y sellados)."
+* #mem-dmc "MEM-DMC" "PIM-EQM: recibe IHE PCD-15 (ORU^R44) por MLLP."
+* #mem-ls "MEM-LS" "PIM-EQM: recibe IHE PCD-16 (ORU^R45) por MLLP."
+* #mcsd-update "Actualización mCSD" "PIM-INV: responde IHE ITI-91 (_history con _since) para Organization y Location."
+* #transicion "Operación $transicion" "PIM-OT: cambios de estado por operación, además de PUT."
+
+CodeSystem: PimOrigen
+Id: pim-origen
+Title: "PIM — Origen del dato"
+Description: "Etiqueta (meta.tag) que indica de dónde viene un recurso."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #pim "PIM" "Creado en el servidor PIM."
+* #legado "Sistema anterior" "Reflejado de un sistema anterior: solo lectura en PIM."
+* #mem-dmc "MEM-DMC" "Creado a partir de un mensaje IHE PCD-15."
+
+ValueSet: PimNivelConformidadVS
+Id: pim-nivel-conformidad
+Title: "PIM — Nivel de conformidad (VS)"
+Description: "Niveles de conformidad."
+* ^status = #draft
+* include codes from system PimNivelConformidad
+
+ValueSet: PimPerfilIntegracionVS
+Id: pim-perfil-integracion
+Title: "PIM — Perfiles de integración (VS)"
+Description: "Perfiles de integración."
+* ^status = #draft
+* include codes from system PimPerfilIntegracion
+
+ValueSet: PimActorVS
+Id: pim-actor
+Title: "PIM — Actores (VS)"
+Description: "Actores del marco técnico."
+* ^status = #draft
+* include codes from system PimActor
+
+ValueSet: PimOpcionVS
+Id: pim-opcion
+Title: "PIM — Opciones (VS)"
+Description: "Opciones de los perfiles de integración."
+* ^status = #draft
+* include codes from system PimOpcion
+
+ValueSet: PimOrigenVS
+Id: pim-origen
+Title: "PIM — Origen del dato (VS)"
+Description: "Origen del dato."
+* ^status = #draft
+* include codes from system PimOrigen
+
+ValueSet: PimMemDmcVS
+Id: pim-mem-dmc
+Title: "PIM — Códigos MDC de IHE MEM-DMC y MEM-LS"
+Description: "Códigos de la nomenclatura ISO/IEEE 11073-10101 (MDC) que usan los mensajes IHE PCD-15 y PCD-16 (suplemento MEM-DMC Rev. 1.5). Los atributos de batería y autoprueba no tienen código asignado en el suplemento: llegan con código 0 y prefijo MDCX, y se conservan como texto."
+* ^status = #draft
+* $MDC#69135 "MDC_OBS_MEM"
+* $MDC#67880 "MDC_ATTR_ID_MODEL"
+* $MDC#67972 "MDC_ATTR_SYS_ID"
+* $MDC#67925 "MDC_ATTR_POWER_STAT"
+* $MDC#68512 "MDC_ATTR_LS_NAME"
+* $MDC#68513 "MDC_ATTR_LS_LOCATION"
+* $MDC#68525 "MDC_ATTR_LS_COORD_X"
+* $MDC#68526 "MDC_ATTR_LS_COORD_Y"
+* $MDC#68527 "MDC_ATTR_LS_COORD_Z"
+
+ValueSet: PimPuntoMedicionVS
+Id: pim-punto-medicion
+Title: "PIM — Puntos de medición (instalaciones y equipos médicos)"
+Description: "Tipos de punto: códigos PIM para instalaciones y códigos MDC para los atributos que informan los equipos médicos por IHE MEM-DMC."
+* ^status = #draft
+* include codes from system PimPuntoCS
+* include codes from valueset PimMemDmcVS
