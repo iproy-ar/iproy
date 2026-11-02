@@ -1,0 +1,21 @@
+{
+  "id": "modbus",
+  "nombre": "Sondeo Modbus TCP",
+  "version": "1.0.0",
+  "abi": 1,
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Cliente Modbus TCP (Modbus Application Protocol v1.1b3) sin dependencias: lee registros de retención (FC3) y de entrada (FC4) de PLC, tableros, medidores de energía y variadores; agrupa direcciones contiguas, decodifica int16/uint16/int32/uint32/float32 con orden de palabras configurable, aplica escala y publica telemetria/medicion.",
+  "requiere": ["telemetria"],
+  "lib": "lib.php",
+  "capacidades": { "modbus.ver": ["GM"] },
+  "tareas": [{ "id": "sondear", "cada": 10, "archivo": "tareas/sondear.php" }],
+  "rutas": "rutas.php",
+  "config_defecto": {
+    "habilitado": false,
+    "equipos": [
+      { "nombre": "ejemplo-tablero", "host": "192.0.2.10", "puerto": 502, "unidad": 1, "cada_s": 30, "activo": "CODIGO-INVENTARIO", "habilitado": false,
+        "registros": [ { "punto": "TENSION-L1", "funcion": 4, "direccion": 0, "tipo": "float32", "orden": "ABCD", "escala": 1, "desplazamiento": 0, "unidad": "V" } ] }
+    ]
+  }
+}

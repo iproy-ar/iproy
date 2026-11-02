@@ -1,0 +1,17 @@
+{
+  "id": "alarmas",
+  "nombre": "Alarmas (ISA-18.2 / IEC 62682)",
+  "version": "1.0.0",
+  "abi": 1,
+  "estabilidad": "estable",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Gestión de alarmas con el ciclo de vida de ANSI/ISA-18.2: normal, no reconocida, reconocida, retorno sin reconocer, enclavada, archivada (shelved), suprimida por diseño y fuera de servicio. Banda muerta, retardo de activación, prioridades, órdenes automáticas en PIM e indicadores de desempeño (tasa por 10 min, alarmas estancadas, intermitentes y «malos actores», EEMUA 191).",
+  "requiere": ["pim", "telemetria"],
+  "lib": "lib.php",
+  "capacidades": { "alarmas.ver": ["GM", "EJ", "CI", "FT"], "alarmas.operar": ["GM", "EJ"], "alarmas.configurar": ["GM"] },
+  "suscribe": { "telemetria/valor": "eventos.php" },
+  "tareas": [{ "id": "temporizadores", "cada": 15, "archivo": "tareas/temporizadores.php" }],
+  "rutas": "rutas.php",
+  "ui": { "script": "ui.js", "orden": 40 },
+  "config_defecto": { "archivar_max_min": 480, "estancada_h": 24, "intermitente_n": 3, "intermitente_s": 60 }
+}

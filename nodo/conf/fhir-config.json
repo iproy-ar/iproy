@@ -1,0 +1,10 @@
+{
+  "ns": "https://iproy.com.ar/fhir",
+  "ns_alias": [],
+  "organismo": { "codigo": "ORG", "nombre": "Organismo (configurar en data/fhir/config.json)", "refes": "", "refes_system": "" },
+  "empresas_internas": [],
+  "exponer_detalle": false,
+  "token_ttl": 300,
+  "max_count": 200,
+  "count_def": 50
+}

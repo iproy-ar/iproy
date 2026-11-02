@@ -1,0 +1,18 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
+CREATE TABLE IF NOT EXISTS tel_ultimo (
+  activo_id VARCHAR(64) NOT NULL, punto VARCHAR(40) NOT NULL,
+  valor DOUBLE NOT NULL, unidad VARCHAR(20) NOT NULL, ts DATETIME(3) NOT NULL, origen VARCHAR(40) NULL,
+  env_valor DOUBLE NULL, env_ts DATETIME(3) NULL, n BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (activo_id, punto)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS tel_serie (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, activo_id VARCHAR(64) NOT NULL, punto VARCHAR(40) NOT NULL, ts DATETIME(3) NOT NULL, valor DOUBLE NOT NULL,
+  KEY k_ap (activo_id, punto, ts)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS tel_cola (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, activo_id VARCHAR(64) NOT NULL, punto VARCHAR(40) NOT NULL, valor DOUBLE NOT NULL, unidad VARCHAR(20) NOT NULL, ts DATETIME(3) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS tel_mapa (
+  codigo VARCHAR(64) PRIMARY KEY, activo_id VARCHAR(64) NULL, nombre VARCHAR(200) NULL, actualizado DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

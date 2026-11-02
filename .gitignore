@@ -1,0 +1,11 @@
+# Nunca se versiona lo propio de un nodo ni los binarios
+data/
+runtime/
+descargas/
+**/data/
+**/runtime/
+**/descargas/
+hub/config.php
+hub/datos/*.sqlite*
+*.part
+.DS_Store

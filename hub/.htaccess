@@ -1,0 +1,5 @@
+# Hub de relevo de la colmena · Apache (hosting compartido)
+Options -Indexes
+<FilesMatch "^(config\.php|config\.ejemplo\.php|LEEME\.md)$">
+  Require all denied
+</FilesMatch>

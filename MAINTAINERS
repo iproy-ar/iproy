@@ -1,0 +1,47 @@
+# Mantenedores por área (formato inspirado en el MAINTAINERS de Linux)
+#   M: mantenedor · R: revisor · S: estado (Mantenido | Huérfano | Obsoleto) · F: archivos
+# Los correos se completan al publicar el repositorio.
+
+NÚCLEO (módulos, bus, planificador, diario, usuarios, proc)
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	nodo/app/nucleo/
+
+COLMENA (protocolo colmena/1, vínculos, RPC) Y HUB DE RELEVO
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	nodo/app/nucleo/lib/colmena.php
+F:	nodo/app/nucleo/lib/identidad.php
+F:	hub/
+F:	docs/COLMENA.md
+
+SERVIDOR PIM (HL7 FHIR R4)
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	nodo/app/pim/
+F:	nodo/modulos/pim/
+
+MÓDULOS INDUSTRIALES (telemetría, alarmas ISA-18.2, MQTT, Modbus)
+M:	Ovidio F. Arias (autor)
+S:	Mantenido (mqtt y modbus en «pruebas»)
+F:	nodo/modulos/telemetria/
+F:	nodo/modulos/alarmas/
+F:	nodo/modulos/mqtt/
+F:	nodo/modulos/modbus/
+F:	nodo/tools/residente.php
+
+MANTENIMIENTO PREVENTIVO
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	nodo/modulos/preventivos/
+
+INCUBADORA
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	incubadora/
+
+LANZADORES Y EMPAQUETADO (Linux, Windows)
+M:	Ovidio F. Arias (autor)
+S:	Mantenido
+F:	nodo/iProy-Control.*
+F:	nodo/tools/

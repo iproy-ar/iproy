@@ -1,0 +1,47 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+# Política de seguridad
+
+## Cómo reportar una vulnerabilidad
+
+No la publiques en un *issue*. Escribí al correo de seguridad del proyecto, que se completa al publicar, o usá el aviso privado de vulnerabilidades del repositorio. Contá qué componente afecta, la versión y cómo reproducirla.
+
+| Plazo | Compromiso |
+|---|---|
+| 72 horas | Acuse de recibo |
+| 7 días | Evaluación inicial y severidad (CVSS) |
+| 90 días como máximo | Divulgación coordinada; antes si ya hay corrección publicada |
+
+La corrección se publica con un aviso que indica las versiones afectadas, cómo mitigar y cómo actualizar, y se da crédito a quien lo reportó si lo desea.
+
+## Versiones con soporte
+
+| Versión | Soporte |
+|---|---|
+| 1.0.x (actual) | Correcciones de seguridad |
+| LTS anual (a partir de la primera) | 2 años de correcciones de seguridad |
+
+Como hace el kernel Linux desde que es CNA, una vulnerabilidad se da por cerrada recién cuando su corrección está publicada en una versión con soporte.
+
+## Diseño de seguridad (resumen)
+
+- **Sin secretos en el código.** Contraseñas, claves y tokens se generan en `data/` al instalar, con permisos 600. `incubar.php verificar` busca claves privadas, contraseñas escritas y datos institucionales.
+- **Contraseñas** con Argon2id y bloqueo de 5 minutos tras 5 intentos fallidos.
+- **Sesión** en una cookie firmada (HMAC-SHA256), con los atributos HttpOnly y SameSite=Strict. Para escribir hace falta además el encabezado `X-Nucleo`, como protección contra CSRF.
+- **Diario** de solo agregado, encadenado con SHA-256 y firmado con ed25519. Se verifica con `nucleo verificar`.
+- **Colmena.** Los sobres van firmados (ed25519) y sellados (X25519, `crypto_box_seal`). Cada sobre se procesa una sola vez y tiene una vida máxima de 8 días. La huella se compara fuera de banda antes de aceptar un vínculo.
+- **Hub.** No puede leer ni falsificar los sobres. Además verifica la firma de cada pedido con un nonce de un solo uso y una ventana de ±5 minutos, limita la cantidad de pedidos y fija la clave de cada nodo en el primer uso (TOFU).
+- **Servidor PIM.** Usa SMART Backend Services (aserciones RS384 o ES384), roles con alcances mínimos, If-Match obligatorio y Provenance encadenado.
+
+## Reglamento europeo de ciberresiliencia (CRA)
+
+El Reglamento (UE) 2024/2847 obliga a los fabricantes a informar vulnerabilidades explotadas desde el 11-09-2026 y se aplica completo desde el 11-12-2027.
+
+- Para el software libre crea la figura del *steward*: una persona jurídica que sostiene software libre destinado a actividades comerciales. Sus obligaciones son livianas: política de ciberseguridad pública, cooperación y reportes.
+- Según la información disponible, un desarrollador individual sin actividad comercial no sería *steward* \[a verificar con asesoría legal\].
+- Quien **comercialice** un derivado de iProy en la UE será fabricante y tendrá las obligaciones completas.
+
+Para facilitar el cumplimiento se ofrecen:
+
+- esta política;
+- el SBOM de cada versión, con `php herramientas/sbom.php`;
+- la divulgación coordinada descrita arriba.

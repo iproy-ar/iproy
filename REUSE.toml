@@ -1,0 +1,14 @@
+# Convención REUSE (https://reuse.software/): licencia y copyright de los archivos que no pueden llevar cabecera.
+version = 1
+
+[[annotations]]
+path = ["**/*.png", "**/*.ico", "**/*.jpg", "nodo/conf/*.json", "**/modulo.json", "nodo/producto.json", "VERSION", "MAINTAINERS"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023-2026 Proyecto iProy y colaboradores"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = ["docs/**", "*.md"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023-2026 Proyecto iProy y colaboradores"
+SPDX-License-Identifier = "CC-BY-SA-4.0"

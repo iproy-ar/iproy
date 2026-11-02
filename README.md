@@ -1,0 +1,104 @@
+# iProy
+
+**Núcleo libre para sistemas de gestión de mantenimiento e infraestructura crítica.** iProy funciona como un kernel: un núcleo pequeño y estable que carga módulos, una red de nodos («colmena») que se vinculan por acuerdo mutuo, y una incubadora que deja un sistema propio funcionando en minutos.
+
+- **Interoperable por diseño.** Servidor PIM: HL7 FHIR R4, SMART Backend Services, Provenance encadenado.
+- **Industrial.** Incluye MQTT 3.1.1, Modbus TCP, alarmas ANSI/ISA-18.2 con indicadores EEMUA 191 y mantenimiento EN 13306.
+- **Libre para siempre.** Código bajo AGPL-3.0-or-later, especificación bajo CC BY-SA 4.0. Las contribuciones se firman con DCO y no hay CLA.
+
+> Proyecto personal de su autor, publicado como software libre. No es una publicación oficial de ninguna institución. No contiene datos, documentos ni configuraciones de ninguna institución: cada nodo nace vacío.
+
+## Qué hay en el repositorio
+
+```
+iproy/
+├── nodo/            distribución base: un nodo completo, portable (Linux y Windows), sin instalar nada en el sistema
+│   ├── app/nucleo/  el núcleo: módulos, bus, planificador, diario firmado, usuarios, /api/proc, colmena
+│   ├── app/pim/     Servidor PIM (FHIR R4) · app/app/ aplicación web · app/_iproy/ utilidades del nodo
+│   ├── modulos/     pim · telemetria · alarmas · preventivos · mqtt · modbus  (cada uno con su modulo.json)
+│   ├── conf/ tools/ sdk/   Caddyfile, SQL, residente MQTT, SDK PHP y JS
+│   └── iProy-Control.sh / .ps1 / .bat   lanzador: init, start, stop, usuario, modulo, nucleo, colmena, pim…
+├── incubadora/      incubar.php: crea un software derivado (nombre, logo, plantilla) o un módulo nuevo; verifica licencias
+├── hub/             hub de relevo de la colmena para Internet: un PHP para cualquier hosting (SQLite + libsodium)
+├── pruebas/         unitarias.php · colmena.sh (dos nodos, intranet y hub) · industrial.sh (alarmas, preventivos, MQTT, Modbus)
+├── herramientas/    simuladores Modbus y MQTT para pruebas
+├── docs/            arquitectura, protocolo colmena/1, guía de módulos, integración industrial, hoja de ruta, investigación
+└── LICENSE, LICENSES/, CONTRATO_SOCIAL.md, CONTRIBUIR.md, GOBERNANZA.md, MAINTAINERS, SEGURIDAD.md, CHANGELOG.md, REUSE.toml
+```
+
+## En 5 minutos
+
+```bash
+cd nodo
+bash tools/bajar-runtime.sh                 # FrankenPHP (PHP 8.5), verificado por sha256
+bash iProy-Control.sh instalar-mariadb      # MariaDB 11.4 oficial (bajado de mariadb.org a descargas/), verificado y recortado
+bash iProy-Control.sh init --nombre "Pañol central" --modo lan
+bash iProy-Control.sh start                 # MariaDB, servidor web, worker y residente MQTT
+bash iProy-Control.sh usuario alta admin AD # te pide la contraseña (no queda en el historial)
+# abrí http://localhost:8080/  → Tablero, Órdenes, Solicitud, Inventario, Preventivos, Alarmas, Telemetría, Colmena, Sistema
+```
+
+En Windows se usa `iProy-Control.bat init -Nombre "Pañol central" -Modo lan`, después `start`. El resto de los comandos se escribe igual.
+
+## Tu propio sistema, en minutos
+
+```bash
+php incubadora/incubar.php nuevo --nombre Colmen --sigla CLM --color "#0277bd" --plantilla gestion-mantenimiento
+php incubadora/incubar.php modulo calibraciones --nombre "Calibraciones" \
+    --campos "instrumento:texto!,fecha:fecha!,resultado:opcion(apto|no-apto|ajustado)!,error_pct:numero" \
+    --destino ../Colmen/Colmen-Portable/modulos
+```
+
+La incubadora renombra todo el producto (archivos, bases, variables, lanzador) y genera el logo. Elegís una de cuatro plantillas: `gestion-mantenimiento`, `mantenimiento-basico`, `monitoreo-industrial` o `minima`.
+
+Hay cosas que nunca cambia:
+
+- la licencia;
+- los avisos de copyright del original;
+- el espacio de nombres canónico del estándar PIM;
+- el protocolo `colmena/1`.
+
+Por eso un nodo *Colmen* y un nodo *iProy* se vinculan y se entienden sin adaptaciones.
+
+## Colmena: nodos que se vinculan
+
+```bash
+# en el nodo A
+bash iProy-Control.sh colmena vincular https://192.168.1.20:8443     # intranet (o el ID del otro nodo, por el hub)
+# en el nodo B, después de comparar la huella por teléfono
+bash Colmen-Control.sh colmena aceptar <ID-de-A> CI                  # CI consulta · SO solicitante · GM gestor
+bash iProy-Control.sh colmena rpc <ID-de-B> GET "Task?status=requested"
+```
+
+Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extremo a extremo. Para Internet sin IP fija ni puertos abiertos, `hub/` es un buzón de relevo que se instala en un hosting PHP común. El hub no puede leer ni alterar lo que transporta.
+
+La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
+
+## Estado (v1.0.0 · 02-11-2026)
+
+| Prueba | Resultado |
+|---|---|
+| `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, condición de alarma, libsodium, manifiestos | 32/32 |
+| `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub | 19/19 |
+| `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos por calendario y por uso, Modbus TCP, MQTT con proceso residente | 19/19 |
+| Recorrido de la aplicación web en Chromium, 11 pestañas, en iProy y en Colmen | sin errores de consola |
+| `incubar.php verificar` sobre la base y sobre Colmen | sin secretos, sin datos institucionales, licencias libres |
+
+Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA_DE_RUTA.md).
+
+## Documentación
+
+- [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md): el núcleo explicado con analogías de Linux.
+- [docs/COLMENA.md](docs/COLMENA.md): especificación del protocolo `colmena/1` y del hub.
+- [docs/MODULOS.md](docs/MODULOS.md): cómo escribir un módulo, con el manifiesto, el ABI y los puntos de enganche.
+- [docs/INDUSTRIAL.md](docs/INDUSTRIAL.md): MQTT, Modbus, alarmas ISA-18.2, OPC UA y Sparkplug.
+- [docs/INVESTIGACION.md](docs/INVESTIGACION.md): qué se tomó de Linux, EdgeX, Sparkplug, la CRA europea, openMAINT y Atlas CMMS, y por qué.
+- [nodo/INSTALAR.md](nodo/INSTALAR.md): instalación detallada y comandos del lanzador.
+
+## Licencia
+
+- Código: **GNU AGPL-3.0-or-later** ([LICENSE](LICENSE)). Quien ofrezca iProy o un derivado por red tiene que ofrecer el código fuente correspondiente, incluidas sus modificaciones. El enlace «código fuente» del pie de la aplicación y `GET /api/fuente` cumplen esa función.
+- Especificación y documentación: **CC BY-SA 4.0**.
+- Cada archivo lleva su cabecera `SPDX-License-Identifier`, según la convención [REUSE](https://reuse.software/).
+
+Los compromisos del proyecto están en el [Contrato social](CONTRATO_SOCIAL.md).

@@ -1,0 +1,6 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
+CREATE TABLE IF NOT EXISTS mqtt_saliente (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY, tema VARCHAR(255) NOT NULL, carga MEDIUMTEXT NOT NULL, retener TINYINT NOT NULL DEFAULT 0,
+  intentos INT NOT NULL DEFAULT 0, creado DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,70 @@
+# iProy Portable · Caddyfile del nodo · v0.5.0 · 30-10-2026
+# Las variables {$...} las define iProy-Control al iniciar. No editar: se reemplaza al actualizar.
+{
+	admin off
+	skip_install_trust
+	auto_https disable_redirects
+	storage file_system "{$IPROY_DATA}/caddy"
+	frankenphp
+	log {
+		output file "{$IPROY_DATA}/logs/caddy.log"
+		format console
+	}
+}
+
+(app) {
+	root * "{$IPROY_APP}"
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	@privado {
+		path *.local.php */_estado/* /_iproy/lib_*.php /_iproy/tareas/* /_iproy/offline/*.php *.sha256 /iProy.prev_* /pim/lib/* /pim/lib /nucleo/lib/* /nucleo/sql/*
+	}
+	respond @privado 403
+	# API pública FHIR R4 (interoperabilidad): todo /fhir/* entra por un único controlador; lib/ nunca se sirve.
+	# Ruta neutral de la colmena: nodos con distinto nombre de software se reconocen entre sí (Paso 105)
+	@colmena path /colmena/ping
+	rewrite @colmena /_iproy/ping.php
+	# Núcleo (v1.0): toda la API del nodo entra por un único controlador; app/nucleo/ no se sirve directo.
+	@api path /api /api/*
+	rewrite @api /nucleo/index.php
+	@fhir path /fhir /fhir/*
+	rewrite @fhir /fhir/index.php
+	# Servidor PIM v1.0 (sistema paralelo, base propia iproy_pim): API REST y token por un único controlador;
+	# la Consola (/pim/consola/) y el disparador de importación (/pim/admin/) son archivos propios.
+	@pim path /pim /pim/r4 /pim/r4/* /pim/auth/*
+	rewrite @pim /pim/index.php
+	# En el nodo solo existe iProy: lo que la app todavía pida a /GestionMant/… se sirve desde /iProy/… (v0.4.2)
+	@gestionmant path_regexp gm ^/GestionMant(/.*)?$
+	rewrite @gestionmant /iProy{re.gm.1}
+	# Archivo ESTÁTICO que no está en el nodo (p. ej. /servicios.txt de la raíz de producción): se trae de
+	# iproy.com.ar la primera vez que hay red y queda en data/cdn/ (v0.4.4). Nunca .php. Antes, el nodo devolvía
+	# la portada HTML en su lugar y los widgets la tomaban como datos.
+	@faltante {
+		not file
+		not path /_iproy/* /fhir/* /pim/* /api/* /app/*
+		path_regexp \.(txt|csv|json|png|jpe?g|gif|svg|ico|webp|css|js|map|woff2?|ttf|pdf)$
+	}
+	# (directo a cdn.php: las reescrituras de este bloque son excluyentes entre sí; cdn.php lee la ruta original)
+	rewrite @faltante /_iproy/cdn.php
+	# Copia local de librerías y fuentes externas (modo autónomo, v0.4)
+	@cdn path /_iproy/cdn/*
+	rewrite @cdn /_iproy/cdn.php
+	encode zstd gzip
+	php_server
+}
+
+# Modo «solo este equipo»: http://localhost es contexto seguro (PWA, Service Worker y WebAuthn funcionan).
+http://:{$IPROY_PUERTO} {
+	bind {$IPROY_BIND}
+	import app
+}
+
+# HTTPS con la CA propia del nodo (necesario para la LAN: L-205, L-281).
+{$IPROY_TLS_SITIOS} {
+	bind {$IPROY_BIND}
+	tls internal
+	import app
+}

@@ -1,0 +1,17 @@
+{
+  "id": "telemetria",
+  "nombre": "Telemetría",
+  "version": "1.0.0",
+  "abi": 1,
+  "estabilidad": "estable",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Recibe mediciones de cualquier origen (MQTT, Modbus, HTTP, otros nodos) por el tema telemetria/medicion, resuelve el activo en PIM, guarda el último valor y una serie corta, y las envía al Servidor PIM como Observation por excepción (banda muerta + intervalo máximo), en lotes.",
+  "requiere": ["pim"],
+  "lib": "lib.php",
+  "capacidades": { "telemetria.ver": ["GM", "EJ", "CI", "FT"], "telemetria.escribir": ["FT", "GM"] },
+  "suscribe": { "telemetria/medicion": "eventos.php" },
+  "tareas": [{ "id": "enviar", "cada": 30, "archivo": "tareas/enviar.php" }],
+  "rutas": "rutas.php",
+  "ui": { "script": "ui.js", "orden": 50 },
+  "config_defecto": { "banda_muerta_pct": 0.5, "pim_cada_s": 300, "serie_dias": 7, "lote": 200 }
+}

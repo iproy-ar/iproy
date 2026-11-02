@@ -1,0 +1,21 @@
+{
+  "ns": "https://iproy.com.ar/pim",
+  "ns_alias": [
+    "https://iproy.com.ar/fhir"
+  ],
+  "organismo": {
+    "codigo": "ORG",
+    "nombre": "Organismo (configurar en data/pim/config.json)",
+    "refes": "",
+    "refes_system": ""
+  },
+  "empresas_internas": [],
+  "exponer_detalle": false,
+  "token_ttl": 300,
+  "max_count": 200,
+  "count_def": 50,
+  "responsable_defecto": "",
+  "regla_telemetria": true,
+  "legado_solo_lectura": true,
+  "consola_lan": false
+}

@@ -1,0 +1,9 @@
+{
+  "nombre": "iProy",
+  "version": "1.0.0",
+  "descripcion": "Sistema de gestión de mantenimiento e infraestructura: núcleo modular, Servidor PIM (HL7 FHIR R4), colmena de nodos e integración industrial (MQTT, Modbus, alarmas ISA-18.2).",
+  "licencia": "AGPL-3.0-or-later",
+  "fuente": "https://github.com/iproy/iproy",
+  "base": null,
+  "colores": {"primario": "#0d47a1", "secundario": "#1e88e5", "claro": "#e3f0fd"}
+}
