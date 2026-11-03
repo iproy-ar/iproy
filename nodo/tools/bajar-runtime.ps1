@@ -8,7 +8,13 @@ $sha = '89b99aed53fbf8bfe718a816a987001d499bf92e2e1288e882285a8d940ba00e'   # 60
 New-Item -ItemType Directory -Force -Path (Join-Path $RAIZ 'descargas') | Out-Null   # no existe en un producto recien incubado (1.1.1)
 $zip = Join-Path $RAIZ 'descargas\frankenphp-windows-x86_64.zip'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip -ProxyUseDefaultCredentials
+# Proxy del sistema solo si existe: -ProxyUseDefaultCredentials sin -Proxy falla en Windows PowerShell 5.1 (1.3.1)
+$px = [Net.WebRequest]::GetSystemWebProxy().GetProxy([Uri]$url)
+if ($px -and $px.AbsoluteUri -ne ([Uri]$url).AbsoluteUri) {
+  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip -Proxy $px.AbsoluteUri -ProxyUseDefaultCredentials
+} else {
+  Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip
+}
 $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 if ($h -ne $sha) { Remove-Item $zip; throw "sha256 distinto ($h): NO se instala" }
 $dst = Join-Path $RAIZ 'runtime\win-x64\frankenphp'
