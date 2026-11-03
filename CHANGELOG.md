@@ -1,9 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
-## Sin publicar
+## 1.3.1 · 03-11-2026 — Primera instalación real en Windows
+
+Correcciones encontradas instalando un nodo en Windows 10 desde cero:
 
 - **Windows, `iProy-Control.bat`:** pasaba solo 7 argumentos al `.ps1`, así que `init -Nombre … -Modo … -Puerto … -Vista menu` perdía el último («Falta un argumento para el parámetro Vista»); ahora pasa todos.
+- **Windows, `init`:** sugiere `start`; `importar-app` e `importar-datos` solo hacen falta al migrar desde Google Sheets.
+- **Tutorial de Windows** (`docs/INSTALACION.md`, B1–B7): winget con `--scope machine`, reparación del error `0x8a15000f`, activación de `mbstring` y `gd`, Administrador solo para instalar, `pwd` antes de cada paso, pruebas con el bash de Git (no el de WSL) y tabla de problemas.
 - **Windows, `tools\bajar-runtime.ps1`:** fallaba con «falta el parámetro Proxy» en Windows PowerShell 5.1; ahora usa el proxy del sistema solo si existe.
 - **Incubadora:** al arrancar comprueba que PHP tenga `mbstring` y `json`; si falta alguna, explica cómo activarla en `php.ini` en lugar de cortar con un error fatal (detectado en la primera prueba en Windows, donde el PHP oficial trae `mbstring` desactivada).
 

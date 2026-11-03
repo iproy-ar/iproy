@@ -131,22 +131,46 @@ Después del reinicio, `calibraciones` aparece como `cargado`.
 
 ## B. Windows 10 / 11
 
-Mismo recorrido; cambian las herramientas. Todo se hace desde **PowerShell** (botón derecho sobre Inicio → «Terminal» o «Windows PowerShell»), sin permisos de administrador salvo para instalar PHP y Git.
+Mismo recorrido; cambian las herramientas. Todo se hace desde **PowerShell** (botón derecho sobre Inicio → «Terminal» o «Windows PowerShell»).
 
-### B1. Requisitos (una sola vez)
+> **Administrador solo para instalar Git y PHP.** Todo lo demás (clonar, incubar, `init`, `start`) se hace con **tu usuario de siempre**: si lo hacés como Administrador, el nodo queda en `C:\Users\Admin\…` y el icono en el escritorio de Admin, no en el tuyo (comprobado en la primera prueba en Windows).
 
-1. **Git:** https://git-scm.com/download/win (o `winget install Git.Git`).
-2. **PHP 8.1 o posterior** (solo para la incubadora; el nodo trae el suyo): https://windows.php.net/download/ → «Thread Safe» ZIP → descomprimir en `C:\php` y agregar esa carpeta al PATH (Configuración → Sistema → Acerca de → Configuración avanzada → Variables de entorno). O `winget install PHP.PHP.8.3`.
-   - Para el logo propio: en `C:\php\php.ini` (copiá `php.ini-development` si no existe) quitá el `;` de `;extension=gd`.
-3. Comprobá en una PowerShell nueva: `git --version` y `php -v`.
-
-### B2. Bajar el repositorio
+### B1. Requisitos (una sola vez, en PowerShell **de Administrador**)
 
 ```powershell
-mkdir $HOME\Proyectos\pim; cd $HOME\Proyectos\pim
+winget install --id Git.Git -e --source winget
+winget install --id PHP.PHP.8.3 -e --source winget --scope machine
+```
+
+- `--scope machine` instala PHP para todos los usuarios de la PC; sin eso queda solo para el usuario que lo instaló.
+- Si winget responde **`0x8a15000f : Faltan los datos requeridos por el origen`**, su catálogo está dañado. Se repara con:
+  ```powershell
+  winget source reset --force
+  Add-AppxPackage -Path https://cdn.winget.microsoft.com/cache/source.msix
+  ```
+- Sin winget: Git de https://git-scm.com/download/win y PHP de https://windows.php.net/download/ (ZIP «VS16 x64 Thread Safe») descomprimido en `C:\php` y agregado al PATH del sistema.
+
+**Activar las extensiones de PHP** que el PHP oficial de Windows trae apagadas (`mbstring` es obligatoria; `gd` hace el logo). Abrí una PowerShell de Administrador **nueva** y corré el bloque completo:
+
+```powershell
+$d = Split-Path (php -r "echo PHP_BINARY;")
+if (!(Test-Path "$d\php.ini")) { Copy-Item "$d\php.ini-development" "$d\php.ini" }
+(Get-Content "$d\php.ini") -replace '^;extension=mbstring','extension=mbstring' -replace '^;extension=gd','extension=gd' -replace '^;extension_dir = "ext"',"extension_dir = `"$d\ext`"" | Set-Content "$d\php.ini"
+php -m | Select-String "mbstring|gd"
+```
+
+Tienen que aparecer **gd** y **mbstring**. Cerrá esa ventana: desde acá, PowerShell **normal**. Comprobá `git --version` y `php -v`.
+
+### B2. Bajar el repositorio (PowerShell normal)
+
+```powershell
+mkdir $HOME\Proyectos\pim -Force; cd $HOME\Proyectos\pim
 git clone https://github.com/iproy-ar/iproy.git
 cd iproy
+pwd
 ```
+
+`pwd` tiene que terminar en `\Proyectos\pim\iproy`. **Cada PowerShell nueva arranca en otra carpeta:** antes de cualquier comando, entrá con `cd` y confirmá con `pwd`.
 
 ### B3. Incubar tu producto (opcional)
 
@@ -155,13 +179,26 @@ php incubadora\incubar.php nuevo --nombre MantSur --sigla MSR --color "#0277bd" 
 cd ..\MantSur\MantSur-Portable
 ```
 
+Tiene que terminar con `✔ verificación: sin problemas`. Desde la 1.3.1, si a PHP le falta una extensión, la incubadora dice cuál y cómo activarla.
+
 ### B4. Runtime
 
-1. **FrankenPHP:** botón derecho sobre `tools\bajar-runtime.ps1` → «Ejecutar con PowerShell». Si Windows bloquea los scripts, abrí PowerShell y corré una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. Termina con `OK FrankenPHP verificado (89b99aed53fbf8bf)`.
-2. **MariaDB:** copiá a `descargas\` una de estas dos cosas:
-   - a) `runtime-mariadb-11.4.13-win-x64-recortado.zip` + `sha256sums.txt` de otro nodo (19 MB), o
-   - b) el ZIP oficial `mariadb-11.4.x-winx64.zip` de https://mariadb.org/download/.
-3. `.\MantSur-Control.bat instalar-mariadb` y después `.\MantSur-Control.bat diagnostico` (comprueba FrankenPHP, MariaDB y puertos).
+1. **FrankenPHP:**
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\tools\bajar-runtime.ps1
+   ```
+   Termina con `OK FrankenPHP verificado (89b99aed53fbf8bf)`.
+2. **MariaDB:** el ZIP oficial va a `descargas\` (sin descomprimir):
+   ```powershell
+   Invoke-WebRequest -UseBasicParsing https://archive.mariadb.org/mariadb-11.4.13/winx64-packages/mariadb-11.4.13-winx64.zip -OutFile descargas\mariadb-11.4.13-winx64.zip
+   ```
+   O, de otro nodo, `runtime-mariadb-11.4.13-win-x64-recortado.zip` + `sha256sums.txt` (19 MB).
+3. Instalar y revisar:
+   ```powershell
+   .\MantSur-Control.bat instalar-mariadb
+   .\MantSur-Control.bat diagnostico
+   ```
+   Resultado esperado: `12 OK · 0 para resolver`. El aviso «sin sha256sums.txt» es normal con el ZIP oficial.
 
 ### B5. Crear el nodo y arrancarlo
 
@@ -171,13 +208,32 @@ cd ..\MantSur\MantSur-Portable
 .\MantSur-Control.bat usuario alta admin AD
 ```
 
-En Windows la base usa siempre el puerto 3407 (no hay `-PuertoDb`); si ya tenés otro MySQL o XAMPP, `diagnostico` lo avisa. Windows puede preguntar si permitís que FrankenPHP y MariaDB usen la red: aceptá solo redes privadas. El antivirus a veces demora el primer arranque de `mariadbd.exe`.
+Uno por vez. `usuario alta` pide la contraseña dos veces sin mostrarla: **anotala antes**. En Windows la base usa siempre el puerto 3407; si ya tenés otro MySQL o XAMPP, `diagnostico` lo avisa. Si Windows pregunta por el firewall, permití solo redes privadas.
 
 ### B6. Comprobar y usar
 
-Igual que en Linux (A6 y A7): `http://localhost:8095/`, `/pim/r4/metadata`, `/pim/declaracion`. Las pruebas `pim.sh` y `mem.sh` son scripts de bash: en Windows se corren desde **Git Bash** (viene con Git) con `bash pruebas/pim.sh ../MantSur/MantSur-Portable`.
+1. `http://localhost:8095/` con `admin` (lleva a la aplicación); `/pim/r4/metadata` y `/pim/declaracion`.
+2. Pruebas del estándar: en PowerShell la palabra `bash` abre **WSL**, no Git. Usá la ruta del bash de Git (o abrí **Git Bash** desde Inicio):
+   ```powershell
+   cd $HOME\Proyectos\pim\iproy
+   & "C:\Program Files\Git\bin\bash.exe" pruebas/pim.sh ../MantSur/MantSur-Portable
+   & "C:\Program Files\Git\bin\bash.exe" pruebas/mem.sh ../MantSur/MantSur-Portable
+   ```
+3. Para apagar: `.\MantSur-Control.bat stop`, o «Detener MantSur» en el menú Inicio. `init` deja el icono **MantSur** en el escritorio del usuario que lo corrió; si no aparece, `.\MantSur-Control.bat acceso-directo`.
 
-Para apagar: `.\MantSur-Control.bat stop`, o el acceso «Detener MantSur» del menú Inicio. `init` también deja el icono **MantSur** en el escritorio (doble clic para iniciar); si no aparece, `.\MantSur-Control.bat acceso-directo`.
+### B7. Problemas de la primera prueba en Windows
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| `git : El término 'git' no se reconoce…` | Git no estaba instalado | B1 |
+| winget `0x8a15000f` | Catálogo de winget dañado | `winget source reset --force` y `Add-AppxPackage … source.msix` (B1) |
+| `php` no se reconoce con otro usuario | PHP instalado solo para Admin | `--scope machine` (B1) |
+| `Could not open input file: incubadora\incubar.php` | PowerShell en otra carpeta | `cd` a `iproy` y `pwd` (B2) |
+| `Call to undefined function mb_strtoupper()` | Falta `mbstring` en PHP | Activarla (B1). Desde 1.3.1 la incubadora lo avisa |
+| `bajar-runtime.ps1`: «falta el siguiente parámetro: Proxy» | Opción de proxy incompatible con PowerShell 5.1 | Corregido en 1.3.1 |
+| `init … -Vista menu`: «Falta un argumento para el parámetro Vista» | El `.bat` pasaba solo 7 argumentos | Corregido en 1.3.1. Antes: `powershell -ExecutionPolicy Bypass -File .\MantSur-Control.ps1 init …` |
+| `bash` pide instalar WSL | En PowerShell `bash` es el de WSL | Ruta completa del bash de Git (B6) |
+| El icono no está en mi escritorio | `init` se corrió como Administrador | Instalar con tu usuario; o copiar el `.lnk` del escritorio de Admin |
 
 ---
 
