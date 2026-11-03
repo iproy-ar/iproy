@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.2.0 · 03-11-2026 — Tablero nuevo, identidad institucional y perfil
+
+Rediseño de la aplicación a partir del sistema original del autor (GestionMant), sin perder nada de lo que ya hacía:
+- **Inicio**: saludo con el nombre, la fecha y la institución; «Resumen» con tarjetas de indicadores (íconos, degradé suave, efecto al pasar el mouse); **accesos rápidos por categoría** (Mantenimiento, Planificación, Monitoreo, Red de hospitales, Administración) con buscador (tecla «/» y Enter), **recientes** por usuario y baldosas animadas.
+- **Barra superior** con título y ubicación (categoría / módulo), botones atrás, inicio y adelante, y el usuario; **menú lateral** con todos los módulos agrupados.
+- **Identidad institucional** (Configuración, solo administrador, con la contraseña confirmada y una sesión de configuración de 2 horas): logo propio en el ingreso, el menú y la barra; nombre y lema de la institución; fondo de la pantalla de ingreso; fondo del tablero para todos; orden y visibilidad de los widgets.
+- **Mi perfil** (cada usuario): nombre visible, **fondo propio como los temas del correo** (11 temas sin Internet o una foto), transparencia del tablero sobre el fondo, widgets que quiere ver y cambio de contraseña.
+- Imágenes: se achican en el navegador y el núcleo las vuelve a codificar con GD (PNG ≤ 512 px para logos, JPEG ≤ 2560 px para fondos); se rechaza todo lo que no sea PNG, JPG o WebP; se borran las que dejan de usarse.
+- API nueva: `GET /api/apariencia` (pública), `GET|PUT /api/perfil`, `POST /api/perfil/fondo`, `POST /api/sesion/config`, `GET|PUT /api/config/apariencia`, `POST /api/config/imagen/{logo|fondo_login|fondo_tablero}`.
+- Para los módulos: `Nucleo.tablero(fn, {id, titulo})`, `Nucleo.pestana({…, grupo, icono, desc})`, `Nucleo.kpis()` y `Nucleo.icono()`. Compatibles con los módulos anteriores.
+- Telemetría, Usuarios, Colmena y Sistema se conservan igual, ahora como accesos del tablero.
+
 ## 1.1.2 · 03-11-2026 — Acceso directo en el escritorio
 
 - `init` deja un **icono en el escritorio y en el menú de aplicaciones** (Linux: archivo `.desktop` con las acciones «Detener» y «Estado»; Windows: accesos `.lnk` en el escritorio y en el menú Inicio, con «Detener», y un `.ico` generado a partir del logo del producto). Para crearlos o quitarlos después: `acceso-directo` · `acceso-directo --quitar`.

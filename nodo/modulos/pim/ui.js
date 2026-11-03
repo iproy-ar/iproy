@@ -12,10 +12,15 @@
 
   Nucleo.tablero(async (el) => {
     const c = async (q) => (await pim('GET', 'Task?' + q + '&_summary=count')).cuerpo.total;
-    const [abiertas, urg, ejec] = await Promise.all([c('status=requested,received,accepted,ready,in-progress,on-hold'), c('priority=stat,asap&status=requested,received,accepted,ready,in-progress'), c('status=in-progress')]);
-    el.innerHTML = `<div class="tarjeta"><h2>Órdenes de trabajo</h2><div class="kpis"><div class="kpi"><b>${abiertas ?? '—'}</b><span>abiertas</span></div>
-      <div class="kpi"><b>${urg ?? '—'}</b><span>inmediatas o ASAP abiertas</span></div><div class="kpi"><b>${ejec ?? '—'}</b><span>en ejecución</span></div></div></div>`;
-  });
+    const [total, abiertas, urg, ejec, fin] = await Promise.all([c(''), c('status=requested,received,accepted,ready,in-progress,on-hold'),
+      c('priority=stat,asap&status=requested,received,accepted,ready,in-progress'), c('status=in-progress'), c('status=completed')]);
+    el.innerHTML = Nucleo.kpis([{ t: 'Órdenes totales', n: total, sub: 'histórico', icono: 'ordenes', color: '#1e88e5' },
+      { t: 'Abiertas', n: abiertas, sub: 'sin cerrar', icono: 'reloj', color: '#fb8c00' },
+      { t: 'Urgentes', n: urg, sub: 'inmediatas o ASAP abiertas', icono: 'alarmas', color: '#e53935' },
+      { t: 'En ejecución', n: ejec, sub: 'trabajando ahora', icono: 'telemetria', color: '#8e24aa' },
+      { t: 'Finalizadas', n: fin, sub: 'total', icono: 'ok', color: '#43a047' }]);
+    el.querySelectorAll('.kpi').forEach((k) => { k.style.cursor = 'pointer'; k.onclick = () => Nucleo.ir('ordenes'); });
+  }, { id: 'pim.ordenes', titulo: 'Órdenes de trabajo' });
 
   Nucleo.pestana({ id: 'ordenes', titulo: 'Órdenes', orden: 10, cap: 'pim.usar', render: async (el) => {
     el.innerHTML = `<div class="tarjeta"><div class="filtros"><div style="min-width:200px"><label>Estado</label><select id="oEst"><option value="">Abiertas</option>

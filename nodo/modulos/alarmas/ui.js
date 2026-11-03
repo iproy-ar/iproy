@@ -9,11 +9,13 @@
   const es = (e) => `<span class="et ${E[e] || ''}">${h(e)}</span>`;
 
   Nucleo.tablero(async (el) => {
-    if (!puede('alarmas.ver')) return;
+    if (!puede('alarmas.ver')) { el.remove(); return; }
     const a = (await api('GET', 'm/alarmas/activas')).alarmas;
-    el.innerHTML = `<div class="tarjeta"><h2>Alarmas activas (${a.length})</h2>${tabla([{ t: 'Prioridad', html: true, v: (x) => pr(x.prioridad) }, { t: 'Etiqueta', v: (x) => x.etiqueta },
-      { t: 'Estado', html: true, v: (x) => es(x.estado) }, { t: 'Mensaje', v: (x) => x.mensaje }, { t: 'Valor', v: (x) => x.valor }, { t: 'Desde', v: (x) => fecha(x.activada) }], a, () => Nucleo.ir('alarmas'))}</div>`;
-  });
+    el.innerHTML = `<div class="tarjeta"><h2>Alarmas activas (${a.length})</h2>${a.length ? tabla([{ t: 'Prioridad', html: true, v: (x) => pr(x.prioridad) }, { t: 'Etiqueta', v: (x) => x.etiqueta },
+      { t: 'Estado', html: true, v: (x) => es(x.estado) }, { t: 'Mensaje', v: (x) => x.mensaje }, { t: 'Valor', v: (x) => x.valor }, { t: 'Desde', v: (x) => fecha(x.activada) }], a.slice(0, 5), () => Nucleo.ir('alarmas'))
+        + (a.length > 5 ? `<p class="mini" style="margin:8px 0 0"><a href="#alarmas">Ver las ${a.length} alarmas →</a></p>` : '')
+      : '<p class="mini">✔ Sin alarmas activas. Las instalaciones informan valores normales.</p>'}</div>`;
+  }, { id: 'alarmas.activas', titulo: 'Alarmas activas' });
 
   Nucleo.pestana({ id: 'alarmas', titulo: 'Alarmas', orden: 40, cap: 'alarmas.ver', render: async (el) => {
     const [a, d, k] = await Promise.all([api('GET', 'm/alarmas/activas'), api('GET', 'm/alarmas/definiciones'), api('GET', 'm/alarmas/kpi')]);

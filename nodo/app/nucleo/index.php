@@ -18,6 +18,9 @@
  *  colmena    GET /api/colmena/vinculos · POST /api/colmena/vincular {destino} · POST /api/colmena/vinculos/{par}/{aceptar|revocar|rol|ping}
  *             POST /api/colmena/rpc {par, metodo, ruta, cuerpo, esperar} · GET /api/colmena/rpc/{id} · POST /api/colmena/evento {par, tema, datos}
  *             GET|PUT /api/colmena/config {hub:{url,activo,codigo}, url_publica} · POST /api/colmena/hub/{registrar|buzon}
+ *  apariencia GET /api/apariencia (pública: logo, institución, fondo del ingreso) · GET /api/apariencia/imagen/{archivo}
+ *             GET /api/perfil · PUT /api/perfil {nombre, fondo, opacidad, recientes, widgets_ocultos} · POST /api/perfil/fondo (imagen cruda)
+ *             POST /api/sesion/config {clave} (2 h) · GET|PUT /api/config/apariencia · POST /api/config/imagen/{logo|fondo_login|fondo_tablero}
  *  módulos    /api/m/{modulo}/{ruta}          rutas propias de cada módulo (rutas.php)
  *  internas   POST /api/nucleo/{arranque|tick|usuario}   solo el lanzador (127.0.0.1 + token del worker)
  */
@@ -51,6 +54,8 @@ try {
             'aviso' => 'Este programa es software libre (AGPL-3.0-or-later). Quien lo use por red tiene derecho a recibir el código fuente correspondiente, incluidas las modificaciones.']);
     }
     if ($es('GET', 'colmena', 'identidad')) responder(200, identidad_publica());
+    if ($es('GET', 'apariencia')) responder(200, ['ok' => true] + apariencia_publica());
+    if ($es('GET', 'apariencia', 'imagen', '*')) servir_imagen($p[2]);
     if ($es('POST', 'colmena', 'sobre')) {
         $r = recibir_sobre(cuerpo(), 'lan');
         responder(200, ['ok' => true, 'sobre' => $r]);
@@ -84,6 +89,45 @@ try {
         responder(200, ['ok' => true]);
     }
     if (!$u) throw new Fallo(401, 'Ingresá con tu usuario');
+
+    // ---------------------------------------------------------------- perfil propio y configuración de apariencia (1.2.0)
+    if ($es('GET', 'perfil')) responder(200, ['ok' => true, 'vista' => vista_usuario($u['usuario']), 'perfil' => perfil($u['usuario']), 'config_confirmada' => config_confirmada()]);
+    if ($es('PUT', 'perfil')) {
+        if (($n = $c('nombre')) !== null) { $n = trim((string) $n); if ($n === '' || mb_strlen($n) > 120) throw new Fallo(422, 'Nombre visible: 1 a 120 caracteres'); guardar_usuario(['usuario' => $u['usuario'], 'nombre' => $n], false); }
+        perfil($u['usuario'], array_intersect_key(cuerpo(), PERFIL_DEF));
+        responder(200, ['ok' => true, 'vista' => vista_usuario($u['usuario'])]);
+    }
+    if ($es('POST', 'perfil', 'fondo')) {
+        $img = guardar_imagen('fondo'); perfil($u['usuario'], ['fondo' => $img]); asentar('perfil.fondo', [], $u['usuario']);
+        responder(201, ['ok' => true, 'vista' => vista_usuario($u['usuario'])]);
+    }
+    if ($es('POST', 'sesion', 'config')) responder(200, ['ok' => true] + confirmar_config((string) $c('clave', '')));
+    if ($es('GET', 'config', 'apariencia')) { exigir_config(); responder(200, ['ok' => true, 'apariencia' => apariencia(), 'publica' => apariencia_publica(), 'temas' => array_values(array_filter(FONDOS))]); }
+    if ($es('PUT', 'config', 'apariencia')) {
+        exigir_config(); $d = cuerpo(); $cambio = [];
+        foreach (['institucion' => 120, 'lema' => 160] as $k => $max) if (isset($d[$k])) $cambio[$k] = mb_substr(trim((string) $d[$k]), 0, $max);
+        foreach (['fondo_login', 'fondo_tablero'] as $k) if (array_key_exists($k, $d)) $cambio[$k] = validar_fondo((string) $d[$k]);
+        if (isset($d['opacidad'])) $cambio['opacidad'] = max(40, min(100, (int) $d['opacidad']));
+        if (isset($d['saludo'])) $cambio['saludo'] = (bool) $d['saludo'];
+        if (array_key_exists('logo', $d) && $d['logo'] === '') { borrar_imagen(apariencia()['logo']); $cambio['logo'] = ''; }
+        if (isset($d['widgets']) && is_array($d['widgets'])) {
+            $lim = fn($l) => array_slice(array_values(array_unique(array_map(fn($x) => preg_replace('/[^a-z0-9_.-]/', '', (string) $x), (array) $l))), 0, 40);
+            $cambio['widgets'] = ['orden' => $lim($d['widgets']['orden'] ?? []), 'ocultos' => $lim($d['widgets']['ocultos'] ?? [])];
+        }
+        $antes = apariencia(); $a = apariencia($cambio);
+        foreach (['fondo_login', 'fondo_tablero'] as $k) if (isset($cambio[$k]) && $antes[$k] !== $a[$k] && !in_array($antes[$k], [$a['fondo_login'], $a['fondo_tablero']], true)) borrar_imagen($antes[$k]);
+        asentar('config.apariencia', array_keys($cambio));
+        responder(200, ['ok' => true, 'apariencia' => $a, 'publica' => apariencia_publica()]);
+    }
+    if ($es('POST', 'config', 'imagen', '*')) {
+        exigir_config(); $tipo = $p[2];
+        if (!in_array($tipo, ['logo', 'fondo_login', 'fondo_tablero'], true)) throw new Fallo(404, 'Tipo de imagen: logo | fondo_login | fondo_tablero');
+        $img = guardar_imagen($tipo === 'logo' ? 'logo' : 'fondo'); $antes = apariencia()[$tipo];
+        $a = apariencia([$tipo => $img]);
+        if (!in_array($antes, [$a['logo'], $a['fondo_login'], $a['fondo_tablero']], true)) borrar_imagen($antes);
+        asentar('config.imagen', ['tipo' => $tipo]);
+        responder(201, ['ok' => true, 'apariencia' => $a, 'publica' => apariencia_publica()]);
+    }
 
     // ---------------------------------------------------------------- PIM con el rol del usuario
     if (($p[0] ?? '') === 'pim') { exigir('pim.usar'); pim_proxy(implode('/', array_slice($p, 1)), $u); }

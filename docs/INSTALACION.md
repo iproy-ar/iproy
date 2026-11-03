@@ -111,7 +111,8 @@ Las pruebas crean datos de ejemplo con prefijo `EJ-` (establecimiento, edificios
 2. **Inventario → Nuevo activo:** código, nombre y ubicación. Empezá por los activos de alcance A (gases medicinales, energía crítica, cadena de frío).
 3. **Nueva solicitud:** escribí parte del nombre del activo y elegilo de la lista; el sistema genera la orden.
 4. **Órdenes:** asignar → aceptar → en ejecución → finalizada → conformada. «En espera», «rechazada» y «anulada» piden motivo.
-5. Para apagar: `bash MantSur-Control.sh stop` (hace una copia de seguridad antes).
+5. **Identidad de tu hospital** (desde la 1.2.0): menú del usuario → **Configuración** (pide tu contraseña otra vez; dura 2 horas) → subí el logo, escribí el nombre y elegí el fondo del ingreso y del tablero. Cada usuario elige su propio fondo en **Mi perfil**.
+6. Para apagar: `bash MantSur-Control.sh stop` (hace una copia de seguridad antes).
 
 ### A8. Módulo propio (opcional)
 

@@ -77,10 +77,16 @@ La función recibe `$c = {modulo, cfg, nodo, usuario, params, cuerpo, query}` y 
 ```js
 (() => {
   const { h, api, pim, tabla, form, panel, aviso, puede, fecha } = Nucleo;
-  Nucleo.tablero(async (el) => { el.innerHTML = '<div class="tarjeta">…</div>'; });
-  Nucleo.pestana({ id: 'calibraciones', titulo: 'Calibraciones', orden: 60, cap: 'calibraciones.ver', render: async (el) => { … } });
+  // widget del «Resumen» del inicio (id estable: el administrador lo ordena y cada usuario lo puede ocultar)
+  Nucleo.tablero(async (el) => { el.innerHTML = Nucleo.kpis([{ t: 'Vencidas', n: 3, sub: 'calibraciones', icono: 'reloj', color: '#fb8c00' }]); },
+    { id: 'calibraciones.resumen', titulo: 'Calibraciones' });
+  // acceso rápido: grupo (mant | plan | moni | red | adm | otros), ícono y descripción corta para la baldosa
+  Nucleo.pestana({ id: 'calibraciones', titulo: 'Calibraciones', orden: 60, cap: 'calibraciones.ver', grupo: 'plan', icono: 'preventivos',
+    desc: 'Instrumentos y vencimientos', render: async (el) => { … } });
 })();
 ```
+
+Desde la 1.2.0 la aplicación es un tablero con **accesos rápidos por categoría** (buscador con «/», recientes, menú lateral y navegación atrás/adelante). Cada pestaña se muestra como una baldosa de su grupo; sin `grupo`, va a «Otros módulos». `Nucleo.kpis([...])` dibuja tarjetas de indicadores con el estilo del inicio e `Nucleo.icono(nombre)` devuelve un ícono SVG (funciona sin Internet). Los widgets registrados sin `{id, titulo}` siguen funcionando, con un id automático.
 
 `api(metodo, ruta, cuerpo)` llama a `/api/…` con la sesión y el encabezado anti-CSRF. `pim(metodo, ruta, cuerpo, cab)` llama a la API PIM con el rol del usuario.
 
