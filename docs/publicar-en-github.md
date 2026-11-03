@@ -5,7 +5,7 @@
 
 ## 1. Crear la cuenta (una sola vez)
 
-Se recomienda **una cuenta personal del autor y una organización «iproy»** que sea dueña del repositorio. Así el proyecto no queda atado a un nombre de usuario y se pueden sumar mantenedores sin compartir claves.
+El repositorio pertenece a la organización **iproy-ar** (creada el 02-11-2026 desde la cuenta iProy-global, contacto admin@iproy.com.ar), que permite verificar el dominio iproy.com.ar. Así el proyecto no queda atado a un nombre de usuario y se pueden sumar mantenedores sin compartir claves.
 
 1. En https://github.com/signup creá la cuenta personal con **admin@iproy.com.ar** (o tu correo personal y después agregás este). Elegí un usuario propio, por ejemplo `ovidio-arias`.
 2. Activá la **verificación en dos pasos** (Settings → Password and authentication). GitHub la exige a quienes publican código.
@@ -23,7 +23,7 @@ git config --global user.email "admin@iproy.com.ar"     # el mismo correo de la 
 ## 3. Completar los marcadores
 
 ```bash
-bash herramientas/fijar-github.sh iproy seguridad@iproy.com.ar
+bash herramientas/fijar-github.sh iproy-ar admin@iproy.com.ar   # hecho el 02-11-2026
 git commit -s -am "Publicación: cuenta de GitHub y correo de seguridad"
 ```
 
@@ -32,7 +32,7 @@ git commit -s -am "Publicación: cuenta de GitHub y correo de seguridad"
 Creá en la organización un repositorio **público y vacío** llamado `iproy` (sin README ni licencia: ya están en esta carpeta). Después:
 
 ```bash
-git remote add origin https://github.com/iproy/iproy.git
+git remote add origin https://github.com/iproy-ar/iproy.git
 git push -u origin main
 git tag -a v1.1.0 -m "iProy 1.1.0 · PIM 0.9.2 alineado con IHE" && git push origin v1.1.0
 ```

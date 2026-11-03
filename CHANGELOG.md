@@ -31,7 +31,7 @@
 ### Contrato y pruebas
 - OpenAPI 1.2.0. `herramientas/contrato.py` compara la guía compilada con el código: sin diferencias no declaradas. El CI lo exige.
 - Pruebas: unitarias 47 · `pim.sh` 51 · `mem.sh` 19 · `colmena.sh` 20 · `industrial.sh` 19, en iProy y en Colmen.
-- Marcadores `CUENTA-GITHUB` y `CORREO-SEGURIDAD` con `herramientas/fijar-github.sh` y guía de publicación.
+- Publicación en GitHub: organización `iproy-ar`, contacto admin@iproy.com.ar (`herramientas/fijar-github.sh`) y guía de publicación.
 
 ## 1.0.0 · 02-11-2026 — núcleo modular, colmena e incubadora
 

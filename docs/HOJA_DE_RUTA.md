@@ -40,7 +40,7 @@
 
 ## Pendientes de decisión del autor
 
-- Cuenta de GitHub y correo de seguridad: marcadores `CUENTA-GITHUB` y `CORREO-SEGURIDAD`, se completan con `herramientas/fijar-github.sh` (ver `docs/publicar-en-github.md`).
+- ~~Cuenta de GitHub y correo de seguridad~~: organización `iproy-ar`, contacto admin@iproy.com.ar (02-11-2026). Pendiente: alias seguridad@iproy.com.ar y verificación del dominio.
 - Dónde resuelve el canónico `https://iproy.com.ar/fhir` (redirección a la guía publicada).
 - Llevar PIM-EQM y PIM-OT al dominio IHE Devices (doble vía de estandarización, PIM 0.9.2 §11.3).
 - Nombre y espacio de nombres canónico del estándar al publicar (iProy o la versión final).

@@ -6,9 +6,8 @@
 - **Industrial.** Incluye MQTT 3.1.1, Modbus TCP, alarmas ANSI/ISA-18.2 con indicadores EEMUA 191 y mantenimiento EN 13306.
 - **Libre para siempre.** Código bajo AGPL-3.0-or-later, especificación bajo CC BY-SA 4.0. Las contribuciones se firman con DCO y no hay CLA.
 
-> **Repositorio:** https://github.com/CUENTA-GITHUB/iproy
+> **Repositorio:** https://github.com/iproy-ar/iproy
 >
-> ⚠ **Para completar al publicar:** la cuenta de GitHub (`bash herramientas/fijar-github.sh <cuenta> <correo>`; ver [docs/publicar-en-github.md](docs/publicar-en-github.md)). <!-- marcador-publicacion -->
 
 > Proyecto personal de su autor, publicado como software libre. No es una publicación oficial de ninguna institución. No contiene datos, documentos ni configuraciones de ninguna institución: cada nodo nace vacío.
 

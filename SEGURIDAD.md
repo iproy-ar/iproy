@@ -3,7 +3,7 @@
 
 ## Cómo reportar una vulnerabilidad
 
-No la publiques en un *issue*. Escribí a **CORREO-SEGURIDAD** (⚠ se completa al publicar con `herramientas/fijar-github.sh`) o usá el aviso privado de vulnerabilidades del repositorio (GitHub → Security → Report a vulnerability). Contá qué componente afecta, la versión y cómo reproducirla.
+No la publiques en un *issue*. Escribí a **admin@iproy.com.ar** o usá el aviso privado de vulnerabilidades del repositorio (GitHub → Security → Report a vulnerability). Contá qué componente afecta, la versión y cómo reproducirla.
 
 | Plazo | Compromiso |
 |---|---|
