@@ -1,6 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.1.2 · 03-11-2026 — Acceso directo en el escritorio
+
+- `init` deja un **icono en el escritorio y en el menú de aplicaciones** (Linux: archivo `.desktop` con las acciones «Detener» y «Estado»; Windows: accesos `.lnk` en el escritorio y en el menú Inicio, con «Detener», y un `.ico` generado a partir del logo del producto). Para crearlos o quitarlos después: `acceso-directo` · `acceso-directo --quitar`.
+- Nuevo comando `abrir`: si el nodo ya está funcionando abre el navegador; si no, lo inicia. Es lo que ejecuta el icono.
+- Linux: `start` corre en su propia sesión (`setsid`), así que cerrar la terminal ya no apaga el nodo.
+- Los productos incubados heredan todo con su propio nombre e icono.
+
 ## 1.1.1 · 03-11-2026 — Instalación verificada en una PC real y capacitación
 
 Correcciones que salieron de instalar un producto incubado (MantSur) en EndeavourOS, paso a paso con el autor (`docs/INSTALACION.md` §C):

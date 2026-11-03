@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.1.1 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.1.2 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -8,6 +8,8 @@
 #                         primer arranque: crea data/, claves, base y config
 #    start [--no-abrir]   inicia MariaDB + FrankenPHP + worker y abre el navegador
 #    stop                 detiene todo en orden inverso
+#    abrir                inicia si hace falta y abre el navegador (lo usa el acceso directo)
+#    acceso-directo [--quitar]   icono en el escritorio y en el menú de aplicaciones (init ya lo crea)
 #    status               estado de cada proceso y prueba HTTP
 #    instalar-mariadb     descomprime descargas/mariadb-11.4.*-linux-*.tar.gz en runtime/ y verifica su sha256
 #    importar-app         copia descargas/iProy → app/iProy (sin *.local.php ni respaldos; no usa GestionMant)
@@ -47,7 +49,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.1.1"
+VER="1.1.2"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -194,6 +196,7 @@ EOF
   generar_config_php
   detener_mariadb
   log "✔ nodo $IPROY_NODE listo. Siguiente: bash iProy-Control.sh start · después: bash iProy-Control.sh usuario alta admin AD"
+  [[ "${IPROY_SIN_ACCESO:-}" == 1 ]] || cmd_acceso_directo || log "⚠ no se pudo crear el acceso directo (podés hacerlo después: bash iProy-Control.sh acceso-directo)"
 }
 
 # my.cnf y php.ini se regeneran en cada init/start con las rutas ACTUALES: así data/ sirve aunque la
@@ -669,6 +672,8 @@ cmd_colmena() {
 }
 
 cmd_start() {
+  # 1.1.2: el nodo arranca en su propia sesión; cerrar la terminal (o el acceso directo) ya no lo apaga
+  if [[ -z "${IPROY_DESPRENDIDO:-}" ]] && command -v setsid >/dev/null; then IPROY_DESPRENDIDO=1 exec setsid -w bash "${BASH_SOURCE[0]}" start "$@"; fi
   local abrir=1; [[ "${1:-}" == "--no-abrir" ]] && abrir=0
   cargar_env; mkdir -p "$RUN"
   asegurar_ejecutables
@@ -912,8 +917,57 @@ cmd_instalar_mariadb() {
   log "✔ MariaDB instalado en runtime/linux-x64/mariadb"
 }
 
+# ---------- acceso directo en el escritorio y en el menú de aplicaciones (1.1.2) ----------
+producto_nombre() { local n; n="$(grep -o '"nombre"[[:space:]]*:[[:space:]]*"[^"]*"' "$RAIZ/producto.json" 2>/dev/null | head -1 | sed 's/.*:[[:space:]]*"//; s/"$//')"; printf '%s' "${n:-iProy}"; }
+dir_escritorio() { local d; d="$(xdg-user-dir DESKTOP 2>/dev/null || true)"; [[ -n "$d" && "$d" != "$HOME" && -d "$d" ]] || for d in "$HOME/Escritorio" "$HOME/Desktop"; do [[ -d "$d" ]] && break; done; [[ -d "$d" ]] && printf '%s' "$d"; }
+cmd_acceso_directo() {
+  local prod slug esc ico apps f; prod="$(producto_nombre)"; slug="$(printf '%s' "$prod" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n' '-')-nodo"
+  apps="$HOME/.local/share/applications"; esc="$(dir_escritorio || true)"
+  if [[ "${1:-}" == "--quitar" ]]; then rm -f "$apps/$slug.desktop" ${esc:+"$esc/$slug.desktop"}; log "✔ accesos directos de $prod quitados"; return; fi
+  ico="$RAIZ/app/app/logo-512.png"; [[ -f "$ico" ]] || ico="$RAIZ/app/app/logo.png"
+  mkdir -p "$apps"; f="$apps/$slug.desktop"
+  cat > "$f" <<DESK
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=$prod
+GenericName=Gestión de mantenimiento (PIM)
+Comment=Inicia el sistema $prod y lo abre en el navegador
+Exec=bash "$RAIZ/$(basename "${BASH_SOURCE[0]}")" abrir
+Path=$RAIZ
+Icon=$ico
+Terminal=true
+Categories=Office;Utility;
+Keywords=mantenimiento;PIM;iProy;hospital;
+Actions=detener;estado;
+
+[Desktop Action detener]
+Name=Detener $prod
+Exec=bash "$RAIZ/$(basename "${BASH_SOURCE[0]}")" stop
+
+[Desktop Action estado]
+Name=Estado del nodo
+Exec=bash -c 'bash "$RAIZ/$(basename "${BASH_SOURCE[0]}")" status; read -rp "Enter para cerrar"'
+DESK
+  chmod 755 "$f"; log "✔ menú de aplicaciones: $prod (en la categoría Oficina)"
+  if [[ -n "$esc" ]]; then cp "$f" "$esc/$slug.desktop"; chmod 755 "$esc/$slug.desktop"
+    command -v gio >/dev/null && gio set "$esc/$slug.desktop" metadata::trusted true 2>/dev/null || true
+    log "✔ escritorio: $esc/$slug.desktop (doble clic para iniciar; clic derecho → «Detener»)"
+    log "  Si el escritorio pide confirmación la primera vez, elegí «Confiar y ejecutar» o «Permitir lanzar»."
+  else log "⚠ no encontré la carpeta del escritorio: quedó solo en el menú de aplicaciones"; fi
+}
+# Abre el sistema: si ya está andando, solo abre el navegador; si no, lo inicia (lo usa el acceso directo)
+cmd_abrir() {
+  cargar_env
+  if vivo frankenphp; then log "$(producto_nombre) ya está funcionando · http://localhost:$IPROY_PUERTO/"; command -v xdg-open >/dev/null && (xdg-open "http://localhost:$IPROY_PUERTO/" >/dev/null 2>&1 &); sleep 2; return; fi
+  bash "${BASH_SOURCE[0]}" start
+  if [[ -t 1 ]]; then echo; echo "  Podés cerrar esta ventana: $(producto_nombre) sigue funcionando. Para apagarlo: clic derecho en el icono → «Detener»."; sleep 8; fi
+}
+
 case "${1:-}" in
   init) shift; cmd_init "$@";;
+  acceso-directo) shift; cmd_acceso_directo "$@";;
+  abrir) cmd_abrir;;
   start) shift; cmd_start "$@";;
   stop) cmd_stop;;
   status) cmd_status;;
@@ -934,5 +988,5 @@ case "${1:-}" in
   usuario) shift; cmd_usuario "$@";;
   colmena) shift; cmd_colmena "$@";;
   clave-auth) shift; cmd_clave_auth "$@";;
-  *) sed -n '3,34p' "${BASH_SOURCE[0]}";;
+  *) sed -n '3,38p' "${BASH_SOURCE[0]}";;
 esac

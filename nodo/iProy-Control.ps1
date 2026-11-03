@@ -1,9 +1,9 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.1.1 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.1.2 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
-#    iProy-Control.bat diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
+#    iProy-Control.bat abrir | acceso-directo [--quitar] | diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
 #    iProy-Control.bat fhir-cliente alta <id> <jwks.json> ["system/*.read"] | baja <id> | lista | demo | token <id> <clave.xml>
 #    iProy-Control.bat pim importar | pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI|RE> [organización] [alcances] | pim cliente baja <id> | pim cliente lista
 #    iProy-Control.bat pim token <id> <clave.xml> [alcances] | pim prueba | pim verificar | pim consola      (Consola PIM: http://localhost:8080/pim/)
@@ -28,7 +28,7 @@ param(
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.1.1'
+$VER = '1.1.2'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
@@ -456,6 +456,7 @@ function CmdInit {
   GenerarConfigPhp
   DetenerMariaDB
   Log "OK nodo $id listo. Siguiente: iProy-Control.bat importar-app · importar-datos · start"
+  try { CmdAccesoDirecto '' } catch { Log "Aviso: no se pudo crear el acceso directo ($_). Después: iProy-Control.bat acceso-directo" }
 }
 
 # my.ini y php.ini se regeneran en cada init/start con las rutas ACTUALES (pendrive con otra letra, carpeta movida)
@@ -886,8 +887,33 @@ function CmdDiagnostico {
   Write-Host ''; Write-Host "Resultado: $($script:ok) OK · $($script:mal) para resolver" -ForegroundColor $(if ($script:mal) { 'Yellow' } else { 'Green' })
 }
 
+# ---------- acceso directo en el escritorio y en el menú Inicio (1.1.2) ----------
+function ProductoNombre { try { $n = (Get-Content (Join-Path $RAIZ 'producto.json') -Raw | ConvertFrom-Json).nombre } catch { $n = $null }; if ($n) { $n } else { 'iProy' } }
+function CmdAccesoDirecto([string]$Quitar) {
+  $prod = ProductoNombre
+  $esc = [Environment]::GetFolderPath('Desktop'); $menu = Join-Path ([Environment]::GetFolderPath('Programs')) $prod
+  $lnkE = Join-Path $esc "$prod.lnk"; $lnkM = Join-Path $menu "$prod.lnk"; $lnkS = Join-Path $menu "Detener $prod.lnk"
+  if ($Quitar -eq '--quitar') { Remove-Item $lnkE, $lnkS, $lnkM -ErrorAction SilentlyContinue; Remove-Item $menu -ErrorAction SilentlyContinue; Log "OK accesos directos de $prod quitados"; return }
+  # ícono .ico a partir del logo del producto (un .lnk no acepta PNG)
+  $ico = Join-Path $RAIZ 'app\app\logo.ico'; $png = Join-Path $RAIZ 'app\app\logo-512.png'; if (-not (Test-Path $png)) { $png = Join-Path $RAIZ 'app\app\logo.png' }
+  try { Add-Type -AssemblyName System.Drawing; $bmp = New-Object System.Drawing.Bitmap ([System.Drawing.Image]::FromFile($png)), 256, 256
+    $icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon()); $fs = [IO.File]::Create($ico); $icon.Save($fs); $fs.Close() } catch { $ico = "$env:SystemRoot\System32\shell32.dll,13" }
+  $bat = Join-Path $RAIZ (([IO.Path]::GetFileNameWithoutExtension($PSCommandPath)) + '.bat'); if (-not (Test-Path $bat)) { $bat = (Get-ChildItem $RAIZ -Filter '*-Control.bat' | Select-Object -First 1).FullName }
+  $sh = New-Object -ComObject WScript.Shell; New-Item -ItemType Directory -Force -Path $menu | Out-Null
+  foreach ($d in @(@($lnkE, 'abrir', "Inicia $prod y lo abre en el navegador"), @($lnkM, 'abrir', "Inicia $prod y lo abre en el navegador"), @($lnkS, 'stop', "Detiene $prod (hace una copia de seguridad antes)"))) {
+    $l = $sh.CreateShortcut($d[0]); $l.TargetPath = $bat; $l.Arguments = $d[1]; $l.WorkingDirectory = $RAIZ; $l.Description = $d[2]; $l.IconLocation = $ico; $l.WindowStyle = 7; $l.Save() }
+  Log "OK escritorio: $lnkE"; Log "OK menú Inicio: $prod (y «Detener $prod»)"
+}
+function CmdAbrir {
+  CargarEnv
+  if (Vivo 'frankenphp') { Log "$(ProductoNombre) ya está funcionando · http://localhost:$($E.IPROY_PUERTO)/"; Start-Process "http://localhost:$($E.IPROY_PUERTO)/"; return }
+  CmdStart
+}
+
 switch ($Comando) {
   'init' { CmdInit }
+  'abrir' { CmdAbrir }
+  'acceso-directo' { CmdAccesoDirecto $SoloBase }
   'start' { CmdStart }
   'stop' { CmdStop }
   'status' { CmdStatus }

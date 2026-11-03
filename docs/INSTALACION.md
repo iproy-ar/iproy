@@ -87,6 +87,7 @@ bash MantSur-Control.sh usuario alta admin AD        # pide la contraseña dos v
 
 - `init` tarda entre 10 y 40 segundos en «creando la base de datos»; no escribas nada mientras tanto. Termina con `✔ nodo XXX listo` (XXX es el ID de tu nodo).
 - `start` tiene que listar el worker, los residentes MQTT y MLLP y los módulos como `cargado`, y terminar con `Listo · nodo XXX · http://localhost:8095/`.
+- **Icono en el escritorio:** `init` deja un acceso directo con el logo del producto en el escritorio y en el menú de aplicaciones (categoría Oficina). Doble clic: inicia el sistema y abre el navegador; si ya está andando, solo abre el navegador. Clic derecho → «Detener». La primera vez, el escritorio puede pedir «Confiar y ejecutar» / «Permitir lanzar». Para nodos creados antes de la 1.1.2: `bash MantSur-Control.sh acceso-directo`.
 - `--modo local` atiende solo en esa PC; `--modo lan` la hace visible en la red del hospital (`https://<IP>:8443/`).
 - Los puertos 8095 y 3415 evitan chocar con otro nodo en la misma PC; los de fábrica son 8080 y 3407.
 
@@ -174,7 +175,7 @@ En Windows la base usa siempre el puerto 3407 (no hay `-PuertoDb`); si ya tenés
 
 Igual que en Linux (A6 y A7): `http://localhost:8095/`, `/pim/r4/metadata`, `/pim/declaracion`. Las pruebas `pim.sh` y `mem.sh` son scripts de bash: en Windows se corren desde **Git Bash** (viene con Git) con `bash pruebas/pim.sh ../MantSur/MantSur-Portable`.
 
-Para apagar: `.\MantSur-Control.bat stop`.
+Para apagar: `.\MantSur-Control.bat stop`, o el acceso «Detener MantSur» del menú Inicio. `init` también deja el icono **MantSur** en el escritorio (doble clic para iniciar); si no aparece, `.\MantSur-Control.bat acceso-directo`.
 
 ---
 

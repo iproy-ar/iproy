@@ -43,6 +43,7 @@ bash iProy-Control.sh usuario alta admin AD                       # pide la cont
 
 | Comando | Para qué |
 |---|---|
+| `abrir` · `acceso-directo [--quitar]` | Icono en el escritorio y el menú (lo crea `init`); `abrir` inicia si hace falta y abre el navegador |
 | `start` · `stop` · `status` | Iniciar, detener (con respaldo automático) y ver el estado de cada proceso |
 | `usuario alta <u> <AD\|GM\|EJ\|SO\|FT\|CI> [organización]` · `usuario lista` · `usuario clave <u>` · `usuario token <u> [días]` | Usuarios. `token` sirve para integraciones (gateways, scripts) con su rol |
 | `nucleo estado\|modulos\|tareas\|diario\|verificar\|bus\|tick` · `nucleo ejecutar <modulo:tarea>` | Introspección y operación del núcleo |
