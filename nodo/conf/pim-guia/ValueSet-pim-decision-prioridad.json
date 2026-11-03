@@ -1,0 +1,16 @@
+{
+  "resourceType": "ValueSet",
+  "status": "draft",
+  "name": "PimDecisionPrioridadVS",
+  "id": "pim-decision-prioridad",
+  "title": "PIM — Decisión sobre la prioridad sugerida",
+  "description": "Códigos de PimDecisionPrioridad.",
+  "url": "https://iproy.com.ar/fhir/ValueSet/pim-decision-prioridad",
+  "compose": {
+    "include": [
+      {
+        "system": "https://iproy.com.ar/fhir/CodeSystem/pim-decision-prioridad"
+      }
+    ]
+  }
+}

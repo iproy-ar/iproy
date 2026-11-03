@@ -42,8 +42,8 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | PIM-9 | Informar al registro estatal | RE → GM | `GET Device/$refes` | — |
 | PIM-10 | Informar ensayo | EJ → GM | `POST DiagnosticReport` (`pim-informe-ensayo`) | — |
 | PIM-11 | Exportar indicadores | CI → GM | `MeasureReport` o `$export` | — |
-| PCD-15 | Communicate DMIO | Equipo médico (DMIR) → GM (DMIC) | HL7 v2 ORU^R44 por MLLP → Device + DeviceMetric + Observation | IHE DEV MEM-DMC, sin cambios |
-| PCD-16 | Location Observation | Sistema de localización (LOR) → GM (LOC) | HL7 v2 ORU^R45 → Location | IHE DEV MEM-LS, sin cambios |
+| PCD-15 | Communicate DMIO | Equipo médico (DMIR) → GM (DMIC) | HL7 v2 ORU^R44 por MLLP (opcionalmente sobre TLS 1.2+) → Device + DeviceMetric + Observation | IHE DEV MEM-DMC, sin cambios |
+| PCD-16 | Location Observation | Sistema de localización (LOR) → GM (LOC) | HL7 v2 → Location (opción `mem-ls`, **planificada**) | IHE DEV MEM-LS, sin cambios |
 
 #### Perfiles de integración
 
@@ -94,9 +94,16 @@ El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revisio
 | OBX-14 (o OBX-7 en el ejemplo del suplemento) | `effectiveDateTime` |
 | `68513 MDC_ATTR_LS_LOCATION` (PL) | `Device.location` si el local existe (búsqueda por nombre en la cadena establecimiento › edificio › piso › sala) |
 | Autoprueba con resultado de falla | `ServiceRequest` + orden correctiva automática (`pim-orden`, `reasonReference` = la Observation) |
+| Carga de batería (NM, %) ≤ umbral configurable (20 % por defecto) | `ServiceRequest` + orden correctiva «Batería crítica» (una abierta por equipo) |
 | Paso a batería | Evento `alarmas/cambio` (PIM-ALR) |
 
-La respuesta es un ACK de HL7 v2 (MSA-1 = AA, AE o AR) en el mismo canal MLLP.
+La respuesta es un ACK de HL7 v2 (MSA-1 = AA, AE o AR) en el mismo canal MLLP. Un mensaje con PID o PV1 se rechaza con AR: PCD-15 no lleva datos de pacientes.
+
+**Canal y seguridad.** MLLP sobre TCP, con lista de IP permitidas; con la opción de configuración `tls`, MLLP sobre TLS 1.2 o 1.3 (certificado propio del nodo o el que indique la institución y, con `tls_cliente`, certificado de cliente del gateway firmado por una autoridad conocida). También se acepta por HTTPS (`POST /api/mem/pcd15`) con un cliente autorizado.
+
+#### Decisión humana sobre la prioridad (PIM-RSG)
+
+La orden guarda la prioridad que **sugiere** el IRU del activo y su fundamento, y la extensión `pim-decision-prioridad` registra qué hizo el Gestor: **aceptada**, **cambiada** o **rechazada** (las dos últimas con motivo obligatorio), con autor y fecha. Si el Gestor saca la orden de «solicitada» sin decidir, se registra la decisión implícita. `GET Task?decision-prioridad=cambiada&_summary=count` mide cuántas sugerencias se modifican: es el control del sesgo de automatización. La sugerencia nunca reemplaza la decisión humana.
 
 
 ---

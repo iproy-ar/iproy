@@ -1,0 +1,210 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "pim-decision-prioridad",
+  "url": "https://iproy.com.ar/fhir/StructureDefinition/pim-decision-prioridad",
+  "name": "DecisionPrioridad",
+  "title": "Decisión sobre la prioridad sugerida",
+  "status": "draft",
+  "description": "Prioridad que el Gestor sugiere a partir del IRU del activo, su fundamento y lo que decidió la persona responsable (aceptarla, cambiarla o rechazarla), con motivo, autor y fecha. Sirve para auditar el sesgo de automatización: la sugerencia nunca reemplaza la decisión humana.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "expression": "Task",
+      "type": "element"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Decisión sobre la prioridad sugerida",
+        "definition": "Prioridad que el Gestor sugiere a partir del IRU del activo, su fundamento y lo que decidió la persona responsable (aceptarla, cambiarla o rechazarla), con motivo, autor y fecha. Sirve para auditar el sesgo de automatización: la sugerencia nunca reemplaza la decisión humana."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "min": 2
+      },
+      {
+        "id": "Extension.extension:sugerida",
+        "path": "Extension.extension",
+        "sliceName": "sugerida",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:sugerida.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:sugerida.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "sugerida"
+      },
+      {
+        "id": "Extension.extension:sugerida.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority"
+        }
+      },
+      {
+        "id": "Extension.extension:fundamento",
+        "path": "Extension.extension",
+        "sliceName": "fundamento",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:fundamento.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:fundamento.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "fundamento"
+      },
+      {
+        "id": "Extension.extension:fundamento.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:decision",
+        "path": "Extension.extension",
+        "sliceName": "decision",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:decision.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:decision.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "decision"
+      },
+      {
+        "id": "Extension.extension:decision.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-decision-prioridad"
+        }
+      },
+      {
+        "id": "Extension.extension:motivo",
+        "path": "Extension.extension",
+        "sliceName": "motivo",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:motivo.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:motivo.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "motivo"
+      },
+      {
+        "id": "Extension.extension:motivo.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:autor",
+        "path": "Extension.extension",
+        "sliceName": "autor",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:autor.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:autor.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "autor"
+      },
+      {
+        "id": "Extension.extension:autor.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:fecha",
+        "path": "Extension.extension",
+        "sliceName": "fecha",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:fecha.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:fecha.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "fecha"
+      },
+      {
+        "id": "Extension.extension:fecha.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://iproy.com.ar/fhir/StructureDefinition/pim-decision-prioridad"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

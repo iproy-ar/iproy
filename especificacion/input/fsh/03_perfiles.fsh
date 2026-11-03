@@ -234,7 +234,7 @@ Description: "Orden de trabajo. Su ciclo de vida es la definición de flujo de t
 * owner MS
 * priority MS
 * executionPeriod MS
-* extension contains TipoMantenimiento named tipoMantenimiento 0..1 MS and ModoFalla named modoFalla 0..1 MS
+* extension contains TipoMantenimiento named tipoMantenimiento 0..1 MS and ModoFalla named modoFalla 0..1 MS and DecisionPrioridad named decisionPrioridad 0..1 MS
 
 Profile: PimInformeEnsayo
 Parent: DiagnosticReport

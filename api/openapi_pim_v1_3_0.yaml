@@ -1,0 +1,351 @@
+# SPDX-License-Identifier: CC-BY-SA-4.0
+# Copyright (C) 2026 Ovidio Francisco Arias
+openapi: 3.1.0
+info:
+  title: API iProy · PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud
+  version: 1.3.0
+  summary: API REST HL7 FHIR R4 con perfiles PIM 0.9.3, alineada con IHE (República Argentina)
+  description: |
+    Contrato del protocolo PIM 0.9.3 (mantenimiento de productos médicos activos —PMA— e instalaciones de salud sobre HL7 FHIR R4).
+    **Principio rector:** el PIM se apoya en los bordes que IHE ya estandarizó y crea solo lo que nadie cubre. Organization y Location
+    responden como IHE ITI mCSD (ITI-90) y `_history?_since` como ITI-91; el módulo «mem» agrupa al servidor con el actor DMIC de
+    IHE MEM-DMC (PCD-15 por MLLP, fuera de esta API REST).
+    **Estado:** contrato 1.3.0 (03-11-2026) sobre PIM 0.9.3; el 1.2.0 se publicó el 02-11-2026 junto con PIM-PROP-001 v0.9.2. La implementación de referencia (Servidor PIM 1.1 de iProy)
+    lo cumple: `pruebas/pim.sh` y `pruebas/mem.sh` del repositorio. Lista de cambios en `x-pim-cambios`.
+
+    Puede funcionar en paralelo a un sistema de mantenimiento existente: base propia, clientes y claves propios. No contiene datos de pacientes.
+
+    **Autorización**: SMART Backend Services. El cliente firma un JWT (RS384 o ES384) con su clave privada,
+    lo canjea en `POST /pim/auth/token` y usa el `access_token` (5 minutos) como `Authorization: Bearer`.
+    Cada cliente tiene un **rol PIM** (GM gestor · EJ ejecutor · SO solicitante · FT telemetría · CI consulta · RE registro estatal).
+
+    **Concurrencia**: toda modificación exige `If-Match: W/"<versión>"` (412 si cambió, 428 si falta).
+    **Nunca hay borrado físico**: se anula o inactiva y queda la traza en `_history` y `Provenance`.
+  license: { name: CC BY-SA 4.0, identifier: CC-BY-SA-4.0 }
+servers:
+  - url: https://{nodo}:{puerto}/pim/r4
+    variables:
+      nodo: { default: localhost }
+      puerto: { default: "8443" }
+  - url: http://localhost:8080/pim/r4
+    description: Solo en el propio equipo del nodo
+security:
+  - smart: []
+tags:
+  - { name: Descubrimiento }
+  - { name: PIM-INV, description: "Inventario (Organization, Location, Device —pim-pma, pim-sistema, pim-activo—, DeviceMetric)" }
+  - { name: PIM-REG, description: "Informe al registro estatal (datos de PMA exigidos por el REFES, Res. SGS 532/2026)" }
+  - { name: PIM-SOL, description: Solicitudes de servicio }
+  - { name: PIM-OT, description: Órdenes de trabajo y máquina de estados }
+  - { name: PIM-RSG, description: Riesgo (IRU) }
+  - { name: PIM-TEL, description: Telemetría }
+  - { name: PIM-FED, description: "Historial y procedencia (PIM-8, semántica de IHE ITI-91)" }
+  - { name: PIM-EQM, description: "Equipos médicos por IHE MEM-DMC: PCD-15 por MLLP (módulo mem); por HTTP en POST /api/m/mem/pcd15" }
+paths:
+  /metadata:
+    get:
+      tags: [Descubrimiento]
+      summary: CapabilityStatement (declaración de conformidad)
+      security: []
+      responses: { "200": { $ref: "#/components/responses/Recurso" } }
+  /.well-known/smart-configuration:
+    get:
+      tags: [Descubrimiento]
+      summary: Descubrimiento OAuth2 (SMART)
+      security: []
+      responses: { "200": { description: "JSON con token_endpoint, algoritmos y alcances" } }
+  /{artefacto}:
+    get:
+      tags: [Descubrimiento]
+      summary: Artefactos de la guía PIM 0.9.3 (los mismos que compila la especificación)
+      security: []
+      parameters:
+        - { name: artefacto, in: path, required: true, schema: { type: string, enum: [CodeSystem, ValueSet, StructureDefinition, CapabilityStatement, OperationDefinition, ImplementationGuide] } }
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{artefacto}/{id}:
+    get:
+      tags: [Descubrimiento]
+      summary: Un artefacto de la guía (p. ej. CodeSystem/pim-estado-orden, StructureDefinition/pim-organismo, CapabilityStatement/pim-gm)
+      security: []
+      parameters:
+        - { name: artefacto, in: path, required: true, schema: { type: string, enum: [CodeSystem, ValueSet, StructureDefinition, CapabilityStatement, OperationDefinition, ImplementationGuide] } }
+        - { $ref: "#/components/parameters/id" }
+      responses: { "200": { $ref: "#/components/responses/Recurso" }, "404": { $ref: "#/components/responses/Error" } }
+  /Device/$refes:
+    get:
+      tags: [PIM-REG]
+      summary: "PIM-9: datos de los PMA para el REFES (Res. SGS 532/2026). Roles GM, RE y CI"
+      description: |
+        Devuelve, por cada Device con perfil pim-pma, los cinco datos mínimos del REFES: marca (manufacturer), modelo (modelNumber),
+        fecha de fabricación (manufactureDate) o de puesta en marcha (ext. pim-puesta-en-marcha), pertenencia (ext. pim-pertenencia) y
+        n.º de producto ANMAT (identifier {ns}/sid/anmat-pm, PM-NNNN-NNNN), con `completo` y la lista de lo que `falta`.
+        `_format=csv` produce el archivo de carga (UTF-8 con BOM, separador «;») mientras no exista una interfaz con SISA.
+        El filtro por tipología de la Res. SGS 532/2026 queda pendiente: el modelo todavía no registra la tipología.
+      parameters:
+        - { name: completos, in: query, schema: { type: boolean }, description: "true: solo completos; false: solo incompletos" }
+        - { name: _format, in: query, schema: { type: string, enum: [json, csv] } }
+      responses: { "200": { description: "Parameters (total, completos, norma y un parámetro «pma» por equipo) o CSV" } }
+  /Device/{id}/$refes:
+    get:
+      tags: [PIM-REG]
+      summary: Datos del REFES de un PMA (404 si el Device no es un PMA)
+      parameters: [ { $ref: "#/components/parameters/id" } ]
+      responses: { "200": { description: Parameters }, "404": { $ref: "#/components/responses/Error" } }
+  /declaracion:
+    get:
+      tags: [Descubrimiento]
+      summary: "Declaración de Integración PIM (basada en el IHE Integration Statement). Ruta real: GET /pim/declaracion (fuera de /pim/r4)"
+      security: []
+      responses: { "200": { description: "JSON: producto, versión, nivel, perfiles con actor y opciones, perfiles IHE agrupados, pendientes y vínculos" } }
+  /auth-token:
+    post:
+      tags: [Descubrimiento]
+      summary: "Canje de la aserción firmada por un access_token. Ruta real: POST /pim/auth/token (fuera de /pim/r4)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_assertion_type, client_assertion, scope]
+              properties:
+                grant_type: { const: client_credentials }
+                client_assertion_type: { const: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer" }
+                client_assertion: { type: string, description: "JWT RS384/ES384: iss = sub = client_id, aud = URL de este endpoint, exp ≤ 5 min, jti único" }
+                scope: { type: string, examples: ["system/*.cruds", "system/Task.rs system/ServiceRequest.c"] }
+      responses:
+        "200":
+          description: Token emitido (se concede la intersección entre lo pedido y lo autorizado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { const: bearer }
+                  expires_in: { type: integer }
+                  scope: { type: string }
+        "400": { description: "invalid_request · invalid_scope · unsupported_grant_type" }
+        "401": { description: "invalid_client (firma, aud, exp, jti repetido, cliente dado de baja)" }
+  /:
+    post:
+      tags: [PIM-TEL, PIM-SOL]
+      summary: Lote (Bundle batch) de Observation y ServiceRequest (máx. 500)
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses: { "200": { description: Bundle batch-response (cada entrada con su estado) } }
+  /{tipo}:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    get:
+      summary: Búsqueda
+      description: |
+        Parámetros por recurso — Organization (IHE ITI-90): identifier, name, type (facility | prov | dept | bus), partof, active ·
+        Location (IHE ITI-90): identifier, name, status, partof, organization, type (facility = el establecimiento; o Edificio, Ala, Nivel, Local, Cama, Área) ·
+        Device: identifier (sid/activo, sid/eui64 o sid/anmat-pm con «system|valor»), device-name, location, type, status, parent, manufacturer, categoria-alcance (A|B|C|D) ·
+        DeviceMetric: identifier (<activo>/<punto>), type, source · ServiceRequest: identifier, status, priority, subject, authored ·
+        Task: identifier, status, business-status, owner, priority, location, focus, based-on, code, authored-on, modified, _lastUpdated, decision-prioridad (aceptada | cambiada | rechazada) ·
+        Observation: device (DeviceMetric o Device), code (pim-punto o MDC), date, interpretation · RiskAssessment: subject, banda · Group: member · Provenance: target (obligatorio).
+        Comunes: _id, _count (≤ 200), _offset, _sort (_lastUpdated, -_lastUpdated, date), _summary=count, _total=none.
+        Modificadores de texto: :exact, :contains. Fechas con prefijos eq, ge, gt, le, lt. Varios valores separados por coma = O.
+        El rol EJ solo ve las Task de su organización.
+      parameters:
+        - { name: _count, in: query, schema: { type: integer, maximum: 200 } }
+        - { name: _offset, in: query, schema: { type: integer } }
+        - { name: _summary, in: query, schema: { const: count } }
+      responses: { "200": { $ref: "#/components/responses/Bundle" }, "401": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error" } }
+    post:
+      summary: Alta (Organization, Location, Device — GM · ServiceRequest — GM, SO · Observation — GM, FT). DeviceMetric se crea al configurar el punto o con su primera medición
+      description: |
+        ServiceRequest crea su Task (cabecera `X-PIM-Task`); sin `priority`, la prioridad sale de la banda IRU del activo.
+        ServiceRequest.reasonReference admite una Observation: la orden la referencia en Task.reasonReference.
+        Observation.device referencia el DeviceMetric del punto (pim-punto); también se acepta Device + code (forma 1.0). El valor puede ser
+        Quantity, CodeableConcept, string o boolean (atributos de equipos médicos por MEM-DMC). Una medición Quantity fuera del rango del punto
+        genera solicitud y orden automáticas (Task.reasonReference = la medición), sin duplicar una orden abierta del mismo punto.
+        Device con perfil pim-pma: los cinco datos REFES son MustSupport; su exigencia por tipología la verifica Device/$refes.
+        Los ids de extensiones de la 0.9.1 (camelCase) y el perfil pim-equipo-medico de la 1.0 se aceptan como alias.
+        Cualquier referencia a Patient, Person o RelatedPerson se rechaza con 422.
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses:
+        "201":
+          $ref: "#/components/responses/Recurso"
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { description: Identificador duplicado }
+        "422": { $ref: "#/components/responses/Error" }
+  /{tipo}/_search:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    post:
+      summary: Búsqueda por formulario
+      requestBody: { content: { application/x-www-form-urlencoded: { schema: { type: object } } } }
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/_history:
+    parameters: [ { $ref: "#/components/parameters/tipo" } ]
+    get:
+      tags: [PIM-FED]
+      summary: Historial del tipo
+      parameters: [ { name: _since, in: query, schema: { type: string, format: date-time } } ]
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/{id}:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" } ]
+    get:
+      summary: Lectura (ETag = versión)
+      responses: { "200": { $ref: "#/components/responses/Recurso" }, "404": { $ref: "#/components/responses/Error" } }
+    put:
+      summary: Modificación (Organization, Location, Device, DeviceMetric — GM · Task — GM, EJ)
+      description: Task por PUT aplica la misma máquina de estados que $transicion; las notas solo se agregan. Los registros reflejados del sistema de origen son de solo lectura (409).
+      parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
+      requestBody: { $ref: "#/components/requestBodies/Recurso" }
+      responses:
+        "200": { $ref: "#/components/responses/Recurso" }
+        "409": { description: Registro reflejado del sistema de origen (solo lectura) }
+        "412": { description: La versión cambió (releer) }
+        "422": { $ref: "#/components/responses/Error" }
+        "428": { description: Falta If-Match }
+  /{tipo}/{id}/_history:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" } ]
+    get:
+      tags: [PIM-FED]
+      summary: Historial del recurso
+      responses: { "200": { $ref: "#/components/responses/Bundle" } }
+  /{tipo}/{id}/_history/{vid}:
+    parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" }, { name: vid, in: path, required: true, schema: { type: integer } } ]
+    get:
+      tags: [PIM-FED]
+      summary: Lectura de una versión (vread)
+      responses: { "200": { $ref: "#/components/responses/Recurso" } }
+  /Task/{id}/$transicion:
+    parameters: [ { $ref: "#/components/parameters/id" } ]
+    post:
+      tags: [PIM-OT]
+      summary: Cambio de estado de la orden (Tabla 9-2)
+      description: |
+        Transiciones: solicitada → en-revision | asignada | rechazada | anulada (GM) · en-revision → asignada | rechazada | anulada (GM) ·
+        asignada → aceptada | en-revision (EJ), anulada (GM) · aceptada → lista | en-ejecucion | en-espera (EJ), anulada (GM) ·
+        lista → en-ejecucion | en-espera (EJ), anulada (GM) · en-ejecucion → en-espera | finalizada (EJ) · en-espera → en-ejecucion | aceptada (EJ), anulada (GM) ·
+        finalizada → conformada | en-ejecucion (GM). Terminales: conformada, rechazada, anulada.
+        Motivo obligatorio para en-espera, rechazada, anulada y en-revision. Asignar exige responsable.
+        Una orden correctiva se finaliza con modoFalla (ISO 14224). decisionPrioridad (aceptada | cambiada | rechazada) registra qué hizo el Gestor con la prioridad sugerida por el IRU; cambiada y rechazada exigen motivoPrioridad (extensión pim-decision-prioridad, 1.3.0). Conformar, rechazar o anular cierra la ServiceRequest.
+      parameters: [ { name: If-Match, in: header, required: false, schema: { type: string } } ]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema: { $ref: "#/components/schemas/Parameters" }
+            example:
+              resourceType: Parameters
+              parameter:
+                - { name: estado, valueCode: en-espera }
+                - { name: motivo, valueString: Esperando repuesto }
+                - { name: nota, valueString: Se pidió la placa al proveedor }
+      responses:
+        "200": { $ref: "#/components/responses/Recurso" }
+        "403": { description: El rol no puede hacer esa transición }
+        "409": { description: Orden reflejada del sistema de origen (solo lectura) }
+        "412": { description: Versión desactualizada }
+        "422": { description: Transición no permitida o falta un dato obligatorio }
+components:
+  securitySchemes:
+    smart:
+      type: oauth2
+      description: SMART Backend Services (client_credentials + private_key_jwt RS384/ES384)
+      flows:
+        clientCredentials:
+          tokenUrl: /pim/auth/token
+          scopes:
+            "system/*.cruds": Todo (rol GM)
+            "system/*.rs": Lectura y búsqueda
+            "system/Task.u": Modificar órdenes (rol EJ)
+            "system/ServiceRequest.c": Crear solicitudes (rol SO)
+            "system/Observation.crs": Enviar mediciones (rol FT)
+            "system/Device.rs": Leer PMA para el registro estatal (rol RE)
+  parameters:
+    tipo:
+      name: tipo
+      in: path
+      required: true
+      schema: { type: string, enum: [Organization, Location, Device, DeviceMetric, ServiceRequest, Task, Observation, RiskAssessment, Group, Provenance] }
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[A-Za-z0-9\\-\\.]{1,64}$" }
+    ifMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, examples: ['W/"3"'] }
+  requestBodies:
+    Recurso:
+      required: true
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+  responses:
+    Recurso:
+      description: Recurso FHIR
+      headers:
+        ETag: { schema: { type: string }, description: 'W/"<versión>"' }
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+    Bundle:
+      description: Bundle FHIR (searchset o history)
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/Recurso" } } }
+    Error:
+      description: OperationOutcome
+      content: { application/fhir+json: { schema: { $ref: "#/components/schemas/OperationOutcome" } } }
+  schemas:
+    Recurso:
+      type: object
+      required: [resourceType]
+      properties:
+        resourceType: { type: string }
+        id: { type: string }
+        meta: { type: object, properties: { versionId: { type: string }, lastUpdated: { type: string }, profile: { type: array, items: { type: string } } } }
+      additionalProperties: true
+    Parameters:
+      type: object
+      required: [resourceType, parameter]
+      properties:
+        resourceType: { const: Parameters }
+        parameter:
+          type: array
+          items:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, enum: [estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota, decisionPrioridad, motivoPrioridad] }
+              valueCode: { type: string }
+              valueString: { type: string }
+              valueReference: { type: object, properties: { reference: { type: string } } }
+    OperationOutcome:
+      type: object
+      properties:
+        resourceType: { const: OperationOutcome }
+        issue:
+          type: array
+          items:
+            type: object
+            properties:
+              severity: { type: string }
+              code: { type: string }
+              diagnostics: { type: string }
+              expression: { type: array, items: { type: string } }
+x-pim-cambios:
+  version: 1.3.0
+  fecha: "2026-11-03"
+  documento: PIM 0.9.3 (guía FHIR)
+  cambios:
+    - "Task: extensión pim-decision-prioridad (prioridad sugerida por el IRU, fundamento y decisión aceptada | cambiada | rechazada con motivo, autor y fecha)"
+    - "Task: parámetro de búsqueda decision-prioridad; $transicion admite decisionPrioridad y motivoPrioridad"
+    - "MEM-DMC (fuera de esta API REST): orden por batería crítica y MLLP sobre TLS opcional"
+x-pim-cambios-anteriores:
+  version: 1.2.0
+  fecha: "2026-11-02"
+  documento: PIM-PROP-001 v0.9.2
+  cambios:
+    - "Alineación con IHE: Organization y Location responden como IHE ITI mCSD (ITI-90); _history?_since como ITI-91 (opción mcsd-update)"
+    - "Nuevo perfil pim-establecimiento (mCSD FacilityLocation): raíz de la jerarquía de locales; Location.type obligatorio (mCSD)"
+    - "Artefactos de la guía publicados tal como los compila la especificación: CodeSystem, ValueSet, StructureDefinition, CapabilityStatement (actores pim-gm … pim-re), OperationDefinition"
+    - "Declaración de Integración PIM (IHE Integration Statement) en GET /pim/declaracion y extensión pim-conformidad en /metadata"
+    - "Device/$refes: parámetro completos, _format=csv y variante por instancia; rol RE (solo Device)"
+    - "pim-pma: identificador EUI-64 (IHE MEM-DMC); datos REFES MustSupport con invariante de advertencia"
+    - "Observation: valores CodeableConcept, string y boolean; códigos MDC; reasonReference solicitud/orden"
+    - "Ids de extensiones pim-* (convención FHIR); los camelCase de la 0.9.1 se aceptan como alias"
+  implementado_en: "Servidor PIM 1.1 (iProy 1.1.0): pruebas/pim.sh y pruebas/mem.sh"
+  anterior: "1.1.0 (31-10-2026): DeviceMetric, CodeSystems y ValueSets de la 0.9.1, pim-pma, PIM-REG y rol RE"

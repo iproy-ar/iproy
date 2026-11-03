@@ -10,14 +10,15 @@
 
 <sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
 
-| Perfil IHE | Dominio | En iProy 1.1 | Dónde |
+| Perfil IHE | Dominio | En iProy 1.4 | Dónde |
 |---|---|---|---|
 | mCSD 4.0.0 (ITI-90) | ITI | El Servidor PIM responde como Directory: Organization y Location con `identifier`, `name` (`:exact`, `:contains`), `partof`, `organization`, `type`, `status`, `active` | `nodo/app/pim/lib/api.php` · `pruebas/pim.sh` §2 |
 | mCSD, opción Update (ITI-91) | ITI | `GET Organization/_history?_since=` y `Location/_history?_since=` (Bundle history) | ídem |
 | mCSD FacilityOrganization / FacilityLocation / Location / Organization | ITI | Bases de `pim-organismo`, `pim-establecimiento`, `pim-local` y `pim-empresa` | `especificacion/input/fsh/03_perfiles.fsh` |
 | XDW (modelo de tres capas) | ITI | PIM-OT, PIM-SOL y PIM-ENS como definiciones de flujo sobre FHIR Task; correspondencia de estados | `especificacion/input/pagecontent/marco-tecnico.md` |
-| MEM-DMC Rev. 1.5 (PCD-15) | DEV | Módulo `mem`: actor DMIC; MLLP (residente) y HTTP; ACK; traducción a Device + DeviceMetric + Observation | `nodo/modulos/mem` · `pruebas/mem.sh` |
+| MEM-DMC Rev. 1.5 (PCD-15) | DEV | Módulo `mem`: actor DMIC; MLLP (residente), **MLLP sobre TLS 1.2+** (1.4) y HTTP; ACK AA/AE/AR; rechazo de PID/PV1; traducción a Device + DeviceMetric + Observation; orden correctiva por autoprueba con falla y por **batería crítica** (1.4) | `nodo/modulos/mem` · `pruebas/mem.sh` |
 | MEM-LS (PCD-16) | DEV | Se usa la ubicación PL que llega en PCD-15 (68513); el receptor PCD-16 propio queda pendiente | — |
+| CT (Consistent Time) | ITI | Parcial: el nodo usa la hora del sistema operativo (sincronizada por NTP) y `status`/`diagnostico` avisan si se desfasa más de 60 s respecto de una referencia HTTPS (1.4) | `iProy-Control.sh` · `iProy-Control.ps1` |
 | ACM | DEV | Puente PIM-ALR: alarmas ISA-18.2 del módulo `alarmas` | `nodo/modulos/alarmas` |
 | Integration Statement | — | `GET /pim/declaracion` y extensión `pim-conformidad` del CapabilityStatement | `nodo/app/pim/lib/metadata.php` |
 | Actores con CapabilityStatement | — | `pim-gm`, `pim-so`, `pim-ej`, `pim-ft`, `pim-ci`, `pim-re` (formato de las guías IHE en FHIR R4) | `especificacion/input/fsh/05_actores.fsh` |

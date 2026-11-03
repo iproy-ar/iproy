@@ -116,7 +116,8 @@ const PARAMS = [
     'ServiceRequest' => ['_id' => 'id', 'identifier' => 'numero', 'status' => 'estado', 'priority' => 'prioridad', 'subject' => 'subject', 'authored' => 'autoria'],
     'Task'           => ['_id' => 'id', 'identifier' => 'numero', 'status' => 'estado', 'business-status' => 'estado_negocio', 'owner' => 'responsable_id',
                          'priority' => 'prioridad', 'location' => 'local_id', 'focus' => 'activo_id', 'based-on' => 'solicitud_id',
-                         'authored-on' => 'autoria', 'modified' => 'actualizado', '_lastUpdated' => 'actualizado', 'code' => 'categoria_codigo'],
+                         'authored-on' => 'autoria', 'modified' => 'actualizado', '_lastUpdated' => 'actualizado', 'code' => 'categoria_codigo',
+                         'decision-prioridad' => 'decision_prioridad'],
     'Observation'    => ['_id' => 'id', 'device' => 'activo_id', 'code' => 'punto', 'date' => 'instante', 'interpretation' => 'interpretacion'],
     'DeviceMetric'   => ['_id' => 'id'],
 ];
@@ -389,9 +390,12 @@ function alta_solicitud(array $f, array $cli): array {
     $idS = ulid();
     $numS = $nodo . '-SOL-' . str_pad((string) numero_nuevo('sol-' . $nodo), 6, '0', STR_PAD_LEFT);
     $prio = $f['prioridad'];
-    $motivoPrio = null;
-    if ($prio === null && $f['activo_id'] && ($a = fila('pim_activo', $f['activo_id'])) && ($i = iru($a, $f['estado_declarado']))) {
-        $prio = BANDA_PRIORIDAD[$i['banda']]; $motivoPrio = 'Prioridad por IRU: banda ' . $i['banda'] . ' (' . $i['total'] . ')';
+    $motivoPrio = null; $sug = null; $fund = null;
+    if ($f['activo_id'] && ($a = fila('pim_activo', $f['activo_id'])) && ($i = iru($a, $f['estado_declarado']))) {
+        // la sugerencia del IRU se guarda siempre (1.4.0): así se mide si el auditor la acepta, la cambia o la rechaza
+        $sug = BANDA_PRIORIDAD[$i['banda']];
+        $fund = mb_substr('IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ' · banda ' . $i['banda'] . ($i['ajuste'] ? ' (' . $i['ajuste'] . ')' : ''), 0, 160);
+        if ($prio === null) { $prio = $sug; $motivoPrio = 'Prioridad por IRU: banda ' . $i['banda'] . ' (' . $i['total'] . ')'; }
     }
     $prio ??= 'routine';
     insertar('pim_solicitud', ['id' => $idS, 'numero' => $numS, 'prioridad' => $prio, 'categoria_codigo' => $f['categoria_codigo'], 'categoria_texto' => $f['categoria_texto'],
@@ -405,6 +409,7 @@ function alta_solicitud(array $f, array $cli): array {
     insertar('pim_orden', ['id' => $idT, 'numero' => $nodo . '-' . str_pad((string) numero_nuevo('ot-' . $nodo), 6, '0', STR_PAD_LEFT),
         'solicitud_id' => $idS, 'activo_id' => $f['activo_id'], 'local_id' => $f['local_id'], 'responsable_id' => $resp,
         'estado' => 'requested', 'estado_negocio' => 'solicitada', 'motivo_estado' => $motivoPrio, 'prioridad' => $prio,
+        'prioridad_sugerida' => $sug, 'sugerencia_fundamento' => $fund,
         'categoria_codigo' => $f['categoria_codigo'], 'categoria_texto' => $f['categoria_texto'], 'descripcion' => $f['descripcion']]);
     $task = task_fhir(fila('pim_orden', $idT));
     if (!empty($f['observacion_id'])) {                                        // Task.reasonReference → la medición que la originó
@@ -531,6 +536,10 @@ function task_cambios(array $j, array $r, array $cli): array {
         'responsable' => $j['owner']['reference'] ?? null, 'prioridad' => $j['priority'] ?? null,
         'tipoMantenimiento' => null, 'modoFalla' => null, 'nota' => null];
     foreach ((array) ($j['extension'] ?? []) as $e) {
+        if (($e['url'] ?? '') === sd('pim-decision-prioridad')) foreach ((array) ($e['extension'] ?? []) as $x) {
+            if (($x['url'] ?? '') === 'decision' && ($x['valueCoding']['code'] ?? '') !== 'pendiente' && ($x['valueCoding']['code'] ?? null) !== ($r['decision_prioridad'] ?? null)) $params['decisionPrioridad'] = $x['valueCoding']['code'] ?? null;
+            if (($x['url'] ?? '') === 'motivo' && ($x['valueString'] ?? null) !== ($r['decision_motivo'] ?? null)) $params['motivoPrioridad'] = $x['valueString'] ?? null;
+        }
         if (($e['url'] ?? '') === sd('pim-tipo-mantenimiento')) $params['tipoMantenimiento'] = $e['valueCoding']['code'] ?? null;
         if (($e['url'] ?? '') === sd('pim-modo-falla')) $params['modoFalla'] = $e['valueCoding']['code'] ?? null;
     }
@@ -575,6 +584,7 @@ function transicion_set(array $r, array $p, array $cli, array $notas = []): arra
         if ($cli['rol'] !== 'GM') throw new Fallo(403, 'forbidden', 'Solo el Gestor de Mantenimiento cambia la prioridad');
         $set['prioridad'] = $p['prioridad'];
     }
+    $set += decision_prioridad($r, $p, $set, $cli, $de, $a);
     if (!empty($p['tipoMantenimiento']) && $p['tipoMantenimiento'] !== $r['tipo_mantenimiento']) {
         if (!in_array($p['tipoMantenimiento'], TIPOS_MANT, true)) throw new Fallo(422, 'code-invalid', 'Tipo de mantenimiento: ' . implode(' | ', TIPOS_MANT));
         $set['tipo_mantenimiento'] = $p['tipoMantenimiento'];
@@ -589,6 +599,31 @@ function transicion_set(array $r, array $p, array $cli, array $notas = []): arra
         $set['actualizado'] = (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v');   // la nota también es un cambio (nueva versión)
     }
     return [$set, $motivo ?: ($notas ? 'Nota agregada' : null)];
+}
+
+/**
+ * Decisión del auditor sobre la prioridad sugerida por el IRU (1.4.0, human-in-the-loop):
+ *  - explícita: parámetro decisionPrioridad = aceptada | cambiada | rechazada (+ motivoPrioridad, obligatorio salvo «aceptada»);
+ *  - al cambiar la prioridad: aceptada si queda igual a la sugerida; si no, cambiada (exige motivo);
+ *  - implícita: la primera vez que el Gestor saca la orden de «solicitada» o «en-revisión» sin decidir, se registra si mantuvo la sugerida.
+ */
+const DECISIONES = ['aceptada', 'cambiada', 'rechazada'];
+function decision_prioridad(array $r, array $p, array $set, array $cli, string $de, string $a): array {
+    $exp = $p['decisionPrioridad'] ?? null; $mot = trim((string) ($p['motivoPrioridad'] ?? ''));
+    $sug = $r['prioridad_sugerida'] ?? null;
+    if ($exp !== null && $exp !== '') {
+        if ($cli['rol'] !== 'GM') throw new Fallo(403, 'forbidden', 'Solo el Gestor de Mantenimiento decide sobre la prioridad sugerida');
+        if ($sug === null) throw new Fallo(422, 'business-rule', 'La orden no tiene prioridad sugerida: el activo no tiene IRU cargado');
+        if (!in_array($exp, DECISIONES, true)) throw new Fallo(422, 'code-invalid', 'decisionPrioridad: ' . implode(' | ', DECISIONES));
+        $dec = $exp;
+    } elseif ($sug !== null && isset($set['prioridad'])) $dec = $set['prioridad'] === $sug ? 'aceptada' : 'cambiada';
+    elseif ($sug !== null && ($r['decision_prioridad'] ?? null) === null && $cli['rol'] === 'GM' && $a !== $de && in_array($de, ['solicitada', 'en-revision'], true)) {
+        $dec = $r['prioridad'] === $sug ? 'aceptada' : 'cambiada';
+        $mot = $mot !== '' ? $mot : ($dec === 'aceptada' ? 'Implícita: se mantuvo la prioridad sugerida' : 'Implícita: se mantuvo la prioridad del solicitante');
+    } else return [];
+    if ($dec !== 'aceptada' && $mot === '') throw new Fallo(422, 'required', "Una prioridad sugerida «{$dec}» exige el motivo (motivoPrioridad)", 'Task.extension');
+    return ['decision_prioridad' => $dec, 'decision_motivo' => $mot !== '' ? mb_substr($mot, 0, 255) : null, 'decision_autor' => mb_substr((string) $cli['id'], 0, 80),
+            'decision_ts' => (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v')];
 }
 
 /** POST /Task/{id}/$transicion con Parameters (estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota). */

@@ -1,13 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Diferencias entre la especificación y la implementación de referencia
 
-Generado por `herramientas/contrato.py` el 02-11-2026. Es la verificación por máquina de la lección L-329.
+Generado por `herramientas/contrato.py` el 03-11-2026. Es la verificación por máquina de la lección L-329.
 
 | | Versión |
 |---|---|
-| Especificación (guía FSH compilada por SUSHI) | **0.9.2** |
-| Servidor PIM (`nodo/app/pim`) | **1.1.0** (declara PIM 0.9.2) |
-| Contrato OpenAPI (`api/openapi_pim_v1_2_0.yaml`) | **1.2.0** |
+| Especificación (guía FSH compilada por SUSHI) | **0.9.3** |
+| Servidor PIM (`nodo/app/pim`) | **1.1.0** (declara PIM 0.9.3) |
+| Contrato OpenAPI (`api/openapi_pim_v1_3_0.yaml`) | **1.3.0** |
 
 **Cómo se mide:** toda extensión, perfil y CodeSystem que el código del servidor (y del módulo `mem`) emite o lee debe existir en la guía compilada;
 todo recurso del servidor debe estar en el CapabilityStatement del actor Gestor (`pim-gm`). Además, desde la 1.1 el servidor **no tiene copia
@@ -16,7 +16,7 @@ propia** de las terminologías: sirve los artefactos de la guía (`nodo/conf/pim
 
 **Resultado:** ✔ sin diferencias no declaradas.
 
-| Tipo | Artefacto | En la guía 0.9.2 | En el servidor 1.1.0 | Estado | Nota |
+| Tipo | Artefacto | En la guía 0.9.3 | En el servidor 1.1.0 | Estado | Nota |
 |---|---|---|---|---|---|
 | StructureDefinition | `pim-activo` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-ambiente-controlado` | ✔ | ✔ | ✔ |  |
@@ -24,6 +24,7 @@ propia** de las terminologías: sirve los artefactos de la guía (`nodo/conf/pim
 | StructureDefinition | `pim-categoria-riesgo` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-clase-riesgo-pm` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-conformidad` | ✔ | ✔ | ✔ |  |
+| StructureDefinition | `pim-decision-prioridad` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-establecimiento` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-estado-declarado` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-grupo-activo` | ✔ | ✔ | ✔ |  |
@@ -57,6 +58,7 @@ propia** de las terminologías: sirve los artefactos de la guía (`nodo/conf/pim
 | CodeSystem | `pim-categoria-alcance` | ✔ | ✔ | ✔ |  |
 | CodeSystem | `pim-categoria-riesgo` | ✔ | ✔ | ✔ |  |
 | CodeSystem | `pim-clase-riesgo-pm` | ✔ | ✔ | ✔ |  |
+| CodeSystem | `pim-decision-prioridad` | ✔ | ✔ | ✔ |  |
 | CodeSystem | `pim-estado-orden` | ✔ | ✔ | ✔ |  |
 | CodeSystem | `pim-grupo-local` | ✔ | ✔ | ✔ |  |
 | CodeSystem | `pim-metodo-riesgo` | ✔ | ✔ | ✔ |  |

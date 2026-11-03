@@ -3,7 +3,7 @@
   "id": "ar.iproy.pim",
   "language": "es",
   "url": "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "name": "PIM",
   "title": "PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud",
   "status": "draft",
@@ -132,6 +132,14 @@
         },
         "name": "Conformidad PIM declarada",
         "description": "Nivel de conformidad, perfiles de integración y opciones que declara un sistema en su CapabilityStatement. Es la versión computable de la Declaración de Integración PIM (Parte 6).",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "StructureDefinition/pim-decision-prioridad"
+        },
+        "name": "Decisión sobre la prioridad sugerida",
+        "description": "Prioridad que el Gestor sugiere a partir del IRU del activo, su fundamento y lo que decidió la persona responsable (aceptarla, cambiarla o rechazarla), con motivo, autor y fecha. Sirve para auditar el sesgo de automatización: la sugerencia nunca reemplaza la decisión humana.",
         "exampleBoolean": false
       },
       {
@@ -404,6 +412,22 @@
         },
         "name": "PIM — Códigos MDC de IHE MEM-DMC y MEM-LS",
         "description": "Códigos de la nomenclatura ISO/IEEE 11073-10101 (MDC) que usan los mensajes IHE PCD-15 y PCD-16 (suplemento MEM-DMC Rev. 1.5). Los atributos de batería y autoprueba no tienen código asignado en el suplemento: llegan con código 0 y prefijo MDCX, y se conservan como texto.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "ValueSet/pim-decision-prioridad"
+        },
+        "name": "PIM — Decisión sobre la prioridad sugerida",
+        "description": "Códigos de PimDecisionPrioridad.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "CodeSystem/pim-decision-prioridad"
+        },
+        "name": "PIM — Decisión sobre la prioridad sugerida",
+        "description": "Qué hizo la persona responsable con la prioridad que sugirió el IRU.",
         "exampleBoolean": false
       },
       {

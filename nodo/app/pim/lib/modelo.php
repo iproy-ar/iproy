@@ -372,6 +372,13 @@ function task_fhir(array $r): array {
     $ext = [];
     if ($r['tipo_mantenimiento']) $ext[] = ['url' => sd('pim-tipo-mantenimiento'), 'valueCoding' => coding(cs('pim-tipo-mantenimiento'), $r['tipo_mantenimiento'])];
     if ($r['modo_falla']) $ext[] = ['url' => sd('pim-modo-falla'), 'valueCoding' => coding(cs('pim-modo-falla'), $r['modo_falla'])];
+    if (!empty($r['prioridad_sugerida'])) $ext[] = ['url' => sd('pim-decision-prioridad'), 'extension' => array_values(array_filter([
+        ['url' => 'sugerida', 'valueCode' => $r['prioridad_sugerida']],
+        $r['sugerencia_fundamento'] ? ['url' => 'fundamento', 'valueString' => $r['sugerencia_fundamento']] : null,
+        ['url' => 'decision', 'valueCoding' => coding(cs('pim-decision-prioridad'), $r['decision_prioridad'] ?? 'pendiente')],
+        $r['decision_motivo'] ? ['url' => 'motivo', 'valueString' => $r['decision_motivo']] : null,
+        $r['decision_autor'] ? ['url' => 'autor', 'valueString' => $r['decision_autor']] : null,
+        $r['decision_ts'] ? ['url' => 'fecha', 'valueDateTime' => iso($r['decision_ts'])] : null]))];
     $ids = [['use' => 'official', 'system' => sid('orden'), 'value' => $r['numero']]];
     if ($r['codigo_legado']) $ids[] = ['use' => 'secondary', 'system' => sid('orden-codigo'), 'value' => $r['codigo_legado']];
     $notas = [];

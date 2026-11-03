@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.3.1 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.4.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -50,7 +50,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.3.1"
+VER="1.4.0"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -746,11 +746,24 @@ cmd_stop() {
   detener_mariadb
 }
 
+# hora de la PC (1.4.0, IHE ITI CT): desfase en segundos con la cabecera Date de un servidor de referencia; vacío sin Internet
+reloj() {
+  local ref="${IPROY_HORA_REF:-https://iproy.com.ar/}" d
+  d=$(curl -sI -m 5 "$ref" 2>/dev/null | tr -d '\r' | sed -n 's/^[Dd]ate: //p' | head -1 || true)
+  [[ -n "$d" ]] || return 0
+  echo $(( $(date -u +%s) - $(date -u -d "$d" +%s 2>/dev/null || echo "$(date -u +%s)") ))
+}
 cmd_status() {
   cargar_env
   printf 'Nodo %s · «%s» · modo %s · v%s\n' "$IPROY_NODE" "$IPROY_NOMBRE" "$IPROY_MODO" "$IPROY_VERSION"
   for p in mariadb frankenphp worker residente residente_mem; do printf '  %-13s %s\n' "$p" "$(vivo $p && echo "● activo (pid $(cat "$RUN/$p.pid"))" || echo '○ detenido')"; done
   printf '  http        %s\n' "$(curl -s -m 5 "http://127.0.0.1:$IPROY_PUERTO/_iproy/estado.php?fmt=txt" || echo 'sin respuesta')"
+  local off ntp=""; off=$(reloj)
+  command -v timedatectl >/dev/null && ntp=$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)
+  ntp=${ntp:+ · NTP sincronizado: $ntp}
+  if [[ -z "$off" ]]; then printf '  hora        sin referencia (sin Internet)%s\n' "$ntp"
+  elif (( ${off#-} <= 60 )); then printf '  hora        ✔ desfase %s s%s\n' "$off" "$ntp"
+  else printf '  hora        ⚠ desfase %s s%s · corregí la hora (sudo timedatectl set-ntp true)\n' "$off" "$ntp"; fi
 }
 
 # ---------------------------------------------------------------- app y datos

@@ -99,4 +99,22 @@ ver "transición no permitida → 422" "$(A POST "Task/$T2/\$transicion" '{"reso
 ver "Provenance encadenado" "$(A GET "Provenance?target=Task/$T2")" 'application/x-pim-huella'
 ver "RiskAssessment con banda en pim-valores" "$(A GET "RiskAssessment?subject=Device/$O2")" '"code":"banda-A"'
 
+echo "7) Decisión humana sobre la prioridad sugerida por el IRU (1.4.0)"
+sol() { A POST ServiceRequest "{\"resourceType\":\"ServiceRequest\",\"status\":\"active\",\"intent\":\"order\",\"subject\":{\"reference\":\"Device/$O2\"},\"code\":{\"text\":\"Decisión EJ $1\"},\"note\":[{\"text\":\"Prueba de prioridad\"}]}" | grep -o '"reference":"Task/[^"]*"' | grep -o '[0-9A-Z]\{26\}'; }
+par() { printf '{"resourceType":"Parameters","parameter":[%s]}' "$1"; }
+T3=$(sol 1); R=$(A GET "Task/$T3")
+ver "la orden guarda la prioridad sugerida (banda A → stat)" "$R" '"url":"sugerida","valueCode":"stat"'
+ver "fundamento visible (IRU = F + R + M + A)" "$R" 'IRU = F 9 + R 5 + M 4 + A 0 = 18'
+ver "decisión pendiente al nacer" "$R" '"code":"pendiente"'
+ver "cambiar la prioridad sin motivo → 422" "$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"}')")" 'exige el motivo'
+R=$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"},{"name":"motivoPrioridad","valueString":"Hay red de respaldo en servicio"}')")
+ver "cambio con motivo → decisión «cambiada»" "$R" '"code":"cambiada"'
+ver "el motivo queda registrado" "$R" 'Hay red de respaldo en servicio'
+ver "búsqueda Task?decision-prioridad=cambiada" "$(A GET "Task?decision-prioridad=cambiada&_count=50")" "\"id\":\"$T3\""
+T4=$(sol 2); R=$(A POST "Task/$T4/\$transicion" "{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"estado\",\"valueCode\":\"asignada\"},{\"name\":\"responsable\",\"valueReference\":{\"reference\":\"Organization/$EMP\"}}]}")
+ver "asignar sin decidir → decisión implícita «aceptada»" "$R" '"code":"aceptada"'
+T5=$(sol 3)
+ver "rechazar la sugerencia sin motivo → 422" "$(A POST "Task/$T5/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"rechazada"}')")" 'exige el motivo'
+ver "decisión sobre una orden sin IRU → 422" "$(A POST "Task/$T2/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"aceptada"}')")" 'no tiene prioridad sugerida'
+
 echo; [[ $MAL -eq 0 ]] && echo "✔ $OK comprobaciones correctas" || echo "✘ $MAL fallas, $OK correctas"; exit $((MAL > 0))

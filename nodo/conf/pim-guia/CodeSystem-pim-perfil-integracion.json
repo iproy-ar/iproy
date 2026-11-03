@@ -66,7 +66,7 @@
     {
       "code": "PIM-EQM",
       "display": "Equipos médicos",
-      "definition": "Puente con IHE DEV MEM-DMC (PCD-15) y MEM-LS (PCD-16)."
+      "definition": "Puente con IHE DEV MEM-DMC (PCD-15), por MLLP opcionalmente sobre TLS, y MEM-LS (PCD-16, opción mem-ls)."
     }
   ],
   "caseSensitive": true,

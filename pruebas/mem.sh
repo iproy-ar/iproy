@@ -3,12 +3,13 @@
 # SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
 # Prueba del módulo «mem» (IHE MEM-DMC, actor DMIC) sobre UN nodo iniciado:
 # PCD-15 (ORU^R44) por MLLP y por HTTP → ACK, Device por EUI-64, DeviceMetric MDC, Observation, ubicación, orden por autoprueba,
-# rechazo de tipos no soportados y de mensajes con PID. Los mensajes son ficticios, con la forma del ejemplo del suplemento Rev. 1.5.
+# orden por batería crítica, MLLP sobre TLS, rechazo de tipos no soportados y de mensajes con PID. Los mensajes son ficticios, con la forma del ejemplo del suplemento Rev. 1.5.
 #   bash pruebas/mem.sh <carpeta-nodo> [puerto-mllp]
 set -u
 D="$1"; PM="${2:-2575}"; env="$(ls "$D"/data/*.env | grep -v secrets | head -1)"; P="$(basename "$env" .env | tr a-z A-Z)"
 set -a; . "$env"; . "$D/data/secrets.env"; set +a; eval "PORT=\$${P}_PUERTO TOK=\$${P}_TICK_TOKEN"
 A() { curl -s -m 90 -X "$1" -H "X-$P-Tick: $TOK" -H 'Content-Type: application/json' ${3:+-d "$3"} "http://127.0.0.1:$PORT/api/$2"; }
+no()  { if [[ "$2" != *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
 OK=0; MAL=0; ver() { if [[ "$2" == *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
 NS=https://iproy.com.ar/fhir; S=$RANDOM; EUI=$(printf '001A01%010X' $((RANDOM * 32768 + S))); TS=$(date +%Y%m%d%H%M%S)-0300
 # envía un mensaje por MLLP (0x0B … 0x1C 0x0D) y devuelve el ACK con \r → \n
@@ -21,7 +22,7 @@ while not b.endswith(b'\x1c\r'):
     if not x: break
     b+=x
 print(b.strip(b'\x0b\x1c\r').decode().replace('\r','\n'))" "$PM"; }
-pcd15() {  # $1 control · $2 alimentación · $3 resultado de autoprueba · $4 local (PL componente 9)
+pcd15() {  # $1 control · $2 alimentación · $3 resultado de autoprueba · $4 local (PL componente 9) · $5 carga de batería (%)
 cat <<EOF
 MSH|^~\&|Fabricante EJ^$EUI^EUI-64||Cliente EJ||$TS||ORU^R44^ORU_R44|$1|P|2.6|||AL|NE||UNICODE UTF-8|en^English^ISO639||IHE_PCD_015^IHE PCD^1.3.6.1.4.1.19376.1.6.1.15.1^ISO
 OBR|1|$EUI^Bomba EJ^$EUI^EUI-64|$EUI^Bomba EJ^$EUI^EUI-64|69135^MDC_OBS_MEM^MDC|||$TS
@@ -29,7 +30,7 @@ OBX|1|ST|69985^MDC_DEV_PUMP_INFUS_MDS^MDC|1.0.0.0|||||||F
 OBX|2|ST|67880^MDC_ATTR_ID_MODEL^MDC|1.0.0.1|manufacturer=Fabricante EJ model=BI-4000||$TS||||F
 OBX|3|ST|67972^MDC_ATTR_SYS_ID^MDC|1.0.0.2|$EUI^Bomba EJ^$EUI^EUI-64||$TS||||F
 OBX|4|CWE|67925^MDC_ATTR_POWER_STAT^MDC|1.0.0.3|^$2||$TS||||F|||||||$EUI^Bomba EJ^$EUI^EUI-64
-OBX|5|NM|0^MDCX_ATTR_BATT_CHARGE^MDC|1.0.0.4|87|0^MDC_DIM_PERCENT^MDC|||||F|||$TS
+OBX|5|NM|0^MDCX_ATTR_BATT_CHARGE^MDC|1.0.0.4|${5:-87}|0^MDC_DIM_PERCENT^MDC|||||F|||$TS
 OBX|6|ST|0^MDCX_ATTR_SELF_TEST_RESULT^MDC|1.0.0.5|$3||||||F|||$TS
 OBX|7|ST|68512^MDC_ATTR_LS_NAME^MDC|LOC|Bomba EJ $S||||||F|||$TS
 OBX|8|PL|68513^MDC_ATTR_LS_LOCATION^MDC|LOC|^^^Hospital EJ^^^Edificio EJ^Planta baja^$4||||||F|||$TS||||000000000001^RTLS-EJ^^L
@@ -75,5 +76,37 @@ M=$(pcd15 "EJ$S-7" "AC" "PASS" "x" | python3 -c 'import json,sys; print(json.dum
 ver "PCD-15 por HTTP (POST /api/m/mem/pcd15)" "$(A POST m/mem/pcd15 "$M")" "MSA|AA|EJ$S-7"
 ver "registro de mensajes" "$(A GET m/mem/mensajes)" "\"control\":\"EJ$S-7\""
 ver "historial y Provenance del Device" "$(A GET "pim/Provenance?target=Device/$DEV")" 'application/x-pim-huella'
+
+echo "4) Batería crítica → orden correctiva (1.4.0)"
+EUI=$(printf '001A02%010X' $((RANDOM * 32768 + S)))
+R=$(pcd15 "EJ$S-8" "BATT" "PASS" "UCI EJ $S" 15 | mllp)
+ver "ACK AA con batería al 15 %" "$R" "MSA|AA|EJ$S-8"
+DEV2=$(A GET "pim/Device?identifier=$NS/sid/eui64%7C$EUI" | grep -o '"resourceType":"Device","id":"[^"]*"' | head -1 | grep -o '[0-9A-Z]\{26\}')
+ver "orden «Batería crítica» sin alarma configurada" "$(A GET "pim/Task?focus=Device/$DEV2")" 'Batería crítica'
+pcd15 "EJ$S-9" "BATT" "PASS" "UCI EJ $S" 12 | mllp >/dev/null
+ver "no duplica la orden de batería" "$(A GET "pim/Task?focus=Device/$DEV2&_summary=count")" '"total":1'
+ver "el registro del mensaje lo explica" "$(A GET m/mem/mensajes)" 'orden por batería crítica'
+
+echo "5) MLLP sobre TLS (1.4.0)"
+A PUT modulos/mem/config "{\"config\":{\"habilitado\":true,\"host\":\"127.0.0.1\",\"puerto\":$PM,\"tls\":true}}" >/dev/null
+mllps() { python3 -c "
+import socket,ssl,sys
+c=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT); c.check_hostname=False; c.verify_mode=ssl.CERT_NONE; c.minimum_version=ssl.TLSVersion.TLSv1_2
+s=c.wrap_socket(socket.create_connection(('127.0.0.1',int(sys.argv[1])),timeout=15))
+s.sendall(b'\x0b'+sys.stdin.buffer.read().replace(b'\n',b'\r')+b'\x1c\r')
+b=b''
+while not b.endswith(b'\x1c\r'):
+    x=s.recv(65536)
+    if not x: break
+    b+=x
+print(s.version(), b.strip(b'\x0b\x1c\r').decode().replace('\r','\n'))" "$PM" 2>/dev/null; }
+R=""; for i in $(seq 1 40); do R=$(pcd15 "EJ$S-10" "AC" "PASS" "x" | mllps); [[ "$R" == *MSA* ]] && break; sleep 3; done
+ver "ACK AA por TLS" "$R" "MSA|AA|EJ$S-10"
+ver "versión TLS 1.2 o superior" "$R" 'TLSv1.'
+R=$(pcd15 "EJ$S-11" "AC" "PASS" "x" | timeout 20 bash -c "$(declare -f mllp); PM=$PM; mllp" 2>/dev/null)
+no "con TLS activo, MLLP sin cifrar no recibe ACK" "$R" "MSA|AA|EJ$S-11"
+A PUT modulos/mem/config "{\"config\":{\"habilitado\":true,\"host\":\"127.0.0.1\",\"puerto\":$PM,\"tls\":false}}" >/dev/null
+R=""; for i in $(seq 1 40); do R=$(pcd15 "EJ$S-12" "AC" "PASS" "x" | timeout 10 bash -c "$(declare -f mllp); PM=$PM; mllp" 2>/dev/null); [[ "$R" == *MSA* ]] && break; sleep 3; done
+ver "sin TLS otra vez: MLLP sin cifrar responde" "$R" "MSA|AA|EJ$S-12"
 
 echo; [[ $MAL -eq 0 ]] && echo "✔ $OK comprobaciones correctas" || echo "✘ $MAL fallas, $OK correctas"; exit $((MAL > 0))

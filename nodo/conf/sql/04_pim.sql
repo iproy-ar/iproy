@@ -230,3 +230,11 @@ ALTER TABLE pim_observacion  ADD COLUMN IF NOT EXISTS origen      VARCHAR(20)  N
 ALTER TABLE pim_solicitud    ADD COLUMN IF NOT EXISTS observacion_id CHAR(26) NULL COMMENT 'reasonReference → Observation (orden por telemetría o MEM-DMC)';
 ALTER TABLE pim_punto        ADD COLUMN IF NOT EXISTS id CHAR(26) NULL COMMENT 'DeviceMetric.id (determinístico: activo + punto)';
 ALTER TABLE pim_punto        ADD UNIQUE INDEX IF NOT EXISTS uk_punto_id (id);
+
+-- 1.4.0: registro de la decisión del auditor sobre la prioridad sugerida por el IRU (sesgo de automatización, human-in-the-loop)
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS prioridad_sugerida    VARCHAR(10)  NULL COMMENT 'routine | urgent | asap | stat, de la banda IRU del activo';
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS sugerencia_fundamento VARCHAR(160) NULL COMMENT 'IRU = F + R + M + A = n · banda';
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_prioridad    VARCHAR(10)  NULL COMMENT 'aceptada | cambiada | rechazada; NULL = pendiente';
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_motivo       VARCHAR(255) NULL;
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_autor        VARCHAR(80)  NULL;
+ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_ts           DATETIME(3)  NULL;

@@ -100,8 +100,8 @@ bash MantSur-Control.sh usuario alta admin AD        # pide la contraseña dos v
 
 ```bash
 cd ~/Proyectos/pim/iproy
-bash pruebas/pim.sh ../MantSur/MantSur-Portable     # → ✔ 51 comprobaciones correctas
-bash pruebas/mem.sh ../MantSur/MantSur-Portable     # → ✔ 19 comprobaciones correctas
+bash pruebas/pim.sh ../MantSur/MantSur-Portable     # → ✔ 61 comprobaciones correctas
+bash pruebas/mem.sh ../MantSur/MantSur-Portable     # → ✔ 27 comprobaciones correctas
 ```
 
 Las pruebas crean datos de ejemplo con prefijo `EJ-` (establecimiento, edificios, equipos, órdenes).

@@ -26,7 +26,7 @@
     {
       "code": "mem-ls",
       "display": "MEM-LS",
-      "definition": "PIM-EQM: recibe IHE PCD-16 (ORU^R45) por MLLP."
+      "definition": "PIM-EQM: recibe IHE PCD-16 (ubicación de equipos). Planificada: la implementación de referencia todavía no la ofrece."
     },
     {
       "code": "mcsd-update",

@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.3.1 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.4.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
@@ -29,7 +29,7 @@ param(
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.3.1'
+$VER = '1.4.0'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
@@ -694,11 +694,25 @@ function CmdStop {
   DetenerMariaDB
 }
 
+# ---------- hora de la PC (1.4.0, IHE ITI CT): el sellado de órdenes, mediciones y PCD-15 depende de ella ----------
+function Reloj {
+  # Desfase en segundos respecto de la hora HTTP (cabecera Date) de un servidor de referencia; $null si no hay Internet.
+  $ref = if ($env:IPROY_HORA_REF) { $env:IPROY_HORA_REF } else { 'https://iproy.com.ar/' }
+  try {
+    $r = Invoke-WebRequest -UseBasicParsing -Method Head -TimeoutSec 5 $ref
+    $d = [DateTime]::Parse($r.Headers['Date'], [Globalization.CultureInfo]::InvariantCulture).ToUniversalTime()
+    return [pscustomobject]@{ Desfase = [math]::Round(([DateTime]::UtcNow - $d).TotalSeconds); Fuente = ([Uri]$ref).Host }
+  } catch { return $null }
+}
 function CmdStatus {
   CargarEnv
   Write-Host ("Nodo {0} · «{1}» · modo {2} · v{3}" -f $E.IPROY_NODE, $E.IPROY_NOMBRE, $E.IPROY_MODO, $E.IPROY_VERSION)
   foreach ($n in 'mariadb', 'frankenphp', 'worker') { Write-Host ("  {0,-11} {1}" -f $n, $(if (Vivo $n) { "activo (pid $(Get-Content "$RUN\$n.pid"))" } else { 'detenido' })) }
   try { Write-Host ('  http        ' + (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://127.0.0.1:$($E.IPROY_PUERTO)/_iproy/estado.php?fmt=txt").Content) } catch { Write-Host '  http        sin respuesta' }
+  $h = Reloj
+  if ($null -eq $h) { Write-Host '  hora        sin referencia (sin Internet): no se pudo comparar' }
+  elseif ([math]::Abs($h.Desfase) -le 60) { Write-Host "  hora        OK (desfase $($h.Desfase) s con $($h.Fuente))" }
+  else { Write-Host "  hora        ATENCIÓN: desfase $($h.Desfase) s con $($h.Fuente). Configuración → Hora e idioma → «Sincronizar ahora»" -ForegroundColor Yellow }
 }
 
 function CmdImportarApp {
@@ -889,6 +903,9 @@ function CmdDiagnostico {
   }
   $bloq = @(Get-ChildItem -Path $RAIZ -Recurse -File -Include '*.exe', '*.dll', '*.ps1' -ErrorAction SilentlyContinue | Where-Object { Get-Item -LiteralPath $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue }).Count
   Chk ($bloq -eq 0) "Archivos marcados como «bajados de Internet»: $bloq" 'En PowerShell, dentro de la carpeta: Get-ChildItem -Recurse | Unblock-File'
+  $h = Reloj
+  if ($null -eq $h) { Write-Host '  i   Hora de la PC: sin Internet para compararla (revisala a mano)' }
+  else { Chk ([math]::Abs($h.Desfase) -le 60) "Hora de la PC: desfase de $($h.Desfase) s con $($h.Fuente)" 'Configuración → Hora e idioma → «Sincronizar ahora» (o, como Administrador: w32tm /resync). Las órdenes y los mensajes PCD-15 llevan esta hora' }
   if (Test-Path "$DATA\iproy.env") { CargarEnv; Write-Host "  i   Nodo existente: $($E.IPROY_NODE) «$($E.IPROY_NOMBRE)» (data\ ya creada; para un nodo nuevo renombrala)" } else { Write-Host '  i   Todavía no hay nodo: el siguiente paso es «init»' }
   if (Test-Path (Join-Path $RAIZ 'MANIFEST.sha256')) { $mv = CmdVerificar -SoloContar; Chk ($mv -eq 0) "Archivos contra MANIFEST: $mv distintos o faltantes" 'Volvé a copiar el paquete' }
   Write-Host ''; Write-Host "Resultado: $($script:ok) OK · $($script:mal) para resolver" -ForegroundColor $(if ($script:mal) { 'Yellow' } else { 'Green' })

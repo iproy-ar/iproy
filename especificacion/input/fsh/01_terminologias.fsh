@@ -61,6 +61,25 @@ Description: "Métodos admitidos para evaluar el riesgo de un activo."
 * #nfpa99 "NFPA 99" "Categoría de riesgo según NFPA 99."
 * #iru "Índice de Riesgo Unificado" "IRU = F + R + M + A (PIM-PROP-001, sección 8.2) [propuesta]."
 
+CodeSystem: PimDecisionPrioridad
+Id: pim-decision-prioridad
+Title: "PIM — Decisión sobre la prioridad sugerida"
+Description: "Qué hizo la persona responsable con la prioridad que sugirió el IRU."
+* ^status = #draft
+* ^caseSensitive = true
+* ^content = #complete
+* #pendiente "Pendiente" "Todavía no se decidió."
+* #aceptada "Aceptada" "Se mantuvo la prioridad sugerida."
+* #cambiada "Cambiada" "Se eligió otra prioridad (motivo obligatorio)."
+* #rechazada "Rechazada" "La sugerencia no aplica, por ejemplo por un IRU mal cargado (motivo obligatorio)."
+
+ValueSet: PimDecisionPrioridadVS
+Id: pim-decision-prioridad
+Title: "PIM — Decisión sobre la prioridad sugerida"
+Description: "Códigos de PimDecisionPrioridad."
+* ^status = #draft
+* include codes from system PimDecisionPrioridad
+
 CodeSystem: PimTipoMantenimiento
 Id: pim-tipo-mantenimiento
 Title: "PIM — Tipo de mantenimiento"
@@ -391,7 +410,7 @@ Description: "Perfiles de integración del PIM (Parte 4). Cada uno es una «defi
 * #PIM-TEL "Telemetría" "Mediciones de instalaciones."
 * #PIM-ALR "Alarmas técnicas" "Aviso y escalamiento. Puente con IHE DEV ACM."
 * #PIM-FED "Federación" "Sincronización entre nodos. Semántica de IHE ITI-91 extendida a todos los recursos."
-* #PIM-EQM "Equipos médicos" "Puente con IHE DEV MEM-DMC (PCD-15) y MEM-LS (PCD-16)."
+* #PIM-EQM "Equipos médicos" "Puente con IHE DEV MEM-DMC (PCD-15), por MLLP opcionalmente sobre TLS, y MEM-LS (PCD-16, opción mem-ls)."
 
 CodeSystem: PimActor
 Id: pim-actor
@@ -419,7 +438,7 @@ Description: "Opciones que un actor puede declarar además de lo obligatorio."
 * #mqtt "MQTT" "PIM-TEL: mediciones por MQTT 3.1.1 además de REST."
 * #colmena "Colmena" "PIM-FED y PIM-OT entre nodos por el protocolo colmena/1 (sobres firmados y sellados)."
 * #mem-dmc "MEM-DMC" "PIM-EQM: recibe IHE PCD-15 (ORU^R44) por MLLP."
-* #mem-ls "MEM-LS" "PIM-EQM: recibe IHE PCD-16 (ORU^R45) por MLLP."
+* #mem-ls "MEM-LS" "PIM-EQM: recibe IHE PCD-16 (ubicación de equipos). Planificada: la implementación de referencia todavía no la ofrece."
 * #mcsd-update "Actualización mCSD" "PIM-INV: responde IHE ITI-91 (_history con _since) para Organization y Location."
 * #transicion "Operación $transicion" "PIM-OT: cambios de estado por operación, además de PUT."
 

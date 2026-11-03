@@ -1,23 +1,43 @@
 {
   "id": "mem",
   "nombre": "Equipos médicos: IHE MEM-DMC (PCD-15)",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "abi": 1,
   "nucleo": ">=1.0 <2.0",
   "estabilidad": "pruebas",
   "licencia": "AGPL-3.0-or-later",
-  "descripcion": "Agrupa al Gestor de Mantenimiento con el actor DMIC de IHE MEM-DMC (Rev. 1.5): recibe la transacción PCD-15 (HL7 v2.6 ORU^R44, sin PID ni PV1) por MLLP o por HTTP, responde el ACK y la traduce a FHIR en el Servidor PIM: Device (pim-pma, identificado por EUI-64), DeviceMetric con el código MDC de cada atributo y Observation. Publica en telemetria/medicion los valores normalizados (ALIMENTACION, BATERIA, AUTOPRUEBA) para que las alarmas ISA-18.2 los evalúen, y pide una orden correctiva si la autoprueba falla.",
-  "requiere": ["pim"],
+  "descripcion": "Agrupa al Gestor de Mantenimiento con el actor DMIC de IHE MEM-DMC (Rev. 1.5): recibe la transacción PCD-15 (HL7 v2.6 ORU^R44, sin PID ni PV1) por MLLP o por HTTP, responde el ACK y la traduce a FHIR en el Servidor PIM: Device (pim-pma, identificado por EUI-64), DeviceMetric con el código MDC de cada atributo y Observation. Publica en telemetria/medicion los valores normalizados (ALIMENTACION, BATERIA, AUTOPRUEBA) para que las alarmas ISA-18.2 los evalúen, y pide una orden correctiva si la autoprueba falla o la batería baja del umbral crítico. El canal MLLP puede ir cifrado con TLS 1.2+ (certificado propio del nodo y, opcionalmente, certificado de cliente).",
+  "requiere": [
+    "pim"
+  ],
   "lib": "lib.php",
-  "capacidades": { "mem.ver": ["GM", "EJ", "CI"], "mem.recibir": ["GM", "FT"] },
+  "capacidades": {
+    "mem.ver": [
+      "GM",
+      "EJ",
+      "CI"
+    ],
+    "mem.recibir": [
+      "GM",
+      "FT"
+    ]
+  },
   "rutas": "rutas.php",
   "config_defecto": {
     "habilitado": false,
-    "host": "127.0.0.1", "puerto": 2575,
+    "host": "127.0.0.1",
+    "puerto": 2575,
     "ips_permitidas": [],
     "alta_automatica": true,
     "orden_autoprueba": true,
     "actualizar_ubicacion": true,
-    "aceptar_r01": true
+    "aceptar_r01": true,
+    "bateria_critica": 20,
+    "orden_bateria": true,
+    "tls": false,
+    "tls_cert": "",
+    "tls_clave": "",
+    "tls_cliente": false,
+    "tls_ca": ""
   }
 }

@@ -12,6 +12,8 @@
  *   cada otro OBX                         → Observation (pim-medicion) con el código MDC; el DeviceMetric se crea con la primera medición
  *   68513 MDC_ATTR_LS_LOCATION (PL)       → Device.location si el local existe
  *   autoprueba con falla                  → ServiceRequest (reasonReference = la Observation) → orden correctiva
+ *   batería ≤ «bateria_critica» (%)       → ServiceRequest → orden correctiva (1.4.0), sin depender de una alarma configurada
+ *   MLLP sobre TLS (1.4.0)                → «tls»: true; certificado propio del nodo o el indicado; certificado de cliente opcional
  *   alimentación, batería, autoprueba     → telemetria/medicion (ALIMENTACION, BATERIA, AUTOPRUEBA) para las alarmas ISA-18.2
  * Inconsistencias del suplemento que se aceptan (PIM 0.9.2, 9.8): hora en OBX-14 o en OBX-7; nombre en 0^MDCX_LS_ATTR_NAME o 68512.
  */
@@ -20,7 +22,7 @@ declare(strict_types=1);
 namespace Modulos\Mem;
 
 use Nucleo\Fallo;
-use function Nucleo\{pim, q, cfg_modulo, modulo, publicar};
+use function Nucleo\{pim, q, cfg_modulo, modulo, publicar, dir_datos};
 
 const SB = "\x0B"; const EB = "\x1C"; const CR = "\r";
 const UNIDADES_MDC = ['MDC_DIM_CENTI_M' => 'cm', 'MDC_DIM_PERCENT' => '%', 'MDC_DIM_MIN' => 'min', 'MDC_DIM_HR' => 'h', 'MDC_DIM_SEC' => 's',
@@ -134,7 +136,7 @@ function traducir(array $segs, array $c): array {
     $codigo = '';
     foreach ((array) ($dev['identifier'] ?? []) as $i) if (($i['system'] ?? '') === SID . 'activo') $codigo = (string) $i['value'];
     // Observaciones
-    $entradas = []; $derivados = []; $falla = null; $ubic = null;
+    $entradas = []; $derivados = []; $falla = null; $critica = null; $ubic = null;
     foreach ($obx as $o) {
         $cod = comp(campo($o, 3), 1); $ref = comp(campo($o, 3), 2); $vt = campo($o, 2); $v = campo($o, 5);
         if (in_array($cod, ['67880', '67972'], true) || ($v === '' && $vt !== 'NM')) continue;   // identidad del equipo o nodo MDS sin valor
@@ -162,7 +164,10 @@ function traducir(array $segs, array $c): array {
         // valores normalizados para telemetría y alarmas
         $txt = strtoupper($v . ' ' . $ref);
         if ($cod === '67925') $derivados[] = ['ALIMENTACION', str_contains($txt, 'BATT') ? 1 : (str_contains(strtoupper($v), 'OFF') ? 2 : 0), '1'];
-        if (str_contains($ref, 'BATT') && $vt === 'NM' && is_numeric($v)) $derivados[] = ['BATERIA', (float) $v, '%'];
+        if (str_contains($ref, 'BATT') && $vt === 'NM' && is_numeric($v)) {
+            $derivados[] = ['BATERIA', (float) $v, '%'];
+            if ((float) $v <= (float) ($c['bateria_critica'] ?? 20)) $critica = [count($entradas) - 1, (float) $v];
+        }
         if (str_contains($ref, 'SELF_TEST') || str_contains($ref, 'SELFTEST')) {
             $mal = (bool) preg_match('/FAIL|ERR|FALL|NOK/', strtoupper($v));
             $derivados[] = ['AUTOPRUEBA', $mal ? 1 : 0, '1'];
@@ -181,19 +186,13 @@ function traducir(array $segs, array $c): array {
         foreach ($derivados as [$p, $val, $u]) publicar('telemetria/medicion', ['activo' => $codigo, 'punto' => $p, 'valor' => $val, 'unidad' => $u,
             'ts' => date('Y-m-d H:i:s'), 'origen' => 'mem-dmc'], 'mem');
     $detalle = count($ids) . ' observaciones';
-    // autoprueba con falla → solicitud y orden correctiva (una sola abierta por equipo)
-    if ($falla !== null && !empty($c['orden_autoprueba'])) {
-        $abiertas = pim('GET', 'Task?focus=' . rawurlencode($devRef) . '&status=requested,received,accepted,ready,in-progress,on-hold&_count=50', null, ['rol' => 'GM', 'exigir' => true])['cuerpo'];
-        $ya = false; foreach ((array) ($abiertas['entry'] ?? []) as $e) if (str_contains((string) ($e['resource']['code']['text'] ?? ''), 'Autoprueba con falla')) $ya = true;
-        if (!$ya) {
-            pim('POST', 'ServiceRequest', ['resourceType' => 'ServiceRequest', 'status' => 'active', 'intent' => 'order', 'subject' => ['reference' => $devRef],
-                'code' => ['text' => 'Autoprueba con falla (IHE MEM-DMC)'], 'reasonReference' => [['reference' => 'Observation/' . $ids[$falla]]],
-                'note' => [['text' => 'El equipo ' . $nombre . ' (EUI-64 ' . $eui . ') informó una autoprueba con falla por IHE PCD-15.']],
-                'extension' => [['url' => SD . 'pim-estado-declarado', 'valueCoding' => ['system' => CS . 'pim-valores', 'code' => 'degradado']]],
-                'requester' => ['display' => 'IHE MEM-DMC']], ['rol' => 'GM', 'exigir' => true]);
-            $detalle .= ' · orden por autoprueba';
-        }
-    }
+    // autoprueba con falla o batería crítica → solicitud y orden correctiva (una sola abierta por equipo y motivo)
+    if ($falla !== null && !empty($c['orden_autoprueba'])
+        && pedir_orden($devRef, 'Autoprueba con falla (IHE MEM-DMC)', $ids[$falla], 'El equipo ' . $nombre . ' (EUI-64 ' . $eui . ') informó una autoprueba con falla por IHE PCD-15.'))
+        $detalle .= ' · orden por autoprueba';
+    if ($critica !== null && !empty($c['orden_bateria'])
+        && pedir_orden($devRef, 'Batería crítica (IHE MEM-DMC)', $ids[$critica[0]], 'El equipo ' . $nombre . ' (EUI-64 ' . $eui . ') informó batería al ' . $critica[1] . ' % (umbral ' . ($c['bateria_critica'] ?? 20) . ' %) por IHE PCD-15.'))
+        $detalle .= ' · orden por batería crítica';
     // ubicación (68513, tipo PL): actualiza Device.location si el local existe
     if ($ubic && !empty($c['actualizar_ubicacion'])) {
         foreach ($ubic as $nom) {
@@ -211,6 +210,17 @@ function traducir(array $segs, array $c): array {
     return ['eui' => $eui, 'device' => $dev['id'], 'n' => count($ids), 'detalle' => $detalle];
 }
 
+/** Pide una orden correctiva para el equipo si no hay otra abierta con el mismo motivo. La prioridad la pone el IRU del activo. */
+function pedir_orden(string $devRef, string $titulo, string $obsId, string $nota): bool {
+    $abiertas = pim('GET', 'Task?focus=' . rawurlencode($devRef) . '&status=requested,received,accepted,ready,in-progress,on-hold&_count=50', null, ['rol' => 'GM', 'exigir' => true])['cuerpo'];
+    foreach ((array) ($abiertas['entry'] ?? []) as $e) if (str_contains((string) ($e['resource']['code']['text'] ?? ''), $titulo)) return false;
+    pim('POST', 'ServiceRequest', ['resourceType' => 'ServiceRequest', 'status' => 'active', 'intent' => 'order', 'subject' => ['reference' => $devRef],
+        'code' => ['text' => $titulo], 'reasonReference' => [['reference' => 'Observation/' . $obsId]], 'note' => [['text' => $nota]],
+        'extension' => [['url' => SD . 'pim-estado-declarado', 'valueCoding' => ['system' => CS . 'pim-valores', 'code' => 'degradado']]],
+        'requester' => ['display' => 'IHE MEM-DMC']], ['rol' => 'GM', 'exigir' => true]);
+    return true;
+}
+
 // ------------------------------------------------------------------ servidor MLLP (lo usa tools/residente.php mem)
 function ip_permitida(string $ip, array $lista): bool {
     if (!$lista) return true;
@@ -225,8 +235,34 @@ function ip_permitida(string $ip, array $lista): bool {
     return false;
 }
 /** Atiende conexiones MLLP (varias a la vez) durante $segundos; devuelve la cantidad de mensajes procesados. */
+/** Certificado del canal MLLP: el indicado en la configuración o uno propio del nodo (EC P-256, 10 años), en data/nucleo/mem-tls. */
+function tls_certificado(array $c): array {
+    if (!empty($c['tls_cert']) && !empty($c['tls_clave'])) return [(string) $c['tls_cert'], (string) $c['tls_clave']];
+    $d = dir_datos('mem-tls'); $cert = "$d/cert.pem"; $clave = "$d/clave.pem";
+    if (!is_file($cert) || !is_file($clave)) {
+        $k = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']) ?: throw new \RuntimeException('openssl: no se pudo crear la clave TLS');
+        $csr = openssl_csr_new(['commonName' => gethostname() ?: 'nodo-pim'], $k, ['digest_alg' => 'sha256']);
+        $x = openssl_csr_sign($csr, null, $k, 3650, ['digest_alg' => 'sha256'], random_int(1, PHP_INT_MAX));
+        openssl_pkey_export($k, $pem); openssl_x509_export($x, $crt);
+        file_put_contents($clave, $pem, LOCK_EX); @chmod($clave, 0600); file_put_contents($cert, $crt, LOCK_EX);
+    }
+    return [$cert, $clave];
+}
+/** Contexto TLS 1.2+ del servidor MLLP; con «tls_cliente» exige certificado de cliente firmado por «tls_ca». */
+function tls_contexto(array $c) {
+    [$cert, $clave] = tls_certificado($c);
+    $ssl = ['local_cert' => $cert, 'local_pk' => $clave, 'disable_compression' => true, 'honor_cipher_order' => true,
+            'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_SERVER') ? STREAM_CRYPTO_METHOD_TLSv1_3_SERVER : 0)];
+    if (!empty($c['tls_cliente'])) {
+        if (empty($c['tls_ca']) || !is_file((string) $c['tls_ca'])) throw new \RuntimeException('tls_cliente exige tls_ca (archivo PEM de la autoridad que firma los certificados de los gateways)');
+        $ssl += ['verify_peer' => true, 'verify_peer_name' => false, 'allow_self_signed' => false, 'cafile' => (string) $c['tls_ca']];
+    } else $ssl += ['verify_peer' => false];
+    return stream_context_create(['ssl' => $ssl]);
+}
 function servir(array $c, int $segundos, callable $latido, callable $parar): int {
-    $srv = @stream_socket_server('tcp://' . $c['host'] . ':' . (int) $c['puerto'], $en, $es);
+    $tls = !empty($c['tls']);
+    $ctx = $tls ? tls_contexto($c) : stream_context_create();
+    $srv = @stream_socket_server('tcp://' . $c['host'] . ':' . (int) $c['puerto'], $en, $es, STREAM_SERVER_BIND | STREAM_SERVER_LISTEN, $ctx);
     if (!$srv) throw new \RuntimeException("No se pudo escuchar en {$c['host']}:{$c['puerto']}: $es");
     stream_set_blocking($srv, false);
     $cli = []; $buf = []; $n = 0; $hasta = time() + $segundos;
@@ -240,6 +276,10 @@ function servir(array $c, int $segundos, callable $latido, callable $parar): int
                     if (!$x) continue;
                     $ip = preg_replace('/:\d+$/', '', (string) $peer); $ip = trim($ip, '[]');
                     if (count($cli) >= 20 || !ip_permitida($ip, (array) $c['ips_permitidas'])) { fclose($x); continue; }
+                    if ($tls) {                                   // negociación TLS (bloqueante, máx. 10 s por conexión)
+                        stream_set_blocking($x, true); stream_set_timeout($x, 10);
+                        if (@stream_socket_enable_crypto($x, true, STREAM_CRYPTO_METHOD_TLSv1_2_SERVER | (defined('STREAM_CRYPTO_METHOD_TLSv1_3_SERVER') ? STREAM_CRYPTO_METHOD_TLSv1_3_SERVER : 0)) !== true) { @fclose($x); continue; }
+                    }
                     stream_set_blocking($x, false); $k = (int) $x; $cli[$k] = $x; $buf[$k] = '';
                     continue;
                 }

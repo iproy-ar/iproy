@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
-# Especificación PIM 0.9.2: guía de implementación HL7 FHIR R4 alineada con IHE
+# Especificación PIM 0.9.3: guía de implementación HL7 FHIR R4 alineada con IHE
 
 **PIM** es el Protocolo de Interoperabilidad de Mantenimiento en Salud. Esta carpeta contiene su guía de implementación, escrita en FSH:
 
@@ -24,6 +24,6 @@ bash herramientas/guia-al-nodo.sh   # copia los artefactos al nodo (nodo/conf/pi
 
 El workflow `.github/workflows/guia.yml` publica la guía con el HL7 IG Publisher.
 
-- **Contrato de la API:** `../api/openapi_pim_v1_2_0.yaml`.
+- **Contrato de la API:** `../api/openapi_pim_v1_3_0.yaml`.
 - **Diferencias con la implementación de referencia (Servidor PIM 1.1):** `DIFERENCIAS_IMPLEMENTACION.md` (sin diferencias no declaradas). Se regenera con `python3 herramientas/contrato.py`.
 - **Cambio del dominio canónico:** `../docs/dominio-canonico.md`.

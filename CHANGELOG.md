@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.4.0 · 03-11-2026 — Canal cifrado, batería crítica y decisión humana (PIM 0.9.3, API 1.3.0)
+
+Cierra los huecos encontrados al contrastar iProy con los prácticos de Informática Médica (IHE MEM-DMC y priorización por riesgo):
+
+- **MLLP sobre TLS 1.2+** (módulo `mem` 1.1.0): con `"tls": true` el canal de IHE PCD-15 va cifrado con un certificado propio del nodo (se crea solo, EC P-256) o con el de la institución (`tls_cert`, `tls_clave`); con `tls_cliente` + `tls_ca` exige certificado al gateway. Sigue la lista de IP permitidas.
+- **Batería crítica → orden correctiva**: si un equipo informa carga de batería igual o menor al umbral (`bateria_critica`, 20 % por defecto), se pide la orden sin necesidad de configurar una alarma. Una sola abierta por equipo y motivo; la prioridad la pone el IRU del activo.
+- **Decisión humana sobre la prioridad** (extensión `pim-decision-prioridad`, PIM 0.9.3): la orden guarda la prioridad que sugiere el IRU y su fundamento («IRU = F + R + M + A = n · banda»), y registra si el Gestor la **aceptó**, la **cambió** o la **rechazó** (las dos últimas con motivo obligatorio), con autor y fecha. Si saca la orden de «solicitada» sin decidir, se registra la decisión implícita. `GET Task?decision-prioridad=cambiada` mide el sesgo de automatización.
+- **Control de hora** (IHE ITI CT, parcial): `status` (Linux y Windows) y `diagnostico` (Windows) comparan la hora de la PC con una referencia HTTPS y avisan si el desfase supera 60 s; en Linux también muestran si NTP está sincronizado.
+- **PCD-16 (MEM-LS) marcada como planificada** en la guía: la ubicación de los equipos llega por PCD-15 (atributo 68513) y el receptor PCD-16 propio sigue pendiente, como ya decía `docs/IHE.md`.
+- **API 1.3.0** (`api/openapi_pim_v1_3_0.yaml`; la 1.2.0 pasa a `anteriores/`): parámetro de búsqueda `decision-prioridad` y parámetros `decisionPrioridad` y `motivoPrioridad` en `$transicion`.
+- Pruebas: `pim.sh` 61 comprobaciones (10 nuevas de decisión), `mem.sh` 27 (8 nuevas de batería y TLS).
+
 ## 1.3.1 · 03-11-2026 — Primera instalación real en Windows
 
 Correcciones encontradas instalando un nodo en Windows 10 desde cero:

@@ -110,6 +110,21 @@ Context: Device, RiskAssessment
 * extension[banda].value[x] only Coding
 * extension[banda].valueCoding from PimBandaIruVS (required)
 
+Extension: DecisionPrioridad
+Id: pim-decision-prioridad
+Title: "Decisión sobre la prioridad sugerida"
+Description: "Prioridad que el Gestor sugiere a partir del IRU del activo, su fundamento y lo que decidió la persona responsable (aceptarla, cambiarla o rechazarla), con motivo, autor y fecha. Sirve para auditar el sesgo de automatización: la sugerencia nunca reemplaza la decisión humana."
+Context: Task
+* extension contains sugerida 1..1 and fundamento 0..1 and decision 1..1 and motivo 0..1 and autor 0..1 and fecha 0..1
+* extension[sugerida].value[x] only code
+* extension[sugerida].valueCode from http://hl7.org/fhir/ValueSet/request-priority (required)
+* extension[fundamento].value[x] only string
+* extension[decision].value[x] only Coding
+* extension[decision].valueCoding from PimDecisionPrioridadVS (required)
+* extension[motivo].value[x] only string
+* extension[autor].value[x] only string
+* extension[fecha].value[x] only dateTime
+
 Extension: OrdenGenerada
 Id: pim-orden-generada
 Title: "Orden generada"

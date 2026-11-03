@@ -1,0 +1,34 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "draft",
+  "content": "complete",
+  "name": "PimDecisionPrioridad",
+  "id": "pim-decision-prioridad",
+  "title": "PIM — Decisión sobre la prioridad sugerida",
+  "description": "Qué hizo la persona responsable con la prioridad que sugirió el IRU.",
+  "url": "https://iproy.com.ar/fhir/CodeSystem/pim-decision-prioridad",
+  "concept": [
+    {
+      "code": "pendiente",
+      "display": "Pendiente",
+      "definition": "Todavía no se decidió."
+    },
+    {
+      "code": "aceptada",
+      "display": "Aceptada",
+      "definition": "Se mantuvo la prioridad sugerida."
+    },
+    {
+      "code": "cambiada",
+      "display": "Cambiada",
+      "definition": "Se eligió otra prioridad (motivo obligatorio)."
+    },
+    {
+      "code": "rechazada",
+      "display": "Rechazada",
+      "definition": "La sugerencia no aplica, por ejemplo por un IRU mal cargado (motivo obligatorio)."
+    }
+  ],
+  "caseSensitive": true,
+  "count": 4
+}

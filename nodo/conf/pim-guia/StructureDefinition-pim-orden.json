@@ -88,6 +88,22 @@
         "mustSupport": true
       },
       {
+        "id": "Task.extension:decisionPrioridad",
+        "path": "Task.extension",
+        "sliceName": "decisionPrioridad",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://iproy.com.ar/fhir/StructureDefinition/pim-decision-prioridad"
+            ]
+          }
+        ],
+        "mustSupport": true
+      },
+      {
         "id": "Task.identifier",
         "path": "Task.identifier",
         "min": 1,
