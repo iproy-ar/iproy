@@ -32,7 +32,7 @@ jobs:
         working-directory: especificacion
         run: |
           curl -L -o publisher.jar https://github.com/HL7/fhir-ig-publisher/releases/latest/download/publisher.jar
-          java -jar publisher.jar -ig . -tx n/a
+          java -jar publisher.jar -ig .
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with: { path: especificacion/output }

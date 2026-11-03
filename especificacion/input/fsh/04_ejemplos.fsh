@@ -35,8 +35,7 @@ Usage: #example
 * identifier.value = "EJ-QX-02"
 * status = #active
 * name = "Quirófano 2"
-* type = http://terminology.hl7.org/CodeSystem/v3-RoleCode#HSPD "hospital service"
-* type.text = "Quirófano"
+* type.text = "Quirófano (local de uso médico, grupo 2b)"
 * partOf = Reference(ejemplo-sitio)
 * physicalType = http://terminology.hl7.org/CodeSystem/location-physical-type#ro "Room"
 * managingOrganization = Reference(ejemplo-hospital)
