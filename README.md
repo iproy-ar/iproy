@@ -90,6 +90,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
 | `herramientas/contrato.py`: especificación 0.9.2 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.2.0 | sin diferencias no declaradas | |
 | Especificación PIM 0.9.2 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
+| **Validador oficial de HL7** (IG Publisher con tx.fhir.org, en el CI): guía publicada en https://iproy-ar.github.io/iproy/ | **0 errores**, 132 advertencias (OID y marca «experimental» de los ValueSets, perfiles sin ejemplo) | |
 | Recorrido de la aplicación web y la consola PIM en Chromium | sin errores de consola | |
 | `incubar.php verificar` | sin secretos, sin datos institucionales, licencias libres | ídem |
 
@@ -105,7 +106,8 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 - [docs/INDUSTRIAL.md](docs/INDUSTRIAL.md): MQTT, Modbus, alarmas ISA-18.2, OPC UA y Sparkplug.
 - [docs/IHE.md](docs/IHE.md): alineación con IHE (mCSD, XDW, MEM-DMC, Integration Statement) y lo que queda pendiente.
 - [docs/INVESTIGACION.md](docs/INVESTIGACION.md): qué se tomó de IHE, Linux, EdgeX, Sparkplug, la CRA europea, openMAINT y Atlas CMMS, y por qué.
-- [docs/publicar-en-github.md](docs/publicar-en-github.md): crear la cuenta, completar los marcadores y publicar.
+- **Guía FHIR publicada:** https://iproy-ar.github.io/iproy/ (se regenera con cada cambio en `main`).
+- [docs/publicar-en-github.md](docs/publicar-en-github.md): cómo se publicó y qué queda por configurar.
 - [nodo/INSTALAR.md](nodo/INSTALAR.md): instalación detallada y comandos del lanzador.
 
 ## Licencia
