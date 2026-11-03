@@ -10,6 +10,16 @@
 - **Libre para siempre.** Código bajo AGPL-3.0-or-later, especificación bajo CC BY-SA 4.0. Las contribuciones se firman con DCO y no hay CLA.
 
 > **Repositorio:** https://github.com/iproy-ar/iproy
+
+### Tres versiones, tres cosas distintas
+
+| Pieza | Versión | Qué es |
+|---|---|---|
+| **Estándar PIM** | **0.9.2** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
+| **API PIM** | **1.2.0** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.2. |
+| **Software iProy** | **1.1.1** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+
+El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
 
 > Proyecto personal de su autor, publicado como software libre. No es una publicación oficial de ninguna institución. No contiene datos, documentos ni configuraciones de ninguna institución: cada nodo nace vacío.

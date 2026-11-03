@@ -17,3 +17,7 @@ El texto normativo completo está en el documento PIM-PROP-001 v0.9.2. Esta guí
 ---
 
 <sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>
+
+#### Versiones
+
+Esta guía es la versión **0.9.2** del estándar PIM (borrador). La API de referencia (contrato OpenAPI **1.2.0**) y el software iProy (**1.1.1**) se numeran por separado: el estándar llega a 1.0 cuando esté completo el nivel Intermedio y haya sido probado por otros hospitales.
