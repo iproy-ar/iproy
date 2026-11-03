@@ -3,6 +3,7 @@
 
 ## Sin publicar
 
+- **Windows, `iProy-Control.bat`:** pasaba solo 7 argumentos al `.ps1`, así que `init -Nombre … -Modo … -Puerto … -Vista menu` perdía el último («Falta un argumento para el parámetro Vista»); ahora pasa todos.
 - **Windows, `tools\bajar-runtime.ps1`:** fallaba con «falta el parámetro Proxy» en Windows PowerShell 5.1; ahora usa el proxy del sistema solo si existe.
 - **Incubadora:** al arrancar comprueba que PHP tenga `mbstring` y `json`; si falta alguna, explica cómo activarla en `php.ini` en lugar de cortar con un error fatal (detectado en la primera prueba en Windows, donde el PHP oficial trae `mbstring` desactivada).
 
