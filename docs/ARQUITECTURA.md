@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Arquitectura de iProy 1.0
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/planos)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 iProy se organiza como un sistema operativo: un **núcleo** pequeño y estable, **módulos** cargables que aportan el dominio, **procesos** de usuario (la aplicación web, los clientes PIM, los gateways) y una **red** de nodos (la colmena). Cada pieza tiene un análogo en Linux, y de ahí sale la mayoría de las reglas.
 
 ```
@@ -17,6 +20,8 @@ iProy se organiza como un sistema operativo: un **núcleo** pequeño y estable, 
 
 ## 1. Analogías con Linux y reglas que se derivan
 
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
+
 | Linux | iProy | Regla |
 |---|---|---|
 | Kernel monolítico con módulos cargables (`modprobe`) | `app/nucleo` + `modulos/<id>/modulo.json` | Lo del dominio va en un módulo. El núcleo solo ofrece mecanismos |
@@ -32,6 +37,8 @@ iProy se organiza como un sistema operativo: un **núcleo** pequeño y estable, 
 | Ramas estables y LTS · kernel como CNA | `SEGURIDAD.md`, `GOBERNANZA.md` | Divulgación coordinada; un CVE se cierra cuando la corrección está publicada en una versión con soporte |
 
 ## 2. Núcleo (`nodo/app/nucleo`)
+
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
 
 | Archivo | Responsabilidad |
 |---|---|
@@ -68,12 +75,16 @@ iProy se organiza como un sistema operativo: un **núcleo** pequeño y estable, 
 
 ## 3. Datos y separación de responsabilidades
 
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
+
 - `data/` es todo lo propio del nodo: base de datos, claves, configuración de módulos, estado y respaldos. Nunca entra al repositorio ni a un derivado.
 - **Los módulos no leen la base PIM.** Usan la API (`Nucleo\pim()`) con clientes internos y roles mínimos (FT para telemetría, GM para órdenes). Por eso cada acción queda en el Provenance y el historial, igual que si la hiciera un sistema externo.
 - Cada módulo tiene sus tablas, con su prefijo (`tel_`, `alm_`, `prev_`, `mqtt_`) y migraciones propias.
 - **La aplicación web** usa la API del núcleo y `/api/pim/*`. Este último ejecuta la API PIM en el mismo proceso, con un cliente según el rol del usuario (AD→GM, EJ→cliente de su organización). Así no ocupa dos hilos por pedido (lección L-321).
 
 ## 4. Seguridad
+
+<sub>🎓 [Lección: copias de seguridad, seguridad y red →](https://iproy.com.ar/pim/aprende/respaldo-seguridad-red)</sub>
 
 Ver `SEGURIDAD.md`. En resumen:
 
@@ -86,6 +97,8 @@ Ver `SEGURIDAD.md`. En resumen:
 
 ## 5. Flujo de punta a punta (probado en `pruebas/industrial.sh`)
 
+<sub>🎓 [Lección: sensores con MQTT, alarmas y órdenes automáticas →](https://iproy.com.ar/pim/aprende/sensores-mqtt-esp32)</sub>
+
 1. Un sensor publica `pim/v1/HOSP/CMP-01/PRES-LINEA` en el broker MQTT.
 2. El residente lo convierte en el evento `telemetria/medicion` del bus.
 3. `telemetria` resuelve el activo en PIM y guarda el último valor y la serie. Encola la Observation (por excepción) y publica `telemetria/valor`.
@@ -94,3 +107,8 @@ Ver `SEGURIDAD.md`. En resumen:
 6. El técnico reconoce la alarma en `/app/` y la orden sigue su ciclo (Tabla 9-2 del PIM).
 7. El vigía `pim` publica `pim/Task/update`. Si la orden era preventiva, `preventivos` reprograma el plan desde la fecha real.
 8. Si el activo es de otro hospital vinculado, la orden se pudo pedir por la colmena (rol SO). En ese caso el Provenance del otro nodo registra `colmena-<este nodo>` como autor.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

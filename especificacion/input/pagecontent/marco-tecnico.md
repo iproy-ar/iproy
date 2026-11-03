@@ -1,5 +1,7 @@
 ### Marco técnico del PIM (formato IHE)
 
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
+
 Desde la versión 0.9.2 el PIM se describe con la estructura de un marco técnico IHE: **actores**, **transacciones** numeradas, **perfiles de integración** que agrupan transacciones, **opciones** y **agrupamientos** con perfiles IHE existentes. El principio rector es apoyarse en los bordes que IHE ya estandarizó y crear solo lo que nadie cubre: el flujo del mantenimiento entre organismos y las instalaciones hospitalarias vinculadas al riesgo para el paciente.
 
 #### Capas (modelo IHE XDW)
@@ -95,3 +97,8 @@ El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revisio
 | Paso a batería | Evento `alarmas/cambio` (PIM-ALR) |
 
 La respuesta es un ACK de HL7 v2 (MSA-1 = AA, AE o AR) en el mismo canal MLLP.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Protocolo colmena/1
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/aprende/federar-hospitales)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Especificación del protocolo con el que se comunican los nodos de cualquier producto derivado de iProy (iProy, Colmen u otros). El nombre del producto es informativo: el protocolo es neutral y tiene versión.
 
 ## 1. Identidad del nodo
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 Cada nodo genera en su primer arranque estas claves, que guarda en `data/nucleo/identidad.json` y `data/nucleo/claves/` con permisos 600:
 
@@ -18,6 +23,8 @@ Cada nodo genera en su primer arranque estas claves, que guarda en `data/nucleo/
 `huella` son los primeros 80 bits del SHA-256 de `firma_pub`, en 5 grupos de 4 caracteres hexadecimales. Los administradores la comparan por teléfono o en persona antes de aceptar un vínculo, igual que los «números de seguridad» de las mensajerías cifradas.
 
 ## 2. Sobre
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 ```json
 { "v": 1, "id": "<ULID>", "de": "VN2", "para": "4YX", "ts": 1793642648, "tipo": "rpc",
@@ -44,6 +51,8 @@ Cada nodo genera en su primer arranque estas claves, que guarda en `data/nucleo/
   5. si trae `caja`, se abre con la clave X25519 propia.
 
 ## 3. Vínculo: «el vínculo es la autorización»
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 ```
 A: colmena vincular <url | ID>  ──vinculo-solicitud (identidad A)──▶  B: estado «entrante» (no autoriza nada todavía)
@@ -72,6 +81,8 @@ B: colmena aceptar A <rol>      ──vinculo-aceptado (identidad B)──▶  A
 
 ## 4. RPC sobre la API PIM
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 El nodo A arma `{rpc, metodo, ruta, cuerpo, if_match, asercion}`, lo sella para B y lo envía.
 
 - `asercion` es un JWT ES384 con `iss = sub = colmena-<a>` y `aud = http://nodo-<b>.colmena/pim/auth/token`.
@@ -81,6 +92,8 @@ El nodo A arma `{rpc, metodo, ruta, cuerpo, if_match, asercion}`, lo sella para 
 - Todo lo que el nodo A hace en el nodo B queda en el Provenance de B con `colmena-<a>` como autor.
 
 ## 5. Transporte
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 | Vía | Cómo | Cuándo |
 |---|---|---|
@@ -92,6 +105,8 @@ El nodo A arma `{rpc, metodo, ruta, cuerpo, if_match, asercion}`, lo sella para 
 La seguridad no depende de TLS: los sobres están firmados y sellados. TLS (CA propia del nodo) es una defensa adicional.
 
 ## 6. Hub de relevo (`hub/index.php`)
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 Es un buzón de guardar y reenviar para nodos detrás de NAT, sin IP fija ni puertos abiertos. Se instala en cualquier hosting con PHP 8.1 o superior, PDO SQLite y sodium.
 
@@ -111,4 +126,11 @@ Es un buzón de guardar y reenviar para nodos detrás de NAT, sin IP fija ni pue
 
 ## 7. Compatibilidad
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 `colmena/1` solo se amplía de forma compatible: tipos nuevos que un nodo viejo ignora, o campos opcionales nuevos. Un cambio incompatible se publica como `colmena/2` y, durante la transición, los nodos aceptan las dos versiones. La ruta neutral `/colmena/ping?id=1` sigue respondiendo para el descubrimiento en la LAN que usaban las versiones anteriores del portable.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

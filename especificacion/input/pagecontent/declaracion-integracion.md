@@ -1,5 +1,7 @@
 ### Declaración de Integración PIM
 
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
+
 Basada en el **IHE Integration Statement**. Un proveedor la publica para declarar qué parte del PIM implementa su producto. Un pliego puede exigirla: «el oferente presentará la Declaración de Integración PIM de su producto, con nivel Intermedio como mínimo».
 
 La versión computable es la extensión `pim-conformidad` del CapabilityStatement del servidor (`GET [base]/metadata`). La implementación de referencia la publica además en `GET /api/pim/declaracion` (JSON) y en la consola.
@@ -43,3 +45,8 @@ La versión computable es la extensión `pim-conformidad` del CapabilityStatemen
 **6. Firma**
 
 Responsable técnico del proveedor. Firma digital (Ley 25.506) opcional.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

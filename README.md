@@ -1,5 +1,8 @@
 # iProy
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 **Núcleo libre para sistemas de gestión de mantenimiento e infraestructura crítica.** iProy funciona como un kernel: un núcleo pequeño y estable que carga módulos, una red de nodos («colmena») que se vinculan por acuerdo mutuo, y una incubadora que deja un sistema propio funcionando en minutos.
 
 - **Interoperable por diseño.** Servidor PIM: HL7 FHIR R4, SMART Backend Services, Provenance encadenado. Alineado con IHE: directorio mCSD (ITI-90/91) y equipos médicos por MEM-DMC (PCD-15).
@@ -12,6 +15,8 @@
 > Proyecto personal de su autor, publicado como software libre. No es una publicación oficial de ninguna institución. No contiene datos, documentos ni configuraciones de ninguna institución: cada nodo nace vacío.
 
 ## Qué hay en el repositorio
+
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
 
 ```
 iproy/
@@ -33,10 +38,14 @@ iproy/
 
 ## En 5 minutos
 
+> Requisitos: `git`, `curl` y `php` (8.1+). En Arch/EndeavourOS también `libxcrypt-compat`. Tutorial completo para **Linux y Windows**, con los errores típicos resueltos: [docs/INSTALACION.md](docs/INSTALACION.md).
+
+<sub>🎓 [Tutorial: instalar un sistema PIM en Linux y Windows →](https://iproy.com.ar/pim/instalar)</sub>
+
 ```bash
 cd nodo
 bash tools/bajar-runtime.sh                 # FrankenPHP (PHP 8.5), verificado por sha256
-bash iProy-Control.sh instalar-mariadb      # MariaDB 11.4 oficial (bajado de mariadb.org a descargas/), verificado y recortado
+bash iProy-Control.sh instalar-mariadb      # MariaDB 11.4: antes copiá a descargas/ el paquete oficial de mariadb.org (o el recortado de otro nodo); lo verifica y recorta
 bash iProy-Control.sh init --nombre "Pañol central" --modo lan
 bash iProy-Control.sh start                 # MariaDB, servidor web, worker y residente MQTT
 bash iProy-Control.sh usuario alta admin AD # te pide la contraseña (no queda en el historial)
@@ -46,6 +55,8 @@ bash iProy-Control.sh usuario alta admin AD # te pide la contraseña (no queda e
 En Windows se usa `iProy-Control.bat init -Nombre "Pañol central" -Modo lan`, después `start`. El resto de los comandos se escribe igual.
 
 ## Tu propio sistema, en minutos
+
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
 ```bash
 php incubadora/incubar.php nuevo --nombre Colmen --sigla CLM --color "#0277bd" --plantilla gestion-mantenimiento
@@ -67,6 +78,8 @@ Por eso un nodo *Colmen* y un nodo *iProy* se vinculan y se entienden sin adapta
 
 ## Colmena: nodos que se vinculan
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 ```bash
 # en el nodo A
 bash iProy-Control.sh colmena vincular https://192.168.1.20:8443     # intranet (o el ID del otro nodo, por el hub)
@@ -79,7 +92,9 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.1.0 · 02-11-2026)
+## Estado (v1.1.1 · 03-11-2026)
+
+<sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
 | Prueba | iProy 1.1.0 | Colmen 0.2.0 |
 |---|---|---|
@@ -100,6 +115,10 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 
 ## Documentación
 
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
+
+- **[docs/INSTALACION.md](docs/INSTALACION.md): tutorial de instalación en Linux y Windows**, basado en una práctica real; versión guiada en https://iproy.com.ar/pim/instalar.
+- **Sitio de capacitación y divulgación:** https://iproy.com.ar/pim — lecciones por rol, manuales, planos, casos, API, foro y reseñas.
 - [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md): el núcleo explicado con analogías de Linux.
 - [docs/COLMENA.md](docs/COLMENA.md): especificación del protocolo `colmena/1` y del hub.
 - [docs/MODULOS.md](docs/MODULOS.md): cómo escribir un módulo, con el manifiesto, el ABI y los puntos de enganche.
@@ -112,8 +131,15 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 
 ## Licencia
 
+<sub>🎓 [Conocé PIM: qué gana un hospital y por qué es libre →](https://iproy.com.ar/pim/conoce)</sub>
+
 - Código: **GNU AGPL-3.0-or-later** ([LICENSE](LICENSE)). Quien ofrezca iProy o un derivado por red tiene que ofrecer el código fuente correspondiente, incluidas sus modificaciones. El enlace «código fuente» del pie de la aplicación y `GET /api/fuente` cumplen esa función.
 - Especificación y documentación: **CC BY-SA 4.0**.
 - Cada archivo lleva su cabecera `SPDX-License-Identifier`, según la convención [REUSE](https://reuse.software/).
 
 Los compromisos del proyecto están en el [Contrato social](CONTRATO_SOCIAL.md).
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

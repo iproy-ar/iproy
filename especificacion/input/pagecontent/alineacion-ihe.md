@@ -1,5 +1,7 @@
 ### Alineación con IHE
 
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
+
 **Principio rector (PIM 0.9.2).** IHE confirma el problema que dio origen al PIM —lo diagnosticó en 2009 para los equipos médicos, en el white paper MEM— y confirma que sigue sin resolverse. Lo que IHE ofrece son bordes bien estandarizados (MEM, mCSD, ACM, ATNA/BALP) y un método de conformidad. El PIM se apoya en esos bordes en lugar de reinventarlos, y concentra lo nuevo en lo que nadie cubre: el flujo del mantenimiento entre organismos y las instalaciones hospitalarias vinculadas al riesgo para el paciente.
 
 | Perfil IHE | Dominio | Qué toma el PIM | Cómo |
@@ -22,3 +24,8 @@
 #### Doble vía de estandarización
 
 El PIM sigue como guía FHIR abierta, registrable en la Red Nacional de Interoperabilidad (Res. 115/2019), escrita desde la 0.9.2 con el formato IHE. Así sus perfiles PIM-EQM y PIM-OT pueden proponerse más adelante al dominio IHE Devices sin depender de ese proceso para avanzar.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

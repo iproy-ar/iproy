@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Contrato social de iProy
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Estos son los compromisos del proyecto iProy y del estándar PIM con quienes lo usan, lo adoptan o lo mejoran. Se inspiran en el Contrato Social de Debian. Ninguna versión futura puede debilitarlos: solo se pueden ampliar.
 
 1. **iProy será siempre software libre.** El código se publica bajo GNU AGPL-3.0-or-later y la especificación bajo CC BY-SA 4.0. No habrá ediciones «comunitarias» recortadas ni núcleos cerrados. Las contribuciones se aceptan con DCO y sin CLA, de modo que nadie, tampoco el autor, pueda volver a licenciar lo que aportaron otros.
@@ -12,3 +15,8 @@ Estos son los compromisos del proyecto iProy y del estándar PIM con quienes lo 
 7. **El servicio es libre; el estándar no se vende.** Cualquiera puede cobrar por instalar, capacitar, adaptar o dar soporte, como pasa con Linux. Nadie puede vender el estándar PIM ni impedir que otro lo use.
 8. **Primero los registros del Estado.** PIM alimenta los registros oficiales que ya existen (REFES y los que se creen) en lugar de crear registros paralelos. **Nunca se incluyen datos de pacientes.**
 9. **Transparencia.** Los problemas, las decisiones y la hoja de ruta son públicos. Cuando algo no está verificado se lo marca así: [verificado], [supuesto], [pendiente] o [contradicción].
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

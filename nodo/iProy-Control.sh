@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.1.0 · 02-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.1.1 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -47,7 +47,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.1.0"
+VER="1.1.1"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -883,7 +883,8 @@ cmd_confiar_ca() {
 
 cmd_instalar_mariadb() {
   # 1.º opción: runtime ya recortado (armado con tools/recortar-mariadb.sh desde el oficial verificado)
-  local pre; pre="$(ls -1 "$RAIZ"/descargas/runtime-mariadb-11.4.*-linux-x64-recortado.tar.xz 2>/dev/null | sort -V | tail -1)"
+  mkdir -p "$RAIZ/descargas"
+  local pre; pre="$(ls -1 "$RAIZ"/descargas/runtime-mariadb-11.4.*-linux-x64-recortado.tar.xz 2>/dev/null | sort -V | tail -1 || true)"   # sin coincidencias no corta el script (1.1.1)
   if [[ -f "$pre" && -f "$RAIZ/descargas/sha256sums.txt" ]]; then
     local hp; hp="$(sha256sum "$pre" | cut -d' ' -f1)"
     grep -q "$hp" "$RAIZ/descargas/sha256sums.txt" || fallo "el sha256 de $(basename "$pre") NO figura en sha256sums.txt"
@@ -894,8 +895,11 @@ cmd_instalar_mariadb() {
     ( cd "$MDB" && sha256sum --quiet -c MANIFEST.sha256 ) && log "✔ MariaDB instalado y verificado archivo por archivo" || fallo "MANIFEST del runtime no coincide"
     return 0
   fi
-  local tgz; tgz="$(ls -1 "$RAIZ"/descargas/mariadb-11.4.*-linux-*x86_64.tar.gz 2>/dev/null | sort -V | tail -1)"
-  [[ -f "$tgz" ]] || fallo "no está descargas/mariadb-11.4.x-linux-…-x86_64.tar.gz (bajalo de https://mariadb.org/download/)"
+  local tgz; tgz="$(ls -1 "$RAIZ"/descargas/mariadb-11.4.*-linux-*x86_64.tar.gz 2>/dev/null | sort -V | tail -1 || true)"
+  [[ -n "$tgz" && -f "$tgz" ]] || fallo "no hay nada para instalar en descargas/. Copiá ahí UNA de estas dos cosas:
+    a) runtime-mariadb-11.4.x-linux-x64-recortado.tar.xz + sha256sums.txt (18 MB, de otro nodo iProy o Colmen), o
+    b) mariadb-11.4.x-linux-systemd-x86_64.tar.gz oficial (unos 340 MB) de https://mariadb.org/download/
+  Tutorial paso a paso: https://iproy.com.ar/pim/instalar"
   local h; h="$(sha256sum "$tgz" | cut -d' ' -f1)"
   if [[ -f "$RAIZ/descargas/sha256sums.txt" ]]; then
     grep -q "$h" "$RAIZ/descargas/sha256sums.txt" && log "sha256 verificado contra sha256sums.txt ✔ ($(echo "$h" | cut -c1-16))" \

@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Alineación con IHE
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/conoce)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 **Principio rector (PIM 0.9.2, iProy 1.1).** IHE confirma el problema que dio origen al PIM —lo diagnosticó en 2009 para los equipos médicos, en el white paper «Medical Equipment Management»— y confirma que sigue sin resolverse. Lo que IHE ofrece son bordes bien estandarizados (MEM, mCSD, ACM, ATNA/BALP) y un método de conformidad. El PIM se apoya en esos bordes en lugar de reinventarlos, y concentra lo nuevo en lo que nadie cubre: el flujo del mantenimiento entre organismos y las instalaciones hospitalarias vinculadas al riesgo para el paciente.
 
 ## Qué se implementó
+
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
 
 | Perfil IHE | Dominio | En iProy 1.1 | Dónde |
 |---|---|---|---|
@@ -19,6 +24,8 @@
 
 ## Lo que queda pendiente
 
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
+
 - Receptor PCD-16 (MEM-LS) propio y opción Feed de mCSD (ITI-130).
 - Auditoría con los perfiles de IHE BALP (hoy: auditoría interna equivalente).
 - Validar los mensajes de PCD-15 con las herramientas de prueba de IHE/NIST, y las instancias FHIR con el validador oficial (lo corre el flujo de publicación).
@@ -26,7 +33,14 @@
 
 ## Fuentes
 
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
+
 - IHE DEV, suplemento MEM-DMC Rev. 1.5 (19-09-2024): https://www.ihe.net/uploadedFiles/Documents/PCD/IHE_Suppl_PCD_MEM-DMC.pdf
 - IHE PCD White Paper MEM (2009): https://wiki.ihe.net/index.php/PCD_Detailed_Profile_Proposal_2009_MEM_WP
 - IHE ITI mCSD 4.0.0: https://profiles.ihe.net/ITI/mCSD/
 - IHE ITI XDW (Rev. 20.0): https://profiles.ihe.net/ITI/TF/Volume1/ch-30
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Investigación: qué se tomó de cada proyecto, y por qué
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Investigación del 02-11-2026 previa al diseño de la versión 1.0. Criterio: *si existe, se aplica; si hay algo cercano, se adapta; si no hay nada, se crea*. Las marcas indican la certeza: \[verificado\] significa que se leyó la fuente en la fecha indicada; \[supuesto\], que es inferencia o fuente secundaria.
 
 ## IHE (02-11-2026, para la versión 1.1)
+
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
 
 | Perfil o documento | Fuente | Qué se aplicó |
 |---|---|---|
@@ -16,6 +21,8 @@ Detalle en `docs/IHE.md`.
 
 ## Linux (núcleo, ABI, gobierno, seguridad)
 
+<sub>🎓 [Lección: copias de seguridad, seguridad y red →](https://iproy.com.ar/pim/aprende/respaldo-seguridad-red)</sub>
+
 | Práctica | Fuente | Qué se aplicó en iProy |
 |---|---|---|
 | Niveles del ABI: *stable* (al menos 2 años de compatibilidad), *testing*, *obsolete*, *removed*. Kconfig y los símbolos internos no son ABI | Documentation/ABI, README · https://docs.kernel.org/admin-guide/abi.html \[verificado\] | `"abi"` y `"estabilidad"` en cada `modulo.json`; el núcleo rechaza un ABI distinto; política de 2 años en GOBERNANZA.md |
@@ -26,6 +33,8 @@ Detalle en `docs/IHE.md`.
 | Ramas estables y LTS | kernel.org/category/releases | Una LTS anual con 2 años de seguridad |
 
 ## Industria e IoT
+
+<sub>🎓 [Lección: sensores con MQTT, alarmas y órdenes automáticas →](https://iproy.com.ar/pim/aprende/sensores-mqtt-esp32)</sub>
 
 | Proyecto o norma | Hallazgo | Decisión |
 |---|---|---|
@@ -39,12 +48,16 @@ Detalle en `docs/IHE.md`.
 
 ## CMMS libres
 
+<sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
+
 | Proyecto | Hallazgo | Lección |
 |---|---|---|
 | **openMAINT** (sobre CMDBuild) | Licencia GNU AGPL; la app móvil y el portal son propietarios \[verificado\] · https://www.openmaint.org/ | Riesgo del «núcleo abierto, extras cerrados». El Contrato social de iProy lo prohíbe: no hay ediciones recortadas |
 | **Atlas CMMS** | Núcleo AGPLv3 más licencia comercial; Spring Boot + React \[verificado\] · https://github.com/Grashjs/cmms | El licenciamiento dual exige un CLA; iProy usa DCO para que nadie pueda volver a licenciar |
 
 ## Licencias y cumplimiento
+
+<sub>🎓 [Conocé PIM: qué gana un hospital y por qué es libre →](https://iproy.com.ar/pim/conoce)</sub>
 
 | Tema | Hallazgo | Decisión |
 |---|---|---|
@@ -55,6 +68,8 @@ Detalle en `docs/IHE.md`.
 
 ## Criptografía y seguridad de la colmena
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 | Elemento | Fuente | Uso |
 |---|---|---|
 | ed25519 y *sealed boxes* X25519 | libsodium · https://doc.libsodium.org/public-key_cryptography/sealed_boxes | Sobres firmados y sellados; el hub no puede leerlos |
@@ -62,6 +77,8 @@ Detalle en `docs/IHE.md`.
 | Huellas para comparar fuera de banda | Práctica de las mensajerías cifradas («números de seguridad») | `huella` en la identidad del nodo; la aceptación del vínculo es manual |
 
 ## Antecedentes propios integrados
+
+<sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
 - **PIM v0.9 / 0.9.1** (estándar de interoperabilidad de mantenimiento sobre FHIR R4) y **Servidor PIM 1.0**: es el núcleo de datos del dominio. El repositorio de la especificación (`pim-repositorio_v0.9.1c`, FSH, OpenAPI 1.1.0) se incorporará en `especificacion/` (pendiente).
 - **Portable «colmena»**: lanzador, modo autónomo, CA propia, `/colmena/ping` neutral (lección L-349), todo lo que dejaron los Pasos 87 a 105.
@@ -72,3 +89,8 @@ Detalle en `docs/IHE.md`.
   - L-348: normalización de alias;
   - L-350: tareas reanudables;
   - L-329: contrato contra texto.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

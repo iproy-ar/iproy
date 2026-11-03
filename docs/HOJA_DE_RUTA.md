@@ -1,7 +1,12 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Hoja de ruta, pendientes y límites conocidos
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 ## Límites conocidos de la versión 1.1.0 (honestos)
+
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
 
 - **Windows.** El lanzador `.ps1` tiene los mismos comandos, pasa el análisis sintáctico y se probó con pwsh en Linux (`colmena lista`). La primera corrida real en Windows queda pendiente \[pendiente\].
 - **MQTT sin residente.** Si el proceso residente no está corriendo, la tarea de respaldo escucha unos segundos por ciclo. Con brokers sin sesiones persistentes se pueden perder mensajes. Con el residente (que `start` inicia solo) no se perdió ninguno en las pruebas.
@@ -13,6 +18,8 @@
 - **Cifrado de la base en reposo.** Depende del sistema operativo (por ejemplo, BitLocker o LUKS).
 
 ## Próximas versiones
+
+<sub>🎓 [Conocé PIM: qué gana un hospital y por qué es libre →](https://iproy.com.ar/pim/conoce)</sub>
 
 ### 1.1 (hecho el 02-11-2026)
 
@@ -40,8 +47,15 @@
 
 ## Pendientes de decisión del autor
 
+<sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
+
 - ~~Cuenta de GitHub y correo de seguridad~~: organización `iproy-ar`, contacto admin@iproy.com.ar (02-11-2026). Pendiente: alias seguridad@iproy.com.ar y verificación del dominio.
 - Dónde resuelve el canónico `https://iproy.com.ar/fhir` (redirección a la guía publicada).
 - Llevar PIM-EQM y PIM-OT al dominio IHE Devices (doble vía de estandarización, PIM 0.9.2 §11.3).
 - Nombre y espacio de nombres canónico del estándar al publicar (iProy o la versión final).
 - Pasos legales previos a la publicación, ya documentados en la memoria del proyecto (L-344, L-345): pruebas de autoría, depósito en la DNDA, nota a la institución, publicación AGPL y archivo en Software Heritage.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

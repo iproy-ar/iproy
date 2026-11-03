@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.1.1 · 03-11-2026 — Instalación verificada en una PC real y capacitación
+
+Correcciones que salieron de instalar un producto incubado (MantSur) en EndeavourOS, paso a paso con el autor (`docs/INSTALACION.md` §C):
+- `tools/bajar-runtime.sh` y `.ps1` crean `descargas/` y `runtime/linux-x64/` (en un producto recién incubado no existían y `curl` fallaba con el error 23).
+- `instalar-mariadb` ya no termina en silencio cuando no hay una MariaDB recortada en `descargas/` (la búsqueda sin coincidencias cortaba el script con `set -e`); ahora explica qué copiar.
+- La incubadora avisa al final, con instrucciones por sistema operativo, cuando PHP no tiene GD y el producto conserva el logo de iProy; el `LEEME` generado explica que el producto queda al lado del repositorio y los pasos reales del runtime.
+- Aplicación web, módulo `pim`: «Nueva solicitud» ofrece la lista de activos por código y nombre (buscador con autocompletado) y explica qué hacer si el activo no existe; «Inventario» muestra la ubicación, permite elegirla al dar de alta un activo y suma la sección **Ubicaciones** (establecimiento › edificio › nivel › local, IHE mCSD) para crear el árbol del hospital desde la pantalla.
+- README: `instalar-mariadb` no descarga MariaDB; espera el paquete en `descargas/`.
+- Documentación: nuevo `docs/INSTALACION.md` (Linux y Windows, con los problemas de la práctica y su solución) y enlaces por sección a la capacitación en https://iproy.com.ar/pim en todos los documentos.
+
+El Servidor PIM y el contrato OpenAPI no cambian (1.1.0 / 1.2.0).
+
 ## 1.1.0 · 02-11-2026 — PIM 0.9.2 alineado con IHE
 
 **Principio rector:** apoyarse en los bordes que IHE ya estandarizó (mCSD, MEM, ACM, ATNA/BALP) y crear solo lo que nadie cubre (ver `docs/IHE.md`).

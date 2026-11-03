@@ -1,12 +1,17 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cómo escribir un módulo
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/aprende/tu-propio-software)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Hay dos caminos:
 
 - **Rápido.** `php incubadora/incubar.php modulo <id> --nombre "…" --campos "campo:tipo[!],…"` genera un módulo completo que ya funciona: tabla, validación, API CRUD con baja lógica, interfaz, diario y bus. Después se edita como cualquier código propio.
 - **A mano.** Seguí esta guía.
 
 ## 1. Estructura
+
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
 
 ```
 modulos/<id>/
@@ -20,6 +25,8 @@ modulos/<id>/
 ```
 
 ## 2. Manifiesto
+
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
 
 ```json
 {
@@ -45,6 +52,8 @@ modulos/<id>/
 El núcleo valida el manifiesto **sin ejecutar código**: id, versión, ABI, estabilidad, licencia y que existan los archivos declarados. Si algo falla, el módulo queda en `error` con el motivo, visible en Sistema y en `/api/proc/modulos`.
 
 ## 3. Puntos de enganche
+
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
 
 **Rutas** (`rutas.php`) devuelve una lista de `[MÉTODO, patrón, capacidad|null, función]`:
 
@@ -77,6 +86,8 @@ La función recibe `$c = {modulo, cfg, nodo, usuario, params, cuerpo, query}` y 
 
 ## 4. Funciones del núcleo disponibles
 
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
+
 Todas están en el espacio `Nucleo\`:
 
 | Función | Uso |
@@ -91,8 +102,15 @@ Todas están en el espacio `Nucleo\`:
 
 ## 5. Reglas
 
+<sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
+
 1. No leas ni escribas tablas de otro módulo ni de PIM: usá su API o el bus.
 2. Las tablas llevan el prefijo del módulo y se crean **solo** en migraciones. El DDL dentro de una transacción la confirma sola (lección L-319).
 3. Nada institucional en el módulo. Lo que es de cada nodo va en `config_defecto` y se sobrescribe en `data/nucleo/modulos/<id>.json`.
 4. Toda acción que importe para una auditoría se asienta en el diario. Todo cambio que otros puedan necesitar se publica en el bus.
 5. Para subir de `pruebas` a `estable` hacen falta pruebas automáticas y un año sin cambios incompatibles.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

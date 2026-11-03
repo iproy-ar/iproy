@@ -1,5 +1,8 @@
 # Vínculos institucionales y registro encadenado
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Ningún nodo comparte datos con otro sin un **vínculo**: una relación que una parte propone, la otra acepta y ambas firman. *[propuesta — Fase 1]*
 
 > **Estado de la implementación (núcleo 1.0, 02-11-2026).** Ya funcionan:
@@ -13,6 +16,8 @@ Ningún nodo comparte datos con otro sin un **vínculo**: una relación que una 
 
 ## Tipos
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 | Tipo | Partes | Ejemplo |
 |---|---|---|
 | `local` | Nodos de una misma institución, en el mismo edificio | Mantenimiento e Ingeniería Clínica de un mismo hospital |
@@ -20,6 +25,8 @@ Ningún nodo comparte datos con otro sin un **vínculo**: una relación que una 
 | `central` | Un organismo central y los actores que admite | Ministerio provincial con servidor en la nube |
 
 ## Ciclo de vida
+
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
 
 1. **Propuesta.** El nodo A arma la propuesta: partes, tipo, alcance (qué recursos y perfiles, en qué dirección), vigencia y base legal. La firma con la clave del nodo.
 2. **Revisión.** Los responsables de B la evalúan. Puede pedirse un convenio o un acto administrativo.
@@ -30,6 +37,8 @@ Ningún nodo comparte datos con otro sin un **vínculo**: una relación que una 
 
 ## Registro encadenado («blockchain» de vínculos)
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 Cada evento (propuesta, aceptación, suspensión, revocación) se agrega a un **registro de solo agregado** en el que cada entrada contiene: número, fecha, tipo de evento, identificador del vínculo, huella SHA-256 del acta, firmas de las partes y **la huella de la entrada anterior**. Cambiar una entrada vieja rompe la cadena y se detecta.
 
 - Cada parte guarda una copia completa y las copias se comparan al sincronizar.
@@ -37,6 +46,8 @@ Cada evento (propuesta, aceptación, suspensión, revocación) se agrega a un **
 - **Sello de tiempo público (opcional):** la huella diaria del registro puede anclarse en el servicio de sello de tiempo de **Blockchain Federal Argentina (BFA)**, que prueba ante terceros que el registro existía en esa fecha. [verificar condiciones de uso y API vigentes]
 
 ## Representación en FHIR
+
+<sub>🎓 [Guía rápida de la API PIM, con constructor de pedidos →](https://iproy.com.ar/pim/api)</sub>
 
 | Elemento | Recurso | Perfil |
 |---|---|---|
@@ -47,4 +58,11 @@ Cada evento (propuesta, aceptación, suspensión, revocación) se agrega a un **
 
 ## Sincronización con un servidor central
 
+<sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
+
 Es un vínculo de tipo `central`: el organismo publica sus condiciones de admisión, el actor propone y el organismo acepta. Los datos siguen siendo de cada institución; el servidor central guarda la copia acordada en el alcance. Nunca se sincronizan datos de pacientes.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

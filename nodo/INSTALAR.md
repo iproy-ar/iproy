@@ -1,9 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Instalar un nodo iProy 1.0
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/instalar)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Un nodo es una carpeta autocontenida: servidor web con PHP (FrankenPHP), base de datos (MariaDB), núcleo, Servidor PIM, módulos y aplicación. No instala nada en el sistema operativo y no necesita permisos de administrador. Todo lo que genera queda en `data/`.
 
 ## 1. Runtime (una vez por equipo)
+
+<sub>🎓 [Tutorial: instalar un sistema PIM en Linux y Windows →](https://iproy.com.ar/pim/instalar)</sub>
 
 1. **FrankenPHP 1.13.3** (servidor + PHP 8.5), verificado por sha256:
    - Linux: `bash tools/bajar-runtime.sh linux`
@@ -16,6 +21,8 @@ Un nodo es una carpeta autocontenida: servidor web con PHP (FrankenPHP), base de
 3. Si copiás la carpeta a un disco NTFS o exFAT en Linux, usá siempre `bash iProy-Control.sh …`: así no hace falta el permiso de ejecución.
 
 ## 2. Primer arranque
+
+<sub>🎓 [Tutorial: instalar un sistema PIM en Linux y Windows →](https://iproy.com.ar/pim/instalar)</sub>
 
 ```bash
 bash iProy-Control.sh init --nombre "Pañol central" --modo lan     # ID del nodo, claves, base de datos (vacía)
@@ -32,6 +39,8 @@ bash iProy-Control.sh usuario alta admin AD                       # pide la cont
 
 ## 3. Comandos
 
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
+
 | Comando | Para qué |
 |---|---|
 | `start` · `stop` · `status` | Iniciar, detener (con respaldo automático) y ver el estado de cada proceso |
@@ -47,6 +56,8 @@ En Windows los comandos son los mismos: `iProy-Control.bat <comando> …`.
 
 ## 4. Roles
 
+<sub>🎓 [Manuales de usuario por rol →](https://iproy.com.ar/pim/manuales)</sub>
+
 | Rol | Puede |
 |---|---|
 | AD | Administrar el nodo: todo, más usuarios, módulos y colmena |
@@ -60,6 +71,8 @@ Cada módulo suma sus capacidades. Están en Sistema y en `/api/proc/capacidades
 
 ## 5. Datos de la institución
 
+<sub>🎓 [Manuales de usuario por rol →](https://iproy.com.ar/pim/manuales)</sub>
+
 El nodo nace **vacío**. Lo propio de tu organización se carga desde la aplicación o desde la API PIM:
 
 - organismo, empresas y áreas;
@@ -69,3 +82,8 @@ El nodo nace **vacío**. Lo propio de tu organización se carga desde la aplicac
 La configuración de cada módulo vive en `data/nucleo/modulos/<id>.json`. Nada de eso forma parte del código, así que podés actualizar el código sin perder datos.
 
 **Organismo.** Editá `data/pim/config.json` → `organismo` (código, nombre y REFES si corresponde) y reiniciá.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

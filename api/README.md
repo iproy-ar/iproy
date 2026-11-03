@@ -1,5 +1,8 @@
 # API iProy (contrato OpenAPI 3.1, versión 1.2.0)
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/api)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 - **Contrato:** `openapi_pim_v1_2_0.yaml` (HL7 FHIR R4 con perfiles PIM 0.9.2, alineada con IHE). La versión anterior está en `anteriores/`.
 - **Visor:** abrí `index.html` en un navegador o publicalo en GitHub Pages.
 - **Pruebas manuales:** importá `coleccion_iproy.postman_collection.json` en Postman o Bruno y configurá `base` y `token`.
@@ -22,3 +25,8 @@
 Autenticación: OAuth 2.0 SMART Backend Services (`private_key_jwt`, RS384/ES384). Ningún recurso contiene datos de pacientes.
 
 **Estado:** el Servidor PIM 1.1 (iProy 1.1.0) cumple el contrato 1.2.0. Las diferencias con la especificación se miden por máquina en `especificacion/DIFERENCIAS_IMPLEMENTACION.md`.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

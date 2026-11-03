@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Incubadora de software
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/aprende/tu-propio-software)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 Sirve para que una persona o una institución tenga **en minutos** un sistema de gestión propio que funcione de verdad, esté estandarizado y sea libre. No es una plantilla para copiar y pegar: es la misma distribución base, probada, con otro nombre, otra imagen y los módulos que elijas.
 
 Necesita PHP 8.1 o posterior: `php` del sistema, o `runtime/linux-x64/frankenphp php-cli`.
@@ -15,6 +18,8 @@ php incubar.php verificar ../../Colmen/Colmen-Portable
 ```
 
 ## `nuevo`: producto derivado
+
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
 - Copia `../nodo` y renombra el producto en contenido, archivos y carpetas, respetando mayúsculas: `iProy→Colmen`, `IPROY→COLMEN`, `iproy→colmen`. Eso alcanza al lanzador, las variables, las bases de datos, el espacio de nombres PHP y el encabezado del worker.
 - **No renombra** (está protegido):
@@ -41,6 +46,8 @@ php incubar.php verificar ../../Colmen/Colmen-Portable
 
 ## `modulo`: módulo nuevo
 
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
+
 - **Tipos de campo:** `texto`, `largo`, `numero`, `entero`, `fecha`, `fechahora`, `si-no`, `opcion(a|b|c)` y `activo`. Un `!` al final lo hace obligatorio.
 - **Genera:**
   - `modulo.json`, con capacidades `<id>.ver` y `<id>.editar`;
@@ -55,6 +62,8 @@ php incubar.php verificar ../../Colmen/Colmen-Portable
 
 ## `verificar`
 
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
+
 Controla lo siguiente:
 
 - licencias libres (SPDX) en cada manifiesto;
@@ -63,3 +72,8 @@ Controla lo siguiente:
 - que no se haya copiado ninguna carpeta `data/`.
 
 Si encuentra algo, termina con código 2: sirve como control antes de publicar o en integración continua.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Pruebas
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/instalar#comprobar)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 | Prueba | Qué necesita | Cómo |
 |---|---|---|
 | `unitarias.php` | Solo PHP con sodium (y `nodo/conf/pim-guia`) | `php pruebas/unitarias.php` |
@@ -10,6 +13,8 @@
 | `industrial.sh` | Un nodo iniciado; opcionales: `herramientas/simuladores/modbus_sim.py` (pymodbus) y un broker MQTT con `amqtt_pub` | `bash pruebas/industrial.sh <nodo>` |
 
 ## Entorno de dos nodos para probar (resumen)
+
+<sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
 
 ```bash
 php incubadora/incubar.php nuevo --nombre Colmen --version 0.2.0 --destino /tmp/colmen
@@ -29,3 +34,8 @@ Resultados del 02-11-2026 (iProy 1.1.0 y Colmen 0.2.0):
 - industrial: 19/19 en los dos productos (con simulador Modbus y broker amqtt).
 
 Las pruebas crean sus propios datos ficticios y no usan datos reales.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>

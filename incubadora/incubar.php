@@ -80,7 +80,7 @@ function copiar(string $orig, string $dest, array $m, array &$cuenta, array &$ar
 
 /** Logo propio: hexágono (celda de colmena) con degradé del color elegido y la sigla. PNG 192/512 sin dependencias externas (GD). */
 function logo(string $sigla, string $color, string $archivo, int $t): void {
-    if (!function_exists('imagecreatetruecolor')) { dice("  (sin GD: se conserva el logo de la base en $archivo)"); return; }
+    if (!function_exists('imagecreatetruecolor')) { $GLOBALS['sin_gd'] = true; return; }   // se avisa una sola vez, al final (1.1.1)
     $im = imagecreatetruecolor($t, $t); imagesavealpha($im, true); imagealphablending($im, false);
     imagefill($im, 0, 0, imagecolorallocatealpha($im, 0, 0, 0, 127)); imagealphablending($im, true);
     [$r, $g, $b] = sscanf(ltrim($color, '#'), '%02x%02x%02x');
@@ -146,7 +146,8 @@ function cmd_nuevo(array $o): void {
     file_put_contents("$destRaiz/INCUBACION.json", json_encode($rep, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
     $lanz = "$nombre-Control";
     file_put_contents("$destRaiz/LEEME_$nombre.md", "# $nombre · instalación\n\nGenerado por la incubadora de {$bp['nombre']} el " . date('d-m-Y H:i') . " · plantilla **$plant** (" . implode(', ', $P['modulos']) . ").\n\n" .
-        "1. Copiá en `$nombre-Portable/runtime/` el runtime (FrankenPHP + MariaDB) de la base, o bajalo con `tools/bajar-runtime.sh`.\n" .
+        "0. Esta carpeta quedó **al lado** del repositorio de {$bp['nombre']} (no adentro). Tutorial completo con Linux y Windows: https://iproy.com.ar/pim/instalar\n" .
+        "1. Dentro de `$nombre-Portable/`: `bash tools/bajar-runtime.sh` (FrankenPHP) y después copiá a `descargas/` el MariaDB (el recortado de otro nodo con su `sha256sums.txt`, o el oficial de mariadb.org) y corré `bash $lanz.sh instalar-mariadb`. En Arch/EndeavourOS instalá antes `libxcrypt-compat`.\n" .
         "2. `bash $lanz.sh init --nombre \"PC $nombre\" --modo lan` (Windows: `$lanz.bat init -Nombre \"PC $nombre\" -Modo lan`).\n" .
         "3. `bash $lanz.sh start` y creá el administrador: `bash $lanz.sh usuario alta admin AD`.\n4. Abrí http://localhost:8080/ (aplicación) · /pim/ (consola PIM) · /api (núcleo).\n" .
         "5. Colmena: `bash $lanz.sh colmena vincular https://<IP-del-otro-nodo>:8443` y, en el otro nodo, `colmena aceptar <ID>` después de comparar la huella.\n\n" .
@@ -157,7 +158,13 @@ function cmd_nuevo(array $o): void {
     $v = verificar($dest, true);
     dice($v['ok'] ? '✔ verificación: sin problemas' : '⚠ verificación: ' . count($v['problemas']) . ' observaciones (ver INCUBACION.json)');
     if (!$v['ok']) { $rep['verificacion'] = $v; file_put_contents("$destRaiz/INCUBACION.json", json_encode($rep, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n"); }
+    if (!empty($GLOBALS['sin_gd'])) {
+        dice("⚠ PHP no tiene la extensión GD: $nombre conserva el logo de {$bp['nombre']}. Para tener el logo propio (hexágono con la sigla $sigla):");
+        dice("    Arch/EndeavourOS: sudo pacman -S php-gd y quitá el «;» de «;extension=gd» en /etc/php/php.ini · Debian/Ubuntu: sudo apt install php-gd · Windows: extension=gd en php.ini");
+        dice("    y volvé a correr este mismo comando (podés borrar antes la carpeta $destRaiz), o reemplazá a mano $dest/app/app/logo.png y logo-512.png.");
+    }
     dice("Siguiente: $destRaiz/LEEME_$nombre.md");
+    dice("Tutorial de instalación (Linux y Windows): https://iproy.com.ar/pim/instalar");
 }
 function aclarar(string $hex, float $f): string {
     [$r, $g, $b] = sscanf(ltrim($hex, '#'), '%02x%02x%02x');

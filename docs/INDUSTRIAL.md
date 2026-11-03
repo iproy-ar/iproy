@@ -1,6 +1,9 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Integración industrial: SCADA liviano, IoT y mantenimiento
 
+> 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/aprende/sensores-mqtt-esp32)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
+
+
 iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gestión de mantenimiento y de activos. Desde ahí:
 
 - toma datos de campo (MQTT, Modbus, HTTP);
@@ -8,6 +11,8 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 - dispara órdenes de trabajo y preventivos por condición.
 
 ## 1. Telemetría (módulo `telemetria`)
+
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
 - **Entrada única:** el evento `telemetria/medicion` `{activo, punto, valor, unidad, ts, origen}`. Puede venir de:
   - MQTT;
@@ -21,6 +26,8 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 
 ## 2. MQTT 3.1.1 (módulo `mqtt` + `tools/residente.php`)
 
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
+
 - **Temas** (configurables por plantilla): `pim/v1/{refes}/{activo}/{punto}`. Por ejemplo, `pim/v1/HOSP1/CMP-01/PRES-LINEA`.
 - **Carga:** un número (`412.5`) o JSON corto `{"v": 412.5, "u": "kPa", "t": "2026-11-02T10:00:00-03:00"}`.
 - **Proceso residente:** mantiene la conexión permanente (QoS 1, PUBACK) y publica cada mensaje en el bus en el acto. Lo inician y detienen `start` y `stop`. Mientras su latido esté fresco, la tarea `mqtt:escuchar` no hace nada; si el residente cae, la tarea escucha unos segundos por ciclo como respaldo.
@@ -29,6 +36,8 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 - **Sparkplug B (ISO/IEC 20237):** previsto en la hoja de ruta. El entorno ya tiene la extensión `protobuf`. Se agregará como plantilla `spBv1.0/{grupo}/DDATA/{nodo}/{dispositivo}`, con decodificación de métricas y estado (NBIRTH/NDEATH).
 
 ## 3. Modbus TCP (módulo `modbus`)
+
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
 - Funciones 3 (registros de retención) y 4 (registros de entrada).
 - Agrupa direcciones contiguas en lecturas de hasta 120 registros.
@@ -46,6 +55,8 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 ```
 
 ## 4. Alarmas ANSI/ISA-18.2 · IEC 62682 (módulo `alarmas`)
+
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
 - **Estados:**
   - `normal`
@@ -68,11 +79,15 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 
 ## 5. Mantenimiento preventivo (módulo `preventivos`)
 
+<sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
+
 - **Por calendario:** cada N días, con anticipación configurable. Genera la orden en PIM con el tipo EN 13306 `preventivo-sistematico` y la asigna al responsable del plan (organización PIM). Si no hay responsable, la deja en revisión.
 - **Por uso o condición:** contador de un punto de telemetría (por ejemplo, `HORAS-MARCHA` cada 500 h). Tipo `preventivo-condicional`.
 - **Reprogramación** desde la fecha real de finalización (configurable), escuchando `pim/Task/update`. No genera duplicados mientras haya una orden abierta.
 
 ## 6. OPC UA, BACnet y otros protocolos
+
+<sub>🎓 [Lección: sensores con MQTT, alarmas y órdenes automáticas →](https://iproy.com.ar/pim/aprende/sensores-mqtt-esp32)</sub>
 
 Para mantener el núcleo chico y sin dependencias nativas, la vía recomendada es un **gateway** que publique en MQTT con la convención `pim/v1/…`. Opciones:
 
@@ -84,8 +99,15 @@ Si la necesidad lo justifica, un módulo `opcua` podría usar un cliente externo
 
 ## 7. Seguridad OT
 
+<sub>🎓 [Lección: sensores con MQTT, alarmas y órdenes automáticas →](https://iproy.com.ar/pim/aprende/sensores-mqtt-esp32)</sub>
+
 - El nodo **lee** de los equipos (FC3 y FC4) y **no escribe** en PLC: no hay funciones 5, 6, 15 ni 16 de Modbus. Esto es deliberado.
 - Recomendaciones para la red:
   - separar la red de planta (VLAN);
   - usar TLS y credenciales en el broker;
   - que el nodo sea el único que inicia conexiones hacia los equipos.
+
+
+---
+
+<sub>🎓 ¿Algo no quedó claro? [Preguntá en el foro de la capacitación PIM](https://iproy.com.ar/pim/foro) · [Dejá una propuesta de mejora](https://iproy.com.ar/pim/resenas) · Repositorio: https://github.com/iproy-ar/iproy</sub>
