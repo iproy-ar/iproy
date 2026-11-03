@@ -462,7 +462,7 @@ function CmdInit {
   GenerarConfigPhp
   DetenerMariaDB
   GuardarVista $Vista
-  Log "OK nodo $id listo. Siguiente: iProy-Control.bat importar-app · importar-datos · start"
+  Log "OK nodo $id listo. Siguiente: iProy-Control.bat start  (importar-app e importar-datos solo si migrás desde Google Sheets)"
   try { CmdAccesoDirecto '' } catch { Log "Aviso: no se pudo crear el acceso directo ($_). Después: iProy-Control.bat acceso-directo" }
 }
 
