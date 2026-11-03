@@ -37,7 +37,7 @@
   const ic = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || P.modulo}</svg>`;
 
   // ---------------------------------------------------------------- categorías y metadatos de los accesos
-  const GRUPOS = { mant: ['Mantenimiento', '#1e88e5'], plan: ['Planificación', '#43a047'], moni: ['Monitoreo', '#8e24aa'], red: ['Red de hospitales', '#00897b'],
+  const GRUPOS = { mant: ['Mantenimiento', '#1e88e5'], plan: ['Planificación', '#43a047'], moni: ['Monitoreo', '#8e24aa'], red: ['Red de instituciones', '#00897b'],
     adm: ['Administración', '#546e7a'], otros: ['Otros módulos', '#8d6e63'] };
   const META = { ordenes: ['mant', 'ordenes', 'Seguimiento de trabajos'], solicitud: ['mant', 'solicitud', 'Pedir un trabajo'], inventario: ['mant', 'inventario', 'Activos y ubicaciones'],
     preventivos: ['plan', 'preventivos', 'Planes por tiempo, uso o condición'], alarmas: ['moni', 'alarmas', 'ISA-18.2'], telemetria: ['moni', 'telemetria', 'Sensores y equipos'],
@@ -237,7 +237,7 @@
   /** Tarjetas para elegir la vista, con una miniatura de cada una. */
   function selectorVista(sel, deNodo, conNodo) {
     const op = [['widgets', 'Vista widgets', 'Inicio con indicadores y accesos rápidos por categoría; menú lateral.'], ['menu', 'Vista menú', 'Encabezado de color con todos los módulos arriba, siempre a mano.']];
-    if (conNodo) op.unshift(['__nodo', 'La del hospital', `Usar la que eligió el administrador (hoy: ${deNodo === 'menu' ? 'menú' : 'widgets'}).`]);
+    if (conNodo) op.unshift(['__nodo', 'La de la institución', `Usar la que eligió el administrador (hoy: ${deNodo === 'menu' ? 'menú' : 'widgets'}).`]);
     return `<div class="vistas" id="selVista">${op.map(([v, t, d]) => `<button class="vista-op ${sel === v ? 'sel' : ''}" data-v="${v}"><span class="vmini ${v === '__nodo' ? deNodo : v}"><i></i><i></i><i></i><i></i></span><b>${t}</b><small>${d}</small></button>`).join('')}</div>`;
   }
 
@@ -257,7 +257,7 @@
             else if (f !== '__propio') V = (await api('PUT', 'perfil', { fondo: f })).vista;
             aplicarFondo(V.fondo, V.opacidad); ir('perfil');
           } catch (x) { aviso($('#pfMsg'), 'mal', x.message); }
-        }, true, [['__nodo', 'El del hospital', 'linear-gradient(135deg,#fff,#e3f2fd)'], ...(v.fondo_propio && v.fondo.tipo === 'imagen' ? [['__propio', 'Mi imagen', `url('${v.fondo.url}') center/cover`]] : [])])}
+        }, true, [['__nodo', 'El de la institución', 'linear-gradient(135deg,#fff,#e3f2fd)'], ...(v.fondo_propio && v.fondo.tipo === 'imagen' ? [['__propio', 'Mi imagen', `url('${v.fondo.url}') center/cover`]] : [])])}
         <div style="margin-top:14px;max-width:420px"><label>Transparencia del tablero sobre el fondo: <b id="opV">${100 - v.opacidad}%</b></label><input type="range" id="opR" min="0" max="60" value="${100 - v.opacidad}"></div><div id="pfMsg"></div></div>
       <div class="tarjeta"><h2>Widgets de tu inicio</h2><p class="mini">Ocultá los que no uses. El administrador define el orden.</p><ul class="orden-w" id="wLista">${widgets.filter((w) => !v.widgets.ocultos_nodo.includes(w.id)).map((w) =>
         `<li><input type="checkbox" data-w="${h(w.id)}" ${v.widgets.ocultos.includes(w.id) ? '' : 'checked'}><b>${h(w.titulo)}</b></li>`).join('')}</ul></div>
@@ -300,7 +300,7 @@
     }
     if (pestCfg === 'fondos') {
       const ex = (k) => (a[k] && imgDe(a[k]) ? [['__img', 'Imagen subida', `url('${imgDe(a[k])}') center/cover`]] : []);
-      c.innerHTML = `<div class="tarjeta"><h2>Fondo de la pantalla de ingreso</h2><p class="mini">Una foto del hospital da identidad desde el primer momento.</p>
+      c.innerHTML = `<div class="tarjeta"><h2>Fondo de la pantalla de ingreso</h2><p class="mini">Una foto del hospital o centro de salud da identidad desde el primer momento.</p>
           ${galeria(fsel(a.fondo_login), async (f) => { if (f === '__subir') return subir('fondo_login', 2560, false, $('#fMsg')); if (f !== '__img') { await guardar({ fondo_login: f }, $('#fMsg')); ir('configuracion'); } }, true, ex('fondo_login'))}</div>
         <div class="tarjeta"><h2>Fondo del tablero para todos</h2><p class="mini">Cada usuario puede elegir el suyo en «Mi perfil»; este es el que ven quienes no eligieron.</p>
           ${galeria(fsel(a.fondo_tablero), async (f) => { if (f === '__subir') return subir('fondo_tablero', 2560, false, $('#fMsg')); if (f !== '__img') { await guardar({ fondo_tablero: f === '__liso' ? '' : f }, $('#fMsg')); ir('configuracion'); } }, true,

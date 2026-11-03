@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## Sin publicar
+
+- **Textos para hospitales y centros de salud:** la aplicación dice «La de la institución» y «El de la institución» (vista y fondo heredados), «Red de instituciones» en el menú, y los textos de ayuda nombran al hospital o centro de salud.
+
 ## 1.4.0 · 03-11-2026 — Canal cifrado, batería crítica y decisión humana (PIM 0.9.3, API 1.3.0)
 
 Cierra los huecos encontrados al contrastar iProy con los prácticos de Informática Médica (IHE MEM-DMC y priorización por riesgo):
