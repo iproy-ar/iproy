@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.2.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.3.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
-#    init [--nombre "Pañol Central"] [--modo local|lan] [--puerto 8080] [--puerto-db 3407]
+#    init [--nombre "Pañol Central"] [--modo local|lan] [--puerto 8080] [--puerto-db 3407] [--vista widgets|menu]
 #                         primer arranque: crea data/, claves, base y config
 #    start [--no-abrir]   inicia MariaDB + FrankenPHP + worker y abre el navegador
 #    stop                 detiene todo en orden inverso
 #    abrir                inicia si hace falta y abre el navegador (lo usa el acceso directo)
+#    vista widgets|menu   cómo se ve el sistema para todos (también en Configuración y, por usuario, en «Mi perfil»)
 #    acceso-directo [--quitar]   icono en el escritorio y en el menú de aplicaciones (init ya lo crea)
 #    status               estado de cada proceso y prueba HTTP
 #    instalar-mariadb     descomprime descargas/mariadb-11.4.*-linux-*.tar.gz en runtime/ y verifica su sha256
@@ -49,7 +50,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.2.0"
+VER="1.3.0"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -146,10 +147,11 @@ GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,ALTER,INDEX,CREATE VIEW,SHOW VIEW,CREAT
 }
 
 cmd_init() {
-  local nombre="Nodo IPROY" modo="local" puerto="8080" puerto_db="3407"
+  local nombre="Nodo IPROY" modo="local" puerto="8080" puerto_db="3407" vista=""
   while [[ $# -gt 0 ]]; do case "$1" in
     --nombre) nombre="$2"; shift 2;; --modo) modo="$2"; shift 2;; --puerto) puerto="$2"; shift 2;;
     --puerto-db) puerto_db="$2"; shift 2;;   # dos nodos en el mismo equipo (pruebas de colmena)
+    --vista) vista="$2"; shift 2;;           # widgets | menu (1.3.0)
     *) fallo "opción desconocida: $1";; esac; done
   [[ -e "$DATA/iproy.env" ]] && fallo "data/ ya existe (nodo inicializado). Para reinstalar, mové data/ a otro lado."
   # v0.4.5: el nombre del equipo se pide al instalar (se ve en la app: «Nodo ABC · PC Taller»)
@@ -159,9 +161,19 @@ cmd_init() {
     [[ -n "$nombre" ]] || nombre="$sug"
   fi
   nombre="$(nombre_limpio "$nombre")"
+  # 1.3.0: cómo se ve el sistema (se puede cambiar después en Configuración o con «vista»)
+  if [[ -z "$vista" && -t 0 ]]; then
+    echo "¿Cómo querés ver el sistema?"
+    echo "  1) Vista widgets: inicio con indicadores y accesos rápidos por categoría, menú lateral"
+    echo "  2) Vista menú:    encabezado de color con todos los módulos arriba"
+    local op; read -r -p "Elegí 1 o 2 [1]: " op || true; [[ "$op" == 2 ]] && vista=menu || vista=widgets
+  fi
+  [[ -z "$vista" ]] && vista=widgets
+  [[ "$vista" == widgets || "$vista" == menu ]] || fallo "--vista: widgets | menu"
   [[ -x "$FP" ]] || fallo "falta FrankenPHP en $FP"
   [[ -d "$MDB/bin" ]] || fallo "falta MariaDB en $MDB (descomprimí el bintar oficial ahí; ver INSTALAR.md)"
-  mkdir -p "$DATA"/{run,logs,backups,outbox,inbox,adjuntos,caddy,php/sesiones,mariadb}
+  mkdir -p "$DATA"/{run,logs,backups,outbox,inbox,adjuntos,caddy,php/sesiones,mariadb,nucleo}
+  guardar_vista "$vista"
   local id; id="$(nodo_id)"
   log "nodo nuevo: $id · «$nombre» · modo $modo · puerto $puerto"
 
@@ -956,6 +968,19 @@ DESK
     log "  Si el escritorio pide confirmación la primera vez, elegí «Confiar y ejecutar» o «Permitir lanzar»."
   else log "⚠ no encontré la carpeta del escritorio: quedó solo en el menú de aplicaciones"; fi
 }
+# Vista del sistema para todo el nodo (data/nucleo/apariencia.json, la misma que cambia Configuración)
+guardar_vista() {
+  local f="$DATA/nucleo/apariencia.json"; mkdir -p "$DATA/nucleo"
+  if command -v php >/dev/null || [[ -x "$FP" ]]; then
+    local php=(php); command -v php >/dev/null || php=("$FP" php-cli)
+    "${php[@]}" -r '$f=$argv[1]; $a=is_file($f)?(json_decode(file_get_contents($f),true)?:[]):[]; $a["vista"]=$argv[2]; file_put_contents($f, json_encode($a, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n");' "$f" "$1"
+  else printf '{\n    "vista": "%s"\n}\n' "$1" > "$f"; fi
+  chmod 600 "$f" 2>/dev/null || true
+}
+cmd_vista() {
+  local v="${1:-}"; [[ "$v" == widgets || "$v" == menu ]] || fallo "uso: vista widgets | vista menu   (vista del sistema para todo el nodo; cada usuario puede elegir la suya en «Mi perfil»)"
+  guardar_vista "$v"; log "✔ vista del sistema: $v (recargá el navegador)"
+}
 # Abre el sistema: si ya está andando, solo abre el navegador; si no, lo inicia (lo usa el acceso directo)
 cmd_abrir() {
   cargar_env
@@ -968,6 +993,7 @@ case "${1:-}" in
   init) shift; cmd_init "$@";;
   acceso-directo) shift; cmd_acceso_directo "$@";;
   abrir) cmd_abrir;;
+  vista) shift; cmd_vista "$@";;
   start) shift; cmd_start "$@";;
   stop) cmd_stop;;
   status) cmd_status;;
@@ -988,5 +1014,5 @@ case "${1:-}" in
   usuario) shift; cmd_usuario "$@";;
   colmena) shift; cmd_colmena "$@";;
   clave-auth) shift; cmd_clave_auth "$@";;
-  *) sed -n '3,38p' "${BASH_SOURCE[0]}";;
+  *) sed -n '3,39p' "${BASH_SOURCE[0]}";;
 esac

@@ -1,9 +1,9 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.2.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.3.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
-#    iProy-Control.bat abrir | acceso-directo [--quitar] | diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
+#    iProy-Control.bat init [-Vista widgets|menu] · vista widgets|menu · abrir | acceso-directo [--quitar] | diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
 #    iProy-Control.bat fhir-cliente alta <id> <jwks.json> ["system/*.read"] | baja <id> | lista | demo | token <id> <clave.xml>
 #    iProy-Control.bat pim importar | pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI|RE> [organización] [alcances] | pim cliente baja <id> | pim cliente lista
 #    iProy-Control.bat pim token <id> <clave.xml> [alcances] | pim prueba | pim verificar | pim consola      (Consola PIM: http://localhost:8080/pim/)
@@ -23,12 +23,13 @@ param(
   [string]$Nombre = 'Nodo IPROY',
   [ValidateSet('local', 'lan')][string]$Modo = 'local',
   [int]$Puerto = 8080,
+  [ValidateSet('', 'widgets', 'menu')][string]$Vista = '',
   [switch]$NoAbrir
 )
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.2.0'
+$VER = '1.3.0'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
@@ -430,6 +431,11 @@ function CmdInit {
     $script:Nombre = if ($r) { $r } else { $sug }
   }
   $script:Nombre = NombreLimpio $Nombre
+  # 1.3.0: cómo se ve el sistema (se cambia después en Configuración o con «vista»)
+  if (-not $Vista) {
+    Write-Host '¿Cómo querés ver el sistema?'; Write-Host '  1) Vista widgets: inicio con indicadores y accesos rápidos por categoría'; Write-Host '  2) Vista menú:    encabezado de color con todos los módulos arriba'
+    $r = Read-Host 'Elegí 1 o 2 [1]'; $script:Vista = if ($r -eq '2') { 'menu' } else { 'widgets' }
+  }
   $id = NodoId
   Log "nodo nuevo: $id · «$Nombre» · modo $Modo · puerto $Puerto"
   Escribir "$DATA\iproy.env" ("IPROY_NODE=$id`nIPROY_NOMBRE=""$Nombre""`nIPROY_MODO=$Modo`nIPROY_PUERTO=$Puerto`nIPROY_PUERTO_TLS=$($Puerto + 363)`nIPROY_DB_PORT=3407`nIPROY_VERSION=$VER`n")
@@ -455,6 +461,7 @@ function CmdInit {
   Cliente 'iproy' ("INSERT INTO sync_nodo (node_id,nombre,local_actual) VALUES ('$id','" + ($Nombre -replace "'", "''") + "',1);")
   GenerarConfigPhp
   DetenerMariaDB
+  GuardarVista $Vista
   Log "OK nodo $id listo. Siguiente: iProy-Control.bat importar-app · importar-datos · start"
   try { CmdAccesoDirecto '' } catch { Log "Aviso: no se pudo crear el acceso directo ($_). Después: iProy-Control.bat acceso-directo" }
 }
@@ -904,6 +911,15 @@ function CmdAccesoDirecto([string]$Quitar) {
     $l = $sh.CreateShortcut($d[0]); $l.TargetPath = $bat; $l.Arguments = $d[1]; $l.WorkingDirectory = $RAIZ; $l.Description = $d[2]; $l.IconLocation = $ico; $l.WindowStyle = 7; $l.Save() }
   Log "OK escritorio: $lnkE"; Log "OK menú Inicio: $prod (y «Detener $prod»)"
 }
+function GuardarVista([string]$v) {
+  $d = Join-Path $DATA 'nucleo'; New-Item -ItemType Directory -Force -Path $d | Out-Null; $f = Join-Path $d 'apariencia.json'
+  $a = @{}; if (Test-Path $f) { try { $o = Get-Content $f -Raw | ConvertFrom-Json; $o.PSObject.Properties | ForEach-Object { $a[$_.Name] = $_.Value } } catch { } }
+  $a['vista'] = $v; [IO.File]::WriteAllText($f, ($a | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding $false))
+}
+function CmdVista([string]$v) {
+  if ($v -notin 'widgets', 'menu') { Fallo 'uso: iProy-Control.bat vista widgets | vista menu' }
+  GuardarVista $v; Log "OK vista del sistema: $v (recargá el navegador)"
+}
 function CmdAbrir {
   CargarEnv
   if (Vivo 'frankenphp') { Log "$(ProductoNombre) ya está funcionando · http://localhost:$($E.IPROY_PUERTO)/"; Start-Process "http://localhost:$($E.IPROY_PUERTO)/"; return }
@@ -913,6 +929,7 @@ function CmdAbrir {
 switch ($Comando) {
   'init' { CmdInit }
   'abrir' { CmdAbrir }
+  'vista' { CmdVista $SoloBase }
   'acceso-directo' { CmdAccesoDirecto $SoloBase }
   'start' { CmdStart }
   'stop' { CmdStop }

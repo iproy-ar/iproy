@@ -17,9 +17,10 @@ declare(strict_types=1);
 namespace Nucleo;
 
 const FONDOS = ['', 'cielo', 'oceano', 'atardecer', 'bosque', 'montana', 'aurora', 'arena', 'grafito', 'hexagonos', 'quirofano'];
-const APARIENCIA_DEF = ['institucion' => '', 'lema' => '', 'logo' => '', 'fondo_login' => 'cielo', 'fondo_tablero' => '', 'opacidad' => 82,
+const VISTAS = ['widgets', 'menu'];
+const APARIENCIA_DEF = ['vista' => 'widgets', 'institucion' => '', 'lema' => '', 'logo' => '', 'fondo_login' => 'cielo', 'fondo_tablero' => '', 'opacidad' => 82,
     'widgets' => ['orden' => [], 'ocultos' => []], 'saludo' => true];
-const PERFIL_DEF = ['fondo' => null, 'opacidad' => null, 'recientes' => [], 'widgets_ocultos' => []];
+const PERFIL_DEF = ['vista' => null, 'fondo' => null, 'opacidad' => null, 'recientes' => [], 'widgets_ocultos' => []];
 
 function dir_imagenes(): string { return dir_datos('imagenes'); }
 function apariencia(?array $cambios = null): array {
@@ -110,6 +111,7 @@ function perfil(string $u, ?array $cambios = null): array {
             if ($p['fondo'] !== $nuevo && is_string($p['fondo']) && imagen_url($p['fondo']) && $p['fondo'] !== apariencia()['fondo_tablero']) borrar_imagen($p['fondo']);
             $p['fondo'] = $nuevo;
         }
+        if (array_key_exists('vista', $cambios)) $p['vista'] = in_array($cambios['vista'], VISTAS, true) ? $cambios['vista'] : null;
         if (array_key_exists('opacidad', $cambios)) $p['opacidad'] = $cambios['opacidad'] === null ? null : max(40, min(100, (int) $cambios['opacidad']));
         if (isset($cambios['recientes'])) $p['recientes'] = array_slice(array_values(array_unique(array_filter(array_map(fn($x) => preg_replace('/[^a-z0-9_-]/', '', (string) $x), (array) $cambios['recientes'])))), 0, 6);
         if (isset($cambios['widgets_ocultos'])) $p['widgets_ocultos'] = array_slice(array_values(array_unique(array_map(fn($x) => preg_replace('/[^a-z0-9_.-]/', '', (string) $x), (array) $cambios['widgets_ocultos']))), 0, 40);
@@ -121,7 +123,9 @@ function perfil(string $u, ?array $cambios = null): array {
 function vista_usuario(string $u): array {
     $a = apariencia(); $p = perfil($u);
     $fondo = $p['fondo'] ?? $a['fondo_tablero'];
-    return ['institucion' => $a['institucion'], 'lema' => $a['lema'], 'logo' => imagen_url($a['logo']), 'saludo' => (bool) $a['saludo'],
+    $vn = in_array($a['vista'], VISTAS, true) ? $a['vista'] : 'widgets';
+    return ['vista' => $p['vista'] ?? $vn, 'vista_nodo' => $vn, 'vista_propia' => $p['vista'] !== null,
+        'institucion' => $a['institucion'], 'lema' => $a['lema'], 'logo' => imagen_url($a['logo']), 'saludo' => (bool) $a['saludo'],
         'fondo' => fondo_publico((string) $fondo), 'fondo_propio' => $p['fondo'] !== null, 'opacidad' => (int) ($p['opacidad'] ?? $a['opacidad']),
         'widgets' => ['orden' => $a['widgets']['orden'] ?? [], 'ocultos_nodo' => $a['widgets']['ocultos'] ?? [], 'ocultos' => $p['widgets_ocultos']],
         'recientes' => $p['recientes'], 'temas' => array_values(array_filter(FONDOS))];

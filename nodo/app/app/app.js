@@ -234,6 +234,13 @@
       ${conSubir ? `<div class="mini-fondo subir" data-f="__subir">${ic('imagen')}<br>Subir mi imagen</div>` : ''}</div>`;
   }
 
+  /** Tarjetas para elegir la vista, con una miniatura de cada una. */
+  function selectorVista(sel, deNodo, conNodo) {
+    const op = [['widgets', 'Vista widgets', 'Inicio con indicadores y accesos rápidos por categoría; menú lateral.'], ['menu', 'Vista menú', 'Encabezado de color con todos los módulos arriba, siempre a mano.']];
+    if (conNodo) op.unshift(['__nodo', 'La del hospital', `Usar la que eligió el administrador (hoy: ${deNodo === 'menu' ? 'menú' : 'widgets'}).`]);
+    return `<div class="vistas" id="selVista">${op.map(([v, t, d]) => `<button class="vista-op ${sel === v ? 'sel' : ''}" data-v="${v}"><span class="vmini ${v === '__nodo' ? deNodo : v}"><i></i><i></i><i></i><i></i></span><b>${t}</b><small>${d}</small></button>`).join('')}</div>`;
+  }
+
   // ---------------------------------------------------------------- Mi perfil (cualquier usuario)
   Nucleo.pestana({ id: 'perfil', titulo: 'Mi perfil', orden: 998, oculta: true, render: async (el) => {
     const j = await api('GET', 'perfil'); const v = j.vista; const pf = j.perfil;
@@ -241,6 +248,7 @@
     el.innerHTML = `<div class="tarjeta"><h2>Tus datos</h2>${form([{ n: 'nombre', t: 'Nombre visible', v: S.usuario.nombre, req: true }], 'Guardar nombre', async (d, m) => {
         await api('PUT', 'perfil', { nombre: d.nombre }); S.usuario.nombre = d.nombre; aviso(m, 'ok', 'Listo.'); pintarBarra(); })}
       <p class="mini">Usuario <b>${h(S.usuario.usuario)}</b> · rol ${h(S.usuario.rol)} · ${h(S.roles?.[S.usuario.rol] || '')}</p></div>
+      <div class="tarjeta"><h2>Tu vista</h2><p class="mini">Elegí cómo querés ver el sistema. Lo que hagas acá solo cambia tu pantalla.</p>${selectorVista(pf.vista ?? '__nodo', v.vista_nodo, true)}<div id="vMsg"></div></div>
       <div class="tarjeta"><h2>Tu fondo</h2><p class="mini">Como los temas del correo: elegí un fondo para tu tablero o subí una foto propia. Solo lo ves vos.</p>
         ${galeria(selF, async (f) => {
           try {
@@ -255,6 +263,7 @@
         `<li><input type="checkbox" data-w="${h(w.id)}" ${v.widgets.ocultos.includes(w.id) ? '' : 'checked'}><b>${h(w.titulo)}</b></li>`).join('')}</ul></div>
       <div class="tarjeta"><h2>Cambiar contraseña</h2>${form([{ n: 'actual', t: 'Contraseña actual', tipo: 'password', req: true }, { n: 'nueva', t: 'Nueva (10 o más caracteres)', tipo: 'password', req: true }, { n: 'repite', t: 'Repetila', tipo: 'password', req: true }],
         'Cambiar', async (d, m) => { if (d.nueva !== d.repite) throw new Error('Las contraseñas nuevas no coinciden'); await api('POST', 'sesion/clave', { actual: d.actual, nueva: d.nueva }); aviso(m, 'ok', 'Contraseña cambiada.'); })}</div>`;
+    $$('#selVista [data-v]').forEach((b) => b.onclick = async () => { try { V = (await api('PUT', 'perfil', { vista: b.dataset.v === '__nodo' ? null : b.dataset.v })).vista; actual = 'perfil'; pintar(); } catch (x) { aviso($('#vMsg'), 'mal', x.message); } });
     const r = $('#opR'); let t; r.oninput = () => { $('#opV').textContent = r.value + '%'; document.documentElement.style.setProperty('--op', String((100 - r.value) / 100)); clearTimeout(t);
       t = setTimeout(async () => { V = (await api('PUT', 'perfil', { opacidad: 100 - +r.value })).vista; }, 500); };
     $$('#wLista input').forEach((c) => c.onchange = async () => { V = (await api('PUT', 'perfil', { widgets_ocultos: $$('#wLista input').filter((x) => !x.checked).map((x) => x.dataset.w) })).vista; });
@@ -282,8 +291,10 @@
       c.innerHTML = `<div class="tarjeta"><h2>Logo de la institución</h2><p class="mini">Se muestra en la pantalla de ingreso, en el menú y en la barra. PNG con fondo transparente queda mejor (se ajusta a 512 px).</p>
         <div class="vista-logo"><div class="marco">${a.logo ? `<img src="${imgDe(a.logo)}" alt="Logo">` : '<span class="mini">Sin logo propio</span>'}</div>
         <div class="acciones"><button class="b" id="lSub">${ic('imagen')} ${a.logo ? 'Cambiar logo' : 'Subir logo'}</button>${a.logo ? '<button class="b peligro" id="lQui">Quitar</button>' : ''}</div></div><div id="lMsg"></div></div>
+        <div class="tarjeta"><h2>Vista del sistema</h2><p class="mini">La que ven todos al ingresar (se elige al instalar). Cada usuario puede cambiar la suya en «Mi perfil».</p>${selectorVista(a.vista || 'widgets', null, false)}<div id="vsMsg"></div></div>
         <div class="tarjeta"><h2>Nombre y lema</h2>${form([{ n: 'institucion', t: 'Nombre de la institución', v: a.institucion }, { n: 'lema', t: 'Lema o área (aparece debajo del nombre)', v: a.lema },
           { n: 'saludo', t: 'Mostrar el saludo con el nombre en el inicio', tipo: 'check', v: a.saludo }], 'Guardar', (d, m) => guardar(d, m))}</div>`;
+      $$('#selVista [data-v]').forEach((b) => b.onclick = async () => { await guardar({ vista: b.dataset.v }, $('#vsMsg')); actual = 'configuracion'; pintar(); });
       $('#lSub').onclick = () => subir('logo', 512, true, $('#lMsg'));
       if ($('#lQui')) $('#lQui').onclick = async () => { await guardar({ logo: '' }, $('#lMsg')); ir('configuracion'); };
     }
@@ -320,17 +331,20 @@
     const vis = visibles(); const porG = {};
     vis.forEach((p) => { const g = meta(p).grupo; (porG[g] = porG[g] || []).push(p); });
     const rec = (V?.recientes || []).map((id) => vis.find((p) => p.id === id)).filter(Boolean).slice(0, 5);
+    const menu = vista() === 'menu'; let plegado = false; try { plegado = localStorage.getItem('iproy-resumen') === '0'; } catch (x) { /* sin almacenamiento */ }
     el.innerHTML = `${V?.saludo !== false ? `<div class="saludo"><h1>${sal}, ${h(nombre)} 👋</h1><p>${h(hoy.charAt(0).toUpperCase() + hoy.slice(1))} · ${h(V?.institucion || S.nodo.nombre)}</p></div>` : ''}
-      ${lw.length ? '<div class="secc">Resumen</div><div id="wids"></div>' : ''}
-      <div class="secc">Accesos rápidos</div>
+      ${lw.length ? `<div class="secc secc-btn"><span>Resumen</span><button class="plegar" id="bPleg" aria-expanded="${!plegado}">${plegado ? 'Mostrar' : 'Ocultar'} ${ic(plegado ? 'abajo' : 'arriba')}</button></div><div id="wids" class="${plegado ? 'plegado' : ''}"></div>` : ''}
+      ${menu ? '' : `<div class="secc">Accesos rápidos</div>
       <div class="buscar"><div class="caja">${ic('buscar')}<input id="qMod" placeholder="Buscar módulo…" autocomplete="off" aria-label="Buscar módulo"><kbd>/</kbd></div>
         ${rec.length ? `<div class="recientes">${ic('hist')} <b>Recientes:</b> ${rec.map((p) => `<button class="chipr" data-p="${p.id}" style="--gc:${GRUPOS[meta(p).grupo][1]}">${ic(meta(p).icono)} ${h(p.titulo)}</button>`).join('')}</div>` : ''}</div>
       <div class="grupos">${Object.keys(GRUPOS).filter((g) => porG[g]).map((g) => `<section class="grupo" style="--gc:${GRUPOS[g][1]}"><h3><i></i>${h(GRUPOS[g][0])}<em></em><span>${porG[g].length}</span></h3>
-        <div class="tiles">${porG[g].map((p) => `<button class="tile" data-p="${p.id}" data-q="${h((p.titulo + ' ' + meta(p).desc + ' ' + GRUPOS[g][0]).toLowerCase())}"><span class="ico">${ic(meta(p).icono)}</span><span>${h(p.titulo)}${meta(p).desc ? `<small>${h(meta(p).desc)}</small>` : ''}</span></button>`).join('')}</div></section>`).join('')}</div>`;
+        <div class="tiles">${porG[g].map((p) => `<button class="tile" data-p="${p.id}" data-q="${h((p.titulo + ' ' + meta(p).desc + ' ' + GRUPOS[g][0]).toLowerCase())}"><span class="ico">${ic(meta(p).icono)}</span><span>${h(p.titulo)}${meta(p).desc ? `<small>${h(meta(p).desc)}</small>` : ''}</span></button>`).join('')}</div></section>`).join('')}</div>`}`;
     $$('[data-p]', el).forEach((b) => b.onclick = () => ir(b.dataset.p));
-    const q = $('#qMod'); q.oninput = () => { const t = q.value.trim().toLowerCase(); $$('.tile', el).forEach((x) => x.classList.toggle('oculto', !!t && !x.dataset.q.includes(t)));
+    const bp = $('#bPleg'); if (bp) bp.onclick = () => { const w = $('#wids'); const pl = w.classList.toggle('plegado'); try { localStorage.setItem('iproy-resumen', pl ? '0' : '1'); } catch (x) { /* nada */ }
+      bp.innerHTML = `${pl ? 'Mostrar' : 'Ocultar'} ${ic(pl ? 'abajo' : 'arriba')}`; bp.setAttribute('aria-expanded', String(!pl)); };
+    const q = $('#qMod'); if (q) q.oninput = () => { const t = q.value.trim().toLowerCase(); $$('.tile', el).forEach((x) => x.classList.toggle('oculto', !!t && !x.dataset.q.includes(t)));
       $$('.grupo', el).forEach((g) => g.style.display = $$('.tile:not(.oculto)', g).length ? '' : 'none'); };
-    q.onkeydown = (e) => { if (e.key === 'Enter') { const f = $('.tile:not(.oculto)', el); if (f) f.click(); } };
+    if (q) q.onkeydown = (e) => { if (e.key === 'Enter') { const f = $('.tile:not(.oculto)', el); if (f) f.click(); } };
     const cont = $('#wids');
     for (const w of lw) { const d = document.createElement('div'); d.className = 'widget'; cont.appendChild(d); try { await w.fn(d); } catch (x) { aviso(d, 'mal', `${w.titulo}: ${x.message}`); } }
   } });
@@ -356,25 +370,42 @@
   // ---------------------------------------------------------------- cáscara: barra, menú lateral y navegación
   const logoNodo = () => V?.logo || 'logo.png';
   function pintarBarra() { const n = $('#bUsr'); if (n) n.textContent = (S.usuario.nombre || S.usuario.usuario).split(' ').slice(0, 2).join(' '); }
+  const vista = () => (V?.vista === 'menu' ? 'menu' : 'widgets');
+  const menuUsuario = () => `<div class="menuu" id="mUsr"><button data-p="perfil">${ic('perfil')} Mi perfil, vista y fondo</button>${puede('sistema.admin') ? `<button data-p="configuracion">${ic('config')} Configuración</button>` : ''}<hr><button id="bSalir">${ic('salir')} Salir</button></div>`;
+  /** «Vista menú»: encabezado de color con el logo y el menú de módulos arriba (como la versión anterior), con efectos. */
+  function pintarMenu() {
+    const vis = visibles(); const prod = S.producto;
+    $('#raiz').innerHTML = `<div id="capa" class="v-menu">
+      <header class="cabm"><div class="cabm-fila"><img class="cabm-logo" src="${h(logoNodo())}" alt=""><div class="cabm-tit"><h1>${h(V?.institucion || prod.nombre)}</h1><small>${h(V?.lema ? V.lema + ' · ' : '')}${h(prod.nombre)}</small></div>
+        <span class="chipm">Nodo ${h(S.nodo.id)} · ${h(S.nodo.nombre)}</span><div class="der"><button class="pildora claro" id="bUsr" aria-haspopup="true"></button></div>${menuUsuario()}</div>
+        <nav class="navm" id="navm"><button data-p="inicio" style="--gc:#ffffff">${ic('inicio')}<span>Tablero</span></button>${vis.map((p) => `<button data-p="${p.id}" style="--gc:${GRUPOS[meta(p).grupo][1]}" title="${h(meta(p).desc)}">${ic(meta(p).icono)}<span>${h(p.titulo)}</span></button>`).join('')}</nav></header>
+      <main id="main"></main><footer id="pie"></footer></div>`;
+    $$('#navm [data-p]').forEach((b) => b.onclick = () => ir(b.dataset.p));
+  }
   function pintar() {
     if (!S) return pintarIngreso();
+    if (vista() === 'menu') { pintarMenu(); comunes(); return; }
     const vis = visibles(); const porG = {}; vis.forEach((p) => { const g = meta(p).grupo; (porG[g] = porG[g] || []).push(p); });
     $('#raiz').innerHTML = `<div id="capa">
       <header class="barra"><button class="ib sin" id="bMenu" title="Menú">${ic('menu')}</button>
         <div class="tit"><b id="tTit">Inicio</b><small id="tMiga">General / Inicio</small></div>
         <div class="navb"><button class="ib" id="bAtras" title="Atrás">${ic('izq')}</button><button class="ib" id="bInicio" title="Inicio">${ic('inicio')}</button><button class="ib" id="bAdel" title="Adelante">${ic('der')}</button></div>
         <div class="der"><button class="pildora" id="bUsr" aria-haspopup="true"></button></div>
-        <div class="menuu" id="mUsr"><button data-p="perfil">${ic('perfil')} Mi perfil y fondo</button>${puede('sistema.admin') ? `<button data-p="configuracion">${ic('config')} Configuración</button>` : ''}<hr><button id="bSalir">${ic('salir')} Salir</button></div></header>
+        ${menuUsuario()}</header>
       <aside class="lateral" id="lat"><div class="cab"><img src="${h(logoNodo())}" alt=""><div><b>${h(V?.institucion || S.producto.nombre)}</b><small>${h(S.producto.nombre)} · Nodo ${h(S.nodo.id)}</small></div></div>
         <nav><button data-p="inicio">${ic('inicio')} Inicio</button>${Object.keys(GRUPOS).filter((g) => porG[g]).map((g) => `<h6><i style="background:${GRUPOS[g][1]}"></i>${h(GRUPOS[g][0])}</h6>${porG[g].map((p) =>
           `<button data-p="${p.id}">${ic(meta(p).icono)} ${h(p.titulo)}</button>`).join('')}`).join('')}<h6>Cuenta</h6><button data-p="perfil">${ic('perfil')} Mi perfil</button></nav></aside>
       <main id="main"></main><footer id="pie"></footer></div>`;
-    pintarBarra(); pie();
     $('#bMenu').onclick = () => { $('#lat').classList.add('abierto'); $('#velo').classList.add('abierto'); };
-    $$('#lat [data-p], #mUsr [data-p]').forEach((b) => b.onclick = () => { cerrar(); $('#mUsr').classList.remove('abierto'); ir(b.dataset.p); });
+    $$('#lat [data-p]').forEach((b) => b.onclick = () => { cerrar(); ir(b.dataset.p); });
+    $('#bAtras').onclick = () => history.back(); $('#bAdel').onclick = () => history.forward(); $('#bInicio').onclick = () => ir('inicio');
+    comunes();
+  }
+  function comunes() {
+    pintarBarra(); pie();
+    $$('#mUsr [data-p]').forEach((b) => b.onclick = () => { cerrar(); $('#mUsr').classList.remove('abierto'); ir(b.dataset.p); });
     $('#bUsr').onclick = (e) => { e.stopPropagation(); $('#mUsr').classList.toggle('abierto'); };
     $('#bSalir').onclick = async () => { await api('DELETE', 'sesion').catch(() => {}); S = null; V = null; await cargarPublica(); pintar(); };
-    $('#bAtras').onclick = () => history.back(); $('#bAdel').onclick = () => history.forward(); $('#bInicio').onclick = () => ir('inicio');
     aplicarFondo(V?.fondo, V?.opacidad);
     ir((location.hash.slice(1) || actual || 'inicio'), true);
   }
@@ -386,7 +417,8 @@
   async function ir(id, sinHist) {
     const p = pestanas.find((x) => x.id === id && (!x.cap || puede(x.cap))) || pestanas.find((x) => x.id === 'inicio');
     actual = p.id; if (location.hash.slice(1) !== p.id) { sinHist ? history.replaceState(null, '', '#' + p.id) : history.pushState(null, '', '#' + p.id); }
-    const m = meta(p); $('#tTit').textContent = p.titulo; $('#tMiga').textContent = (p.id === 'inicio' ? 'General' : p.id === 'perfil' ? 'Cuenta' : GRUPOS[m.grupo][0]) + ' / ' + p.titulo;
+    const m = meta(p); if ($('#tTit')) { $('#tTit').textContent = p.titulo; $('#tMiga').textContent = (p.id === 'inicio' ? 'General' : p.id === 'perfil' ? 'Cuenta' : GRUPOS[m.grupo][0]) + ' / ' + p.titulo; }
+    $$('#navm button').forEach((b) => b.classList.toggle('activo', b.dataset.p === p.id));
     document.title = `${p.titulo} · ${V?.institucion || S.producto.nombre}`;
     $$('#lat nav button').forEach((b) => b.classList.toggle('activo', b.dataset.p === p.id));
     if (!['inicio', 'perfil', 'configuracion'].includes(p.id) && V) {

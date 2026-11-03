@@ -19,7 +19,7 @@
  *             POST /api/colmena/rpc {par, metodo, ruta, cuerpo, esperar} · GET /api/colmena/rpc/{id} · POST /api/colmena/evento {par, tema, datos}
  *             GET|PUT /api/colmena/config {hub:{url,activo,codigo}, url_publica} · POST /api/colmena/hub/{registrar|buzon}
  *  apariencia GET /api/apariencia (pública: logo, institución, fondo del ingreso) · GET /api/apariencia/imagen/{archivo}
- *             GET /api/perfil · PUT /api/perfil {nombre, fondo, opacidad, recientes, widgets_ocultos} · POST /api/perfil/fondo (imagen cruda)
+ *             GET /api/perfil · PUT /api/perfil {nombre, vista, fondo, opacidad, recientes, widgets_ocultos} · POST /api/perfil/fondo (imagen cruda)
  *             POST /api/sesion/config {clave} (2 h) · GET|PUT /api/config/apariencia · POST /api/config/imagen/{logo|fondo_login|fondo_tablero}
  *  módulos    /api/m/{modulo}/{ruta}          rutas propias de cada módulo (rutas.php)
  *  internas   POST /api/nucleo/{arranque|tick|usuario}   solo el lanzador (127.0.0.1 + token del worker)
@@ -109,6 +109,7 @@ try {
         foreach (['fondo_login', 'fondo_tablero'] as $k) if (array_key_exists($k, $d)) $cambio[$k] = validar_fondo((string) $d[$k]);
         if (isset($d['opacidad'])) $cambio['opacidad'] = max(40, min(100, (int) $d['opacidad']));
         if (isset($d['saludo'])) $cambio['saludo'] = (bool) $d['saludo'];
+        if (isset($d['vista'])) { if (!in_array($d['vista'], VISTAS, true)) throw new Fallo(422, 'vista: widgets | menu'); $cambio['vista'] = $d['vista']; }
         if (array_key_exists('logo', $d) && $d['logo'] === '') { borrar_imagen(apariencia()['logo']); $cambio['logo'] = ''; }
         if (isset($d['widgets']) && is_array($d['widgets'])) {
             $lim = fn($l) => array_slice(array_values(array_unique(array_map(fn($x) => preg_replace('/[^a-z0-9_.-]/', '', (string) $x), (array) $l))), 0, 40);

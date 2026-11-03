@@ -17,7 +17,7 @@
 |---|---|---|
 | **Estándar PIM** | **0.9.2** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
 | **API PIM** | **1.2.0** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.2. |
-| **Software iProy** | **1.2.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Software iProy** | **1.3.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -102,7 +102,7 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.2.0 · 03-11-2026)
+## Estado (v1.3.0 · 03-11-2026)
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 

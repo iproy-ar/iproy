@@ -1,6 +1,14 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.3.0 · 03-11-2026 — Dos vistas: «widgets» y «menú»
+
+- **Vista menú** (recupera la de la 1.1, con más color): encabezado con degradé, logo y nombre de la institución, y **todos los módulos arriba** con ícono; al pasar el mouse la pestaña se eleva, el ícono gira y aparece una línea del color de su categoría; la pestaña activa queda marcada con ese color. El inicio («Tablero») muestra el saludo y el resumen.
+- **Vista widgets** (la de la 1.2): inicio con resumen y accesos rápidos por categoría, menú lateral.
+- **Se elige al instalar**: `init` pregunta «1) widgets 2) menú» (o `--vista widgets|menu`; en Windows `-Vista`). Después se cambia para todo el nodo en **Configuración → Identidad** o con `iProy-Control.sh vista menu`, y **cada usuario puede elegir la suya** en «Mi perfil» (o «La del hospital»).
+- **Resumen más compacto** (tarjetas de indicadores más bajas) y **plegable** con «Ocultar / Mostrar» (se recuerda en el navegador).
+- La personalización (logo, fondos, transparencia, widgets) funciona igual en las dos vistas.
+
 ## 1.2.0 · 03-11-2026 — Tablero nuevo, identidad institucional y perfil
 
 Rediseño de la aplicación a partir del sistema original del autor (GestionMant), sin perder nada de lo que ya hacía:

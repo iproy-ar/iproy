@@ -85,6 +85,7 @@ bash MantSur-Control.sh start
 bash MantSur-Control.sh usuario alta admin AD        # pide la contraseña dos veces (mínimo 10 caracteres)
 ```
 
+- **Vista del sistema** (desde la 1.3.0): `init` pregunta «1) Vista widgets · 2) Vista menú». La primera es un inicio con indicadores y accesos rápidos por categoría; la segunda, un encabezado de color con todos los módulos arriba. Se puede pasar directo: `--vista menu`. Se cambia después en Configuración, con `bash MantSur-Control.sh vista widgets`, y cada usuario elige la suya en «Mi perfil».
 - `init` tarda entre 10 y 40 segundos en «creando la base de datos»; no escribas nada mientras tanto. Termina con `✔ nodo XXX listo` (XXX es el ID de tu nodo).
 - `start` tiene que listar el worker, los residentes MQTT y MLLP y los módulos como `cargado`, y terminar con `Listo · nodo XXX · http://localhost:8095/`.
 - **Icono en el escritorio:** `init` deja un acceso directo con el logo del producto en el escritorio y en el menú de aplicaciones (categoría Oficina). Doble clic: inicia el sistema y abre el navegador; si ya está andando, solo abre el navegador. Clic derecho → «Detener». La primera vez, el escritorio puede pedir «Confiar y ejecutar» / «Permitir lanzar». Para nodos creados antes de la 1.1.2: `bash MantSur-Control.sh acceso-directo`.
@@ -165,7 +166,7 @@ cd ..\MantSur\MantSur-Portable
 ### B5. Crear el nodo y arrancarlo
 
 ```powershell
-.\MantSur-Control.bat init -Nombre "Pañol MantSur" -Modo local -Puerto 8095
+.\MantSur-Control.bat init -Nombre "Pañol MantSur" -Modo local -Puerto 8095 -Vista menu
 .\MantSur-Control.bat start
 .\MantSur-Control.bat usuario alta admin AD
 ```

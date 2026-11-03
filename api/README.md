@@ -4,7 +4,7 @@
 
 
 - **Contrato:** `openapi_pim_v1_2_0.yaml` (HL7 FHIR R4 con perfiles PIM 0.9.2, alineada con IHE). La versión anterior está en `anteriores/`.
-- **Versiones:** la API (1.2.0), el estándar que implementa (PIM 0.9.2) y el software de referencia (iProy 1.2.0) se numeran por separado. Ver «Tres versiones, tres cosas distintas» en el [README](../README.md).
+- **Versiones:** la API (1.2.0), el estándar que implementa (PIM 0.9.2) y el software de referencia (iProy 1.3.0) se numeran por separado. Ver «Tres versiones, tres cosas distintas» en el [README](../README.md).
 - **Visor:** abrí `index.html` en un navegador o publicalo en GitHub Pages.
 - **Pruebas manuales:** importá `coleccion_iproy.postman_collection.json` en Postman o Bruno y configurá `base` y `token`.
 - **Pruebas automáticas:** `pruebas/pim.sh` y `pruebas/mem.sh` del repositorio, sobre un nodo iniciado.
