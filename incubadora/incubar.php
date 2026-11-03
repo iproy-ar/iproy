@@ -21,6 +21,17 @@
  */
 declare(strict_types=1);
 
+// Extensiones obligatorias: en Windows el PHP oficial las trae desactivadas (1.3.1).
+foreach (['mbstring' => 'mbstring', 'json' => 'json'] as $ext => $ini) {
+    if (!extension_loaded($ext)) {
+        fwrite(STDERR, "✖ A tu PHP le falta la extensión «{$ext}».\n"
+            . "  Abrí el php.ini que muestra `php --ini` y quitá el ; de la línea ;extension=$ini\n"
+            . "  (en Windows, si no hay php.ini: copiá php.ini-development como php.ini en la carpeta de php.exe).\n"
+            . "  Guía: https://iproy.com.ar/pim/instalar\n");
+        exit(2);
+    }
+}
+
 const TEXTO = ['php', 'js', 'mjs', 'json', 'md', 'sql', 'sh', 'ps1', 'bat', 'txt', 'tpl', 'css', 'html', 'yaml', 'yml', 'toml', 'xml', 'svg', 'ini', ''];
 const EXCLUIR = ['data', 'runtime', 'descargas', '.git', 'node_modules'];
 const VERBATIM = ['conf/pim-guia'];                  // artefactos del estándar PIM: se copian tal cual (no son de la marca)

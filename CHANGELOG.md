@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## Sin publicar
+
+- **Incubadora:** al arrancar comprueba que PHP tenga `mbstring` y `json`; si falta alguna, explica cómo activarla en `php.ini` en lugar de cortar con un error fatal (detectado en la primera prueba en Windows, donde el PHP oficial trae `mbstring` desactivada).
+
 ## 1.3.0 · 03-11-2026 — Dos vistas: «widgets» y «menú»
 
 - **Vista menú** (recupera la de la 1.1, con más color): encabezado con degradé, logo y nombre de la institución, y **todos los módulos arriba** con ícono; al pasar el mouse la pestaña se eleva, el ícono gira y aparece una línea del color de su categoría; la pestaña activa queda marcada con ese color. El inicio («Tablero») muestra el saludo y el resumen.
