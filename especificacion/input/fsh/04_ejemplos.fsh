@@ -49,7 +49,7 @@ Title: "Ejemplo — Producto médico activo con datos del REFES"
 Description: "Datos ficticios."
 Usage: #example
 * identifier[inventario].value = "EJ-PMA-000812"
-* identifier[anmatPM].value = "PM-0000-0000"
+* identifier[anmatPM].value = "PM-0000-000"
 * identifier[eui64].value = "001A010000000001"
 * status = #active
 * manufacturer = "Fabricante Ejemplo"

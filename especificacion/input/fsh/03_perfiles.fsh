@@ -9,7 +9,7 @@ Alias: $mCSDFacLoc = https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.m
 Alias: $mCSDTipos = https://profiles.ihe.net/ITI/mCSD/CodeSystem/IHE.mCSD.Organization.Location.Types
 
 Invariant: pim-anmat-pm
-Description: "El n.º de producto ANMAT tiene el formato PM-N-N, con uno a cinco dígitos por grupo (p. ej. PM-1137-45) [a confirmar con el padrón ANMAT]."
+Description: "El n.º de producto ANMAT es «PM-<legajo de la empresa>-<número de producto>», la leyenda del rótulo que exige la Disp. ANMAT 4831/05 («Autorizado por la ANMAT PM-legajo-producto»), p. ej. PM-2430-65. Se escribe con guiones y sin espacios; cada grupo admite de uno a cinco dígitos. Un servidor puede aceptar las variantes tipográficas de las disposiciones («PM 2430-65», «PM: 2430-65») y normalizarlas a esta forma."
 Severity: #error
 Expression: "matches('^PM-[0-9]{1,5}-[0-9]{1,5}$')"
 

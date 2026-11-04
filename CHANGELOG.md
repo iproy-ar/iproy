@@ -1,6 +1,11 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## Sin publicar (próxima versión)
+
+- N.º de producto ANMAT: formato **confirmado** con la Disp. ANMAT 4831/05 y disposiciones de registro vigentes: `PM-<legajo de la empresa>-<número de producto>` (p. ej. `PM-2430-65`). El nodo acepta las variantes con espacio o dos puntos que usan las disposiciones («PM 2430-65», «PM: 2430-65») y las guarda normalizadas con guiones; la columna pasa a `VARCHAR(16)`.
+- Pruebas: `pim.sh` 70 (una nueva de normalización ANMAT); `docs/INSTALACION.md`, `instalador/LEEME.md` y el sitio de capacitación actualizan los conteos (70/28).
+
 ## 1.5.1 · 04-11-2026 — Auditoría del estándar antes de las pruebas de colmena (PIM 0.9.4, API 1.3.1)
 
 Resultado de una revisión técnica independiente de la guía, la API y el código, previa a las pruebas de interoperabilidad entre tres nodos:
@@ -12,7 +17,7 @@ Resultado de una revisión técnica independiente de la guía, la API y el códi
 - **API 1.3.1:** DeviceMetric deja de figurar como modificable por PUT (el servidor nunca lo permitió).
 - N.º de producto ANMAT: se acepta `PM-N-N` con 1 a 5 dígitos por grupo [supuesto, a confirmar con el padrón].
 - `herramientas/contrato.py` ya no exceptúa recursos: mide de verdad que todo lo que sirve el servidor esté en `pim-gm`.
-- Pruebas: `pim.sh` 69, `mem.sh` 28, `colmena.sh` 20 (intranet + hub de relevo local), unitarias 47.
+- Pruebas: `pim.sh` 69, `mem.sh` 28, `colmena.sh` 20 (intranet + hub de relevo local y el hub real en iproy.com.ar), unitarias 47.
 - Nuevo `docs/PRUEBA_COLMENA_3_NODOS.md`: plan paso a paso de la primera prueba de interoperabilidad real (A ↔ B en la red local, C en otra institución por el hub), con fallas provocadas y criterio de éxito.
 - Sitio de capacitación: la página de instalación no mostraba la introducción en pantallas comunes (el efecto de aparición no se disparaba en bloques más altos que la ventana); las capturas del instalador pasan a una galería compacta.
 

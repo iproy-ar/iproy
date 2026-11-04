@@ -57,6 +57,6 @@ En Linux se usa `pkexec` (la ventana de contraseña del sistema). Sin entorno gr
 **Prueba de punta a punta (Linux):**
 - el instalador, manejado desde la interfaz con Chromium, armó un producto incubado («SaludNorte»);
 - se ingresó con la contraseña elegida;
-- `pruebas/pim.sh` y `pruebas/mem.sh` dieron 61/61 y 27/27 sobre ese nodo.
+- `pruebas/pim.sh` y `pruebas/mem.sh` dieron 70/70 y 28/28 sobre ese nodo.
 
 En Windows se probó la interfaz completa en modo simulado, incluido el pedido de permiso. **La primera corrida real en una PC con Windows está pendiente.**

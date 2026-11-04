@@ -78,7 +78,7 @@ paths:
       description: |
         Devuelve, por cada Device con perfil pim-pma, los cinco datos mínimos del REFES: marca (manufacturer), modelo (modelNumber),
         fecha de fabricación (manufactureDate) o de puesta en marcha (ext. pim-puesta-en-marcha), pertenencia (ext. pim-pertenencia) y
-        n.º de producto ANMAT (identifier {ns}/sid/anmat-pm, PM-NNNN-NNNN), con `completo` y la lista de lo que `falta`.
+        n.º de producto ANMAT (identifier {ns}/sid/anmat-pm, `PM-<legajo>-<producto>`, p. ej. PM-2430-65), con `completo` y la lista de lo que `falta`.
         `_format=csv` produce el archivo de carga (UTF-8 con BOM, separador «;») mientras no exista una interfaz con SISA.
         El filtro por tipología de la Res. SGS 532/2026 queda pendiente: el modelo todavía no registra la tipología.
       parameters:

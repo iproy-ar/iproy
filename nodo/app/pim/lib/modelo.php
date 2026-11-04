@@ -157,6 +157,16 @@ function loc_desde(array $j): array {
 }
 
 // ================================================================== Device (pim-sistema · pim-activo · equipo médico)
+/**
+ * N.º de producto ANMAT: «PM-<legajo de la empresa>-<número de producto>» (Disp. 4831/05, leyenda del rótulo
+ * «Autorizado por la ANMAT PM-legajo-producto»). Las disposiciones lo escriben también «PM 2430-65» o «PM: 2430-65»;
+ * se acepta cualquiera de esas formas y se guarda siempre como PM-2430-65. Devuelve null si no es válido.
+ */
+function anmat_pm_normalizar(string $v): ?string {
+    if (!preg_match('/^\s*PM\s*[-:\s]?\s*(\d{1,5})\s*-\s*(\d{1,5})\s*$/i', $v, $m)) return null;
+    return 'PM-' . $m[1] . '-' . $m[2];
+}
+
 /** IRU = F + R + M + A; R se deriva de la categoría NFPA 99 si no se cargó (1→5, 2→4, 3→2, 4→1). */
 function iru(array $r, ?string $estadoDeclarado = null): ?array {
     $R = $r['iru_r'] !== null ? (int) $r['iru_r'] : ([1 => 5, 2 => 4, 3 => 2, 4 => 1][(int) ($r['categoria_riesgo'] ?? 0)] ?? null);
@@ -224,7 +234,7 @@ function dev_desde(array $j): array {
     foreach ((array) ($j['identifier'] ?? []) as $i) {
         $sys = (string) ($i['system'] ?? ''); $val = trim((string) ($i['value'] ?? ''));
         if (es_sistema($sys, 'activo')) $cod = $val;
-        if (es_sistema($sys, 'anmat-pm')) { if (!preg_match('/^PM-\d{1,5}-\d{1,5}$/', $val)) throw new Fallo(422, 'invalid', 'N.º de producto ANMAT: PM-NNNN-NN (hasta 5 dígitos por grupo)', 'Device.identifier'); $anmat = $val; }
+        if (es_sistema($sys, 'anmat-pm')) { $val = anmat_pm_normalizar($val); if ($val === null) throw new Fallo(422, 'invalid', 'N.º de producto ANMAT: PM-<legajo>-<producto> (Disp. 4831/05), p. ej. PM-2430-65', 'Device.identifier'); $anmat = $val; }
         if (es_sistema($sys, 'eui64')) { $val = strtoupper($val); if (!preg_match('/^[0-9A-F]{16}$/', $val)) throw new Fallo(422, 'invalid', 'EUI-64: 16 dígitos hexadecimales', 'Device.identifier'); $eui = $val; }
     }
     if (!$cod) throw new Fallo(422, 'required', 'identifier con system ' . sid('activo') . ' es obligatorio', 'Device.identifier');

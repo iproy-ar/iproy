@@ -214,7 +214,8 @@ ALTER TABLE pim_orden        ADD COLUMN IF NOT EXISTS origen_huella CHAR(40) NUL
 
 -- 1.1.0 (PIM 0.9.2): datos del REFES y EUI-64 del PMA (IHE MEM-DMC), categoría de alcance, valores no numéricos y origen de los puntos
 ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS categoria_alcance CHAR(1)     NULL COMMENT 'A | B | C | D (sección 3.3); NULL = se deduce del tipo';
-ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS anmat_pm          VARCHAR(12) NULL COMMENT 'PM-NNNN-NNNN';
+ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS anmat_pm          VARCHAR(16) NULL COMMENT 'PM-<legajo>-<producto>, Disp. ANMAT 4831/05';
+ALTER TABLE pim_activo       MODIFY COLUMN anmat_pm VARCHAR(16) NULL COMMENT 'PM-<legajo>-<producto>, Disp. ANMAT 4831/05';
 ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS eui64             VARCHAR(16) NULL COMMENT 'EUI-64 del equipo (IHE PCD-15)';
 ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS fecha_fabricacion DATE        NULL;
 ALTER TABLE pim_activo       ADD COLUMN IF NOT EXISTS puesta_en_marcha  DATE        NULL;
