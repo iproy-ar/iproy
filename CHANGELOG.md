@@ -13,6 +13,7 @@ Resultado de una revisión técnica independiente de la guía, la API y el códi
 - N.º de producto ANMAT: se acepta `PM-N-N` con 1 a 5 dígitos por grupo [supuesto, a confirmar con el padrón].
 - `herramientas/contrato.py` ya no exceptúa recursos: mide de verdad que todo lo que sirve el servidor esté en `pim-gm`.
 - Pruebas: `pim.sh` 69, `mem.sh` 28, `colmena.sh` 20 (intranet + hub de relevo local), unitarias 47.
+- Nuevo `docs/PRUEBA_COLMENA_3_NODOS.md`: plan paso a paso de la primera prueba de interoperabilidad real (A ↔ B en la red local, C en otra institución por el hub), con fallas provocadas y criterio de éxito.
 - Sitio de capacitación: la página de instalación no mostraba la introducción en pantallas comunes (el efecto de aparición no se disparaba en bloques más altos que la ventana); las capturas del instalador pasan a una galería compacta.
 
 ## 1.5.0 · 03-11-2026 — Instalador gráfico universal (Linux y Windows)

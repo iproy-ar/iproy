@@ -130,6 +130,7 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 
 <sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
 
+- **[docs/PRUEBA_COLMENA_3_NODOS.md](docs/PRUEBA_COLMENA_3_NODOS.md): plan de la primera prueba de interoperabilidad real** (dos nodos en una red y uno en otra institución por el hub de relevo).
 - **[docs/INSTALACION.md](docs/INSTALACION.md): tutorial de instalación en Linux y Windows**, basado en una práctica real; versión guiada en https://iproy.com.ar/pim/instalar.
 - **Sitio de capacitación y divulgación:** https://iproy.com.ar/pim — lecciones por rol, manuales, planos, casos, API, foro y reseñas.
 - [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md): el núcleo explicado con analogías de Linux.
