@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 namespace IproyPim;
 
-const ARTEFACTOS = ['CodeSystem', 'ValueSet', 'StructureDefinition', 'CapabilityStatement', 'OperationDefinition', 'ImplementationGuide'];
+const ARTEFACTOS = ['CodeSystem', 'ValueSet', 'ConceptMap', 'StructureDefinition', 'CapabilityStatement', 'OperationDefinition', 'SearchParameter', 'ImplementationGuide'];
 
 function dir_guia(): string { return raiz() . '/conf/pim-guia'; }
 function artefacto(string $tipo, string $id): ?array {
@@ -126,7 +126,8 @@ function capability(): array {
                     [$sp('identifier', 'token', 'sid/orden'), $sp('status', 'token', 'Estado FHIR'), $sp('business-status', 'token', 'pim-estado-orden'),
                      $sp('owner', 'reference', 'Organization responsable'), $sp('priority', 'token', 'routine | urgent | asap | stat'), $sp('location', 'reference', 'Location'),
                      $sp('focus', 'reference', 'Device'), $sp('based-on', 'reference', 'ServiceRequest'), $sp('code', 'token', 'Categoría'),
-                     $sp('authored-on', 'date', 'Alta'), $sp('modified', 'date', 'Última modificación'), $sp('_lastUpdated', 'date', 'Última modificación')],
+                     $sp('authored-on', 'date', 'Alta'), $sp('modified', 'date', 'Última modificación'), $sp('_lastUpdated', 'date', 'Última modificación'),
+                     $sp('decision-prioridad', 'token', 'aceptada | cambiada | rechazada (parámetro PIM, SearchParameter pim-task-decision-prioridad)')],
                     'PIM-OT (PIM-4 y PIM-5): definición de flujo PIM-OT (Tabla 9-6). Cambios por PUT (If-Match) o $transicion. El rol EJ solo ve y opera las órdenes de su organización.', true,
                     ['operation' => [['name' => 'transicion', 'definition' => cfg()['ns'] . '/OperationDefinition/Task-transicion']]]),
                 $rec('Observation', ['pim-medicion'], ['read', 'search-type', 'create'],
@@ -157,7 +158,7 @@ function smart_config(): array {
     ];
 }
 
-/** Declaración de Integración PIM (Anexo I del PIM 0.9.2), generada desde la conformidad que declara este servidor. */
+/** Declaración de Integración PIM (Anexo I del PIM; versión en VERSION_PIM), generada desde la conformidad que declara este servidor. */
 function declaracion(): array {
     $c = conformidad();
     $prod = is_file(raiz() . '/producto.json') ? (json_decode((string) file_get_contents(raiz() . '/producto.json'), true) ?: []) : [];

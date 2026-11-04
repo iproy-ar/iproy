@@ -39,7 +39,7 @@ Usage: #definition
 * imports[0] = $mCSDDir
 * imports[1] = $mCSDDirUpd
 * rest[0].mode = #server
-* rest[0].documentation = "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría compatible con IHE BALP."
+* rest[0].documentation = "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría interna por cliente y operación; la publicación como AuditEvent (IHE BALP) está planificada."
 * rest[0].security.service = http://terminology.hl7.org/CodeSystem/restful-security-service#SMART-on-FHIR
 * rest[0].resource[0] insert Recurso(Organization, pim-organismo, SHALL)
 * rest[0].resource[0].supportedProfile[1] = "https://iproy.com.ar/fhir/StructureDefinition/pim-empresa"
@@ -88,6 +88,7 @@ Usage: #definition
 * rest[0].resource[2].searchParam[2].type = #token
 * rest[0].resource[2].searchParam[3].name = "categoria-alcance"
 * rest[0].resource[2].searchParam[3].type = #token
+* rest[0].resource[2].searchParam[3].definition = "https://iproy.com.ar/fhir/SearchParameter/pim-device-categoria-alcance"
 * rest[0].resource[2].operation[0].name = "refes"
 * rest[0].resource[2].operation[0].definition = "https://iproy.com.ar/fhir/OperationDefinition/Device-refes"
 * rest[0].resource[3] insert Recurso(DeviceMetric, pim-punto, SHALL)
@@ -114,6 +115,9 @@ Usage: #definition
 * rest[0].resource[5].searchParam[2].type = #reference
 * rest[0].resource[5].searchParam[3].name = "based-on"
 * rest[0].resource[5].searchParam[3].type = #reference
+* rest[0].resource[5].searchParam[4].name = "decision-prioridad"
+* rest[0].resource[5].searchParam[4].type = #token
+* rest[0].resource[5].searchParam[4].definition = "https://iproy.com.ar/fhir/SearchParameter/pim-task-decision-prioridad"
 * rest[0].resource[5].operation[0].name = "transicion"
 * rest[0].resource[5].operation[0].definition = "https://iproy.com.ar/fhir/OperationDefinition/Task-transicion"
 * rest[0].resource[6] insert Recurso(Observation, pim-medicion, SHOULD)
@@ -122,10 +126,19 @@ Usage: #definition
 * rest[0].resource[7] insert Recurso(RiskAssessment, pim-riesgo, SHOULD)
 * rest[0].resource[7].interaction[0] insert Interaccion(read, SHOULD)
 * rest[0].resource[7].interaction[1] insert Interaccion(search-type, SHOULD)
+* rest[0].resource[7].searchParam[0].name = "banda"
+* rest[0].resource[7].searchParam[0].type = #token
+* rest[0].resource[7].searchParam[0].definition = "https://iproy.com.ar/fhir/SearchParameter/pim-riskassessment-banda"
 * rest[0].resource[8] insert Recurso(Provenance, pim-procedencia, SHOULD)
 * rest[0].resource[8].interaction[0] insert Interaccion(search-type, SHOULD)
+* rest[0].resource[9] insert Recurso(Group, pim-grupo-activo, SHOULD)
+* rest[0].resource[9].interaction[0] insert Interaccion(read, SHOULD)
+* rest[0].resource[9].interaction[1] insert Interaccion(search-type, SHOULD)
+* rest[0].resource[10] insert Recurso(DiagnosticReport, pim-informe-ensayo, MAY)
+* rest[0].resource[10].interaction[0] insert Interaccion(create, MAY)
+* rest[0].resource[10].interaction[1] insert Interaccion(search-type, MAY)
 * rest[0].interaction[0].code = #history-system
-* rest[0].interaction[0].documentation = "PIM-8 Sincronizar cambios: _history con _since para todos los recursos (semántica de IHE ITI-91)."
+* rest[0].interaction[0].documentation = "PIM-8 Sincronizar cambios: _history con _since, paginado con _count y _offset (link next), en orden cronológico ascendente, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task (semántica de IHE ITI-91). Observation, DeviceMetric, RiskAssessment y Group no se versionan: las mediciones viajan por PIM-6 y los derivados se recalculan en cada nodo."
 
 Instance: pim-so
 InstanceOf: CapabilityStatement
@@ -204,7 +217,7 @@ Usage: #definition
 * instance = true
 * parameter[0].name = #estado
 * parameter[0].use = #in
-* parameter[0].min = 1
+* parameter[0].min = 0
 * parameter[0].max = "1"
 * parameter[0].type = #code
 * parameter[0].binding.strength = #required
@@ -229,11 +242,36 @@ Usage: #definition
 * parameter[4].min = 0
 * parameter[4].max = "1"
 * parameter[4].type = #code
-* parameter[5].name = #return
-* parameter[5].use = #out
-* parameter[5].min = 1
+* parameter[5].name = #prioridad
+* parameter[5].use = #in
+* parameter[5].min = 0
 * parameter[5].max = "1"
-* parameter[5].type = #Task
+* parameter[5].type = #code
+* parameter[5].binding.strength = #required
+* parameter[5].binding.valueSet = "http://hl7.org/fhir/ValueSet/request-priority"
+* parameter[6].name = #nota
+* parameter[6].use = #in
+* parameter[6].min = 0
+* parameter[6].max = "*"
+* parameter[6].type = #string
+* parameter[7].name = #decisionPrioridad
+* parameter[7].use = #in
+* parameter[7].min = 0
+* parameter[7].max = "1"
+* parameter[7].type = #code
+* parameter[7].documentation = "Qué hizo el Gestor con la prioridad sugerida por el IRU: aceptada | cambiada | rechazada. cambiada y rechazada exigen motivoPrioridad. Si se omite y la orden sale de solicitada o en-revision, se registra la decisión implícita."
+* parameter[7].binding.strength = #required
+* parameter[7].binding.valueSet = "https://iproy.com.ar/fhir/ValueSet/pim-decision-prioridad"
+* parameter[8].name = #motivoPrioridad
+* parameter[8].use = #in
+* parameter[8].min = 0
+* parameter[8].max = "1"
+* parameter[8].type = #string
+* parameter[9].name = #return
+* parameter[9].use = #out
+* parameter[9].min = 1
+* parameter[9].max = "1"
+* parameter[9].type = #Task
 
 Instance: Device-refes
 InstanceOf: OperationDefinition
@@ -260,3 +298,43 @@ Usage: #definition
 * parameter[1].min = 1
 * parameter[1].max = "1"
 * parameter[1].type = #Parameters
+
+// ---------- Parámetros de búsqueda propios del PIM (los demás son los estándar de FHIR R4 y de mCSD)
+Instance: pim-task-decision-prioridad
+InstanceOf: SearchParameter
+Title: "Task · decision-prioridad"
+Description: "Decisión del Gestor sobre la prioridad sugerida por el IRU (extensión pim-decision-prioridad.decision). Sirve para medir el sesgo de automatización: Task?decision-prioridad=cambiada&_summary=count."
+Usage: #definition
+* url = "https://iproy.com.ar/fhir/SearchParameter/pim-task-decision-prioridad"
+* name = "PimTaskDecisionPrioridad"
+* status = #draft
+* code = #decision-prioridad
+* base = #Task
+* type = #token
+* expression = "Task.extension.where(url='https://iproy.com.ar/fhir/StructureDefinition/pim-decision-prioridad').extension.where(url='decision').value"
+
+Instance: pim-riskassessment-banda
+InstanceOf: SearchParameter
+Title: "RiskAssessment · banda"
+Description: "Banda vigente del IRU (A, B, C o D)."
+Usage: #definition
+* url = "https://iproy.com.ar/fhir/SearchParameter/pim-riskassessment-banda"
+* name = "PimRiskAssessmentBanda"
+* status = #draft
+* code = #banda
+* base = #RiskAssessment
+* type = #token
+* expression = "RiskAssessment.prediction.qualitativeRisk"
+
+Instance: pim-device-categoria-alcance
+InstanceOf: SearchParameter
+Title: "Device · categoria-alcance"
+Description: "Categoría de alcance A, B, C o D del activo (extensión pim-categoria-alcance)."
+Usage: #definition
+* url = "https://iproy.com.ar/fhir/SearchParameter/pim-device-categoria-alcance"
+* name = "PimDeviceCategoriaAlcance"
+* status = #draft
+* code = #categoria-alcance
+* base = #Device
+* type = #token
+* expression = "Device.extension.where(url='https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-alcance').value"

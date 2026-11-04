@@ -10,8 +10,8 @@
 | XDW | ITI | Patrón de flujo de trabajo entre organizaciones | Capas de infraestructura, contenido y definición. PIM-OT, PIM-SOL y PIM-ENS son definiciones de flujo sobre FHIR Task. No se usa XDS |
 | MEM-DMC (Rev. 1.5) | DEV | Estado de los equipos médicos hacia el CMMS | El Gestor se agrupa con el actor DMIC y recibe PCD-15 (ORU^R44) por MLLP |
 | MEM-LS (Rev. 1.5) | DEV | Ubicación de los equipos médicos | Opción `mem-ls`: el Gestor se agrupa con el actor LOC (PCD-16). **Planificada:** iProy todavía no la implementa; la ubicación llega por PCD-15 (atributo 68513) |
-| ACM | DEV | Avisos y escalamiento | Puente de PIM-ALR |
-| CT, ATNA, BALP, IUA | ITI | Hora, auditoría y autorización | Auditoría compatible con BALP; autorización SMART Backend Services. Hora: el nodo usa la del sistema operativo (que debe sincronizarse por NTP) y `status`/`diagnostico` avisan si se desfasa más de 60 s; no es un actor CT completo |
+| ACM | DEV | Avisos y escalamiento | PIM-ALR cubre las alarmas técnicas dentro del nodo; el puente ACM (PCD-04/PCD-06) está **planificado** |
+| CT, ATNA, BALP, IUA | ITI | Hora, auditoría y autorización | Auditoría interna por cliente y operación (la publicación como AuditEvent según BALP está **planificada**); autorización SMART Backend Services. Hora: el nodo usa la del sistema operativo (que debe sincronizarse por NTP) y `status`/`diagnostico` avisan si se desfasa más de 60 s; no es un actor CT completo |
 | Integration Statement y Connectathon | — | Método de conformidad | Declaración de Integración PIM y jornada de pruebas con kit propio |
 
 #### Lo que IHE no cubre y el PIM sí

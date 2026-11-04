@@ -1,6 +1,20 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.5.1 · 04-11-2026 — Auditoría del estándar antes de las pruebas de colmena (PIM 0.9.4, API 1.3.1)
+
+Resultado de una revisión técnica independiente de la guía, la API y el código, previa a las pruebas de interoperabilidad entre tres nodos:
+
+- **PIM-8 / ITI-91 corregido:** `_history` devolvía los cambios más nuevos primero y sin paginar, así que un nodo que sincronizaba con `_since` perdía los más viejos cuando había más de `_count`. Ahora va en orden cronológico ascendente, con `total` real y `link next` (`_offset`). La guía acota la promesa a los recursos versionados (Organization, Location, Device, ServiceRequest y Task).
+- **IRU normativo (PIM 0.9.4):** la fórmula, los rangos (F 1–10, R 1–5, M 1–5, A −2..+2), la derivación de R desde NFPA 99, las bandas y los ajustes quedaron escritos en la guía y en la extensión `pim-iru` (`minValue`/`maxValue`). `pim-iru` distingue **banda base** de **banda ajustada** (con su motivo) y publica la **prioridad sugerida**; el mapa banda → `request-priority` es el ConceptMap `pim-banda-a-prioridad`. Así dos implementaciones sugieren lo mismo y la decisión humana se puede auditar.
+- **Lo que un cliente descubre ahora coincide con lo que el servidor hace:** `SearchParameter` publicados para `decision-prioridad`, `banda` y `categoria-alcance`; la OperationDefinition `$transicion` incluye `prioridad`, `nota`, `decisionPrioridad` y `motivoPrioridad` (y `estado` pasa a opcional); el CapabilityStatement del Gestor suma Group y DiagnosticReport; el nodo sirve ConceptMap y SearchParameter en `/pim/r4/`.
+- **IHE, declarado = implementado:** BALP y el puente ACM figuran como **planificados**; MEM-DMC toma el EUI-64 también de `67972 MDC_ATTR_SYS_ID`, registra si falta `IHE_PCD_015` en MSH-21, responde `ERR 100` al rechazar PID/PV1 y la guía documenta la ruta real `POST /api/m/mem/pcd15` y la opción `aceptar_r01`. La vuelta `finalizada → en-ejecucion` queda explicada como extensión del PIM respecto de XDW.
+- **API 1.3.1:** DeviceMetric deja de figurar como modificable por PUT (el servidor nunca lo permitió).
+- N.º de producto ANMAT: se acepta `PM-N-N` con 1 a 5 dígitos por grupo [supuesto, a confirmar con el padrón].
+- `herramientas/contrato.py` ya no exceptúa recursos: mide de verdad que todo lo que sirve el servidor esté en `pim-gm`.
+- Pruebas: `pim.sh` 69, `mem.sh` 28, `colmena.sh` 20 (intranet + hub de relevo local), unitarias 47.
+- Sitio de capacitación: la página de instalación no mostraba la introducción en pantallas comunes (el efecto de aparición no se disparaba en bloques más altos que la ventana); las capturas del instalador pasan a una galería compacta.
+
 ## 1.5.0 · 03-11-2026 — Instalador gráfico universal (Linux y Windows)
 
 - **Instalador gráfico** (`instalador/`): se abre en el navegador y guía en 4 pantallas: revisión de la PC, opciones, instalación con barra de avance e informe final. Se distribuye como un solo archivo por sistema (`instalar-iproy-linux.sh`, `Instalador-iProy-Windows.zip`), armado con `instalador/armar.sh` y publicado en la versión de GitHub.

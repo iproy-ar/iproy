@@ -165,10 +165,12 @@ function iru(array $r, ?string $estadoDeclarado = null): ?array {
     $total = (int) $r['iru_f'] + $R + (int) $r['iru_m'] + $A;
     $bandas = ['A', 'B', 'C', 'D'];
     $i = $total >= 18 ? 0 : ($total >= 14 ? 1 : ($total >= 10 ? 2 : 3));
+    $base = $bandas[$i];                                 // banda que sale solo del total (PIM 0.9.4: se publica aparte de la ajustada)
     $ajuste = null;
     if ($estadoDeclarado === 'fuera-de-servicio' && in_array($r['redundancia'] ?? null, [null, 'N'], true)) { $i = max(0, $i - 1); $ajuste = 'sube: fuera de servicio sin contingencia'; }
     elseif (in_array($r['redundancia'] ?? null, ['N+1', '2N'], true)) { $i = min(3, $i + 1); $ajuste = 'baja: redundancia ' . $r['redundancia']; }
-    return ['F' => (int) $r['iru_f'], 'R' => $R, 'M' => (int) $r['iru_m'], 'A' => $A, 'total' => $total, 'banda' => $bandas[$i], 'ajuste' => $ajuste];
+    return ['F' => (int) $r['iru_f'], 'R' => $R, 'M' => (int) $r['iru_m'], 'A' => $A, 'total' => $total, 'banda_base' => $base, 'banda' => $bandas[$i], 'ajuste' => $ajuste,
+            'prioridad' => BANDA_PRIORIDAD[$bandas[$i]]];
 }
 
 function alcance(array $r): ?string {
@@ -176,11 +178,18 @@ function alcance(array $r): ?string {
     if ($r['clase'] === 'equipo-medico') return 'A';
     return $r['clase'] === 'sistema' ? (SISTEMA_ALCANCE[$r['tipo_codigo'] ?? ''] ?? null) : null;
 }
+/** Extensión pim-iru (0.9.4): banda = la que sale del total; bandaAjustada y ajuste solo cuando la redundancia o el estado la mueven;
+ *  prioridad = request-priority que el Gestor sugiere (ConceptMap pim-banda-a-prioridad: A→stat, B→asap, C→urgent, D→routine). */
 function iru_ext(array $i): array {
-    return ['url' => sd('pim-iru'), 'extension' => [
-        ['url' => 'F', 'valueInteger' => $i['F']], ['url' => 'R', 'valueInteger' => $i['R']], ['url' => 'M', 'valueInteger' => $i['M']],
-        ['url' => 'A', 'valueInteger' => $i['A']], ['url' => 'total', 'valueInteger' => $i['total']],
-        ['url' => 'banda', 'valueCoding' => coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])]]];
+    $e = [['url' => 'F', 'valueInteger' => $i['F']], ['url' => 'R', 'valueInteger' => $i['R']], ['url' => 'M', 'valueInteger' => $i['M']],
+          ['url' => 'A', 'valueInteger' => $i['A']], ['url' => 'total', 'valueInteger' => $i['total']],
+          ['url' => 'banda', 'valueCoding' => coding(cs('pim-valores'), 'banda-' . $i['banda_base'], 'Banda ' . $i['banda_base'])]];
+    if ($i['banda'] !== $i['banda_base']) {
+        $e[] = ['url' => 'bandaAjustada', 'valueCoding' => coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])];
+        $e[] = ['url' => 'ajuste', 'valueString' => (string) $i['ajuste']];
+    }
+    $e[] = ['url' => 'prioridad', 'valueCode' => $i['prioridad']];
+    return ['url' => sd('pim-iru'), 'extension' => $e];
 }
 function dev_fhir(array $r): array {
     $perfil = ['sistema' => 'pim-sistema', 'activo' => 'pim-activo', 'equipo-medico' => 'pim-pma'][$r['clase']];
@@ -215,7 +224,7 @@ function dev_desde(array $j): array {
     foreach ((array) ($j['identifier'] ?? []) as $i) {
         $sys = (string) ($i['system'] ?? ''); $val = trim((string) ($i['value'] ?? ''));
         if (es_sistema($sys, 'activo')) $cod = $val;
-        if (es_sistema($sys, 'anmat-pm')) { if (!preg_match('/^PM-\d{4}-\d{4}$/', $val)) throw new Fallo(422, 'invalid', 'N.º de producto ANMAT: PM-NNNN-NNNN', 'Device.identifier'); $anmat = $val; }
+        if (es_sistema($sys, 'anmat-pm')) { if (!preg_match('/^PM-\d{1,5}-\d{1,5}$/', $val)) throw new Fallo(422, 'invalid', 'N.º de producto ANMAT: PM-NNNN-NN (hasta 5 dígitos por grupo)', 'Device.identifier'); $anmat = $val; }
         if (es_sistema($sys, 'eui64')) { $val = strtoupper($val); if (!preg_match('/^[0-9A-F]{16}$/', $val)) throw new Fallo(422, 'invalid', 'EUI-64: 16 dígitos hexadecimales', 'Device.identifier'); $eui = $val; }
     }
     if (!$cod) throw new Fallo(422, 'required', 'identifier con system ' . sid('activo') . ' es obligatorio', 'Device.identifier');
@@ -470,7 +479,7 @@ function riesgo_fhir(array $a): ?array {
         'subject' => ['reference' => 'Group/' . $a['id'] . '-g', 'display' => $a['nombre']],
         'occurrenceDateTime' => iso($a['actualizado']), 'performer' => ['reference' => 'Organization/' . org_organismo_id()],
         'basis' => [dev_ref($a['id'], $a['nombre'])],
-        'prediction' => [['qualitativeRisk' => ['coding' => [coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])], 'text' => 'Banda ' . $i['banda'] . ' (IRU ' . $i['total'] . ')'],
+        'prediction' => [['qualitativeRisk' => ['coding' => [coding(cs('pim-valores'), 'banda-' . $i['banda'], 'Banda ' . $i['banda'])], 'text' => 'Banda ' . $i['banda'] . ' (IRU ' . $i['total'] . ($i['banda'] !== $i['banda_base'] ? ', banda base ' . $i['banda_base'] : '') . ')'],
             'rationale' => 'IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ($i['ajuste'] ? ' · ' . $i['ajuste'] : '')]],
         'extension' => [iru_ext($i)],
         'mitigation' => $i['ajuste']]);

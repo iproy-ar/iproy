@@ -4,13 +4,13 @@
 > 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/) (en particular [esta página](https://iproy.com.ar/pim/conoce)). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
 
 
-**Principio rector (PIM 0.9.2, iProy 1.1).** IHE confirma el problema que dio origen al PIM —lo diagnosticó en 2009 para los equipos médicos, en el white paper «Medical Equipment Management»— y confirma que sigue sin resolverse. Lo que IHE ofrece son bordes bien estandarizados (MEM, mCSD, ACM, ATNA/BALP) y un método de conformidad. El PIM se apoya en esos bordes en lugar de reinventarlos, y concentra lo nuevo en lo que nadie cubre: el flujo del mantenimiento entre organismos y las instalaciones hospitalarias vinculadas al riesgo para el paciente.
+**Principio rector (PIM 0.9.4, iProy 1.1).** IHE confirma el problema que dio origen al PIM —lo diagnosticó en 2009 para los equipos médicos, en el white paper «Medical Equipment Management»— y confirma que sigue sin resolverse. Lo que IHE ofrece son bordes bien estandarizados (MEM, mCSD, ACM, ATNA/BALP) y un método de conformidad. El PIM se apoya en esos bordes en lugar de reinventarlos, y concentra lo nuevo en lo que nadie cubre: el flujo del mantenimiento entre organismos y las instalaciones hospitalarias vinculadas al riesgo para el paciente.
 
 ## Qué se implementó
 
 <sub>🎓 [Conocé PIM: principio rector y alineación con IHE →](https://iproy.com.ar/pim/conoce)</sub>
 
-| Perfil IHE | Dominio | En iProy 1.4 | Dónde |
+| Perfil IHE | Dominio | En iProy 1.5 | Dónde |
 |---|---|---|---|
 | mCSD 4.0.0 (ITI-90) | ITI | El Servidor PIM responde como Directory: Organization y Location con `identifier`, `name` (`:exact`, `:contains`), `partof`, `organization`, `type`, `status`, `active` | `nodo/app/pim/lib/api.php` · `pruebas/pim.sh` §2 |
 | mCSD, opción Update (ITI-91) | ITI | `GET Organization/_history?_since=` y `Location/_history?_since=` (Bundle history) | ídem |
@@ -19,7 +19,7 @@
 | MEM-DMC Rev. 1.5 (PCD-15) | DEV | Módulo `mem`: actor DMIC; MLLP (residente), **MLLP sobre TLS 1.2+** (1.4) y HTTP; ACK AA/AE/AR; rechazo de PID/PV1; traducción a Device + DeviceMetric + Observation; orden correctiva por autoprueba con falla y por **batería crítica** (1.4) | `nodo/modulos/mem` · `pruebas/mem.sh` |
 | MEM-LS (PCD-16) | DEV | Se usa la ubicación PL que llega en PCD-15 (68513); el receptor PCD-16 propio queda pendiente | — |
 | CT (Consistent Time) | ITI | Parcial: el nodo usa la hora del sistema operativo (sincronizada por NTP) y `status`/`diagnostico` avisan si se desfasa más de 60 s respecto de una referencia HTTPS (1.4) | `iProy-Control.sh` · `iProy-Control.ps1` |
-| ACM | DEV | Puente PIM-ALR: alarmas ISA-18.2 del módulo `alarmas` | `nodo/modulos/alarmas` |
+| ACM | DEV | Planificado. Hoy PIM-ALR son las alarmas ISA-18.2 del módulo `alarmas` dentro del nodo; no hay PCD-04/PCD-06 | `nodo/modulos/alarmas` |
 | Integration Statement | — | `GET /pim/declaracion` y extensión `pim-conformidad` del CapabilityStatement | `nodo/app/pim/lib/metadata.php` |
 | Actores con CapabilityStatement | — | `pim-gm`, `pim-so`, `pim-ej`, `pim-ft`, `pim-ci`, `pim-re` (formato de las guías IHE en FHIR R4) | `especificacion/input/fsh/05_actores.fsh` |
 

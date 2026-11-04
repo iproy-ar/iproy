@@ -63,7 +63,7 @@ function eui(string $campo): ?string {
     foreach ($c as $i => $x) if (strtoupper($x) === 'EUI-64' && $i > 0 && preg_match('/^[0-9A-Fa-f]{16}$/', $c[$i - 1])) return strtoupper($c[$i - 1]);
     return null;
 }
-function ack(array $segs, string $codigo, string $texto = ''): string {
+function ack(array $segs, string $codigo, string $texto = '', string $err = ''): string {
     $msh = seg($segs, 'MSH');
     $ctrl = $msh ? campo($msh, 10) : '';
     $ver = $msh && campo($msh, 12) !== '' ? campo($msh, 12) : '2.6';
@@ -71,7 +71,7 @@ function ack(array $segs, string $codigo, string $texto = ''): string {
     $l = ['MSH|^~\&|' . ($msh ? campo($msh, 5) : '') . '|' . ($msh ? campo($msh, 6) : '') . '|' . ($msh ? campo($msh, 3) : '') . '|' . ($msh ? campo($msh, 4) : '')
           . '|' . date('YmdHisO') . '||ACK^' . $trig . '^ACK|' . substr(bin2hex(random_bytes(8)), 0, 16) . '|P|' . $ver,
           'MSA|' . $codigo . '|' . $ctrl . ($texto !== '' ? '|' . str_replace(['|', '^', '~', '\\', '&', "\r", "\n"], ' ', mb_substr($texto, 0, 80)) : '')];
-    if ($codigo !== 'AA') $l[] = 'ERR|||' . ($codigo === 'AR' ? '200^Unsupported message type^HL70357' : '207^Application internal error^HL70357') . '|E||||'
+    if ($codigo !== 'AA') $l[] = 'ERR|||' . ($err ?: ($codigo === 'AR' ? '200^Unsupported message type^HL70357' : '207^Application internal error^HL70357')) . '|E||||'
         . str_replace(['|', '^', '~', '\\', '&', "\r", "\n"], ' ', mb_substr($texto, 0, 200));
     return implode(CR, $l) . CR;
 }
@@ -87,8 +87,9 @@ function procesar(string $msg, string $origen = 'mllp'): string {
         $c = cfg_modulo('mem');
         $okTipo = str_starts_with($tipo, 'ORU^R44') || (!empty($c['aceptar_r01']) && str_starts_with($tipo, 'ORU^R01'));
         if (!$okTipo) { registrar($segs, 'AR', "Tipo no soportado: $tipo", $origen); return ack($segs, 'AR', "Tipo no soportado: $tipo (se espera ORU^R44)"); }
-        if (seg($segs, 'PID') || seg($segs, 'PV1')) { registrar($segs, 'AR', 'PCD-15 no admite PID ni PV1', $origen); return ack($segs, 'AR', 'PCD-15 no lleva datos de pacientes (PID/PV1)'); }
+        if (seg($segs, 'PID') || seg($segs, 'PV1')) { registrar($segs, 'AR', 'PCD-15 no admite PID ni PV1', $origen); return ack($segs, 'AR', 'PCD-15 no lleva datos de pacientes (PID/PV1)', '100^Segment sequence error^HL70357'); }
         $r = traducir($segs, $c);
+        if (!str_contains(campo($msh, 21), 'IHE_PCD_015')) $r['detalle'] .= ' · MSH-21 sin IHE_PCD_015';   // se registra, no se rechaza (gateways Rev. 1.3)
         registrar($segs, 'AA', $r['detalle'], $origen, $r['eui'], $r['device'], $r['n']);
         return ack($segs, 'AA');
     } catch (\Throwable $e) {
@@ -109,6 +110,7 @@ function traducir(array $segs, array $c): array {
     // EUI-64: OBX-18 del equipo, OBR-3, OBR-2 o MSH-3
     $eui = null;
     foreach ($obx as $o) if ($eui = eui(campo($o, 18))) break;
+    if (!$eui) foreach ($obx as $o) if (comp(campo($o, 3), 1) === '67972' && ($eui = eui(campo($o, 5)))) break;   // MDC_ATTR_SYS_ID (0.9.4)
     $eui ??= eui(campo($obr, 3)) ?? eui(campo($obr, 2)) ?? eui(campo($msh, 3));
     if (!$eui) throw new Fallo(422, 'No se encontró el EUI-64 del equipo (OBX-18, OBR-3 o MSH-3)');
     $tsDef = ts(campo($obr, 7)) ?? ts(campo($msh, 7)) ?? date('c');

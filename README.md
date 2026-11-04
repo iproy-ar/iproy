@@ -15,9 +15,9 @@
 
 | Pieza | Versión | Qué es |
 |---|---|---|
-| **Estándar PIM** | **0.9.3** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
-| **API PIM** | **1.3.0** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.3. |
-| **Software iProy** | **1.5.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Estándar PIM** | **0.9.4** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
+| **API PIM** | **1.3.1** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.4. |
+| **Software iProy** | **1.5.1** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -40,7 +40,7 @@ iproy/
 │   └── iProy-Control.sh / .ps1 / .bat   lanzador: init, start, stop, usuario, modulo, nucleo, colmena, pim…
 ├── incubadora/      incubar.php: crea un software derivado (nombre, logo, plantilla) o un módulo nuevo; verifica licencias
 ├── hub/             hub de relevo de la colmena para Internet: un PHP para cualquier hosting (SQLite + libsodium)
-├── especificacion/  estándar PIM 0.9.3 en FSH (HL7 FHIR R4, perfiles de directorio sobre IHE mCSD) · api/ contrato OpenAPI 1.3.0, visor y colección
+├── especificacion/  estándar PIM 0.9.4 en FSH (HL7 FHIR R4, perfiles de directorio sobre IHE mCSD) · api/ contrato OpenAPI 1.3.1, visor y colección
 ├── pruebas/         unitarias.php · pim.sh (Servidor PIM, mCSD, REFES) · mem.sh (IHE PCD-15) · colmena.sh · industrial.sh
 ├── herramientas/    contrato.py (especificación ↔ servidor) · guia-al-nodo.sh · fijar-github.sh · simuladores Modbus y MQTT
 ├── docs/            arquitectura, protocolo colmena/1, guía de módulos, integración industrial, hoja de ruta, investigación
@@ -105,7 +105,7 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.5.0 · 03-11-2026)
+## Estado (v1.5.1 · 03-11-2026)
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
@@ -116,8 +116,8 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
-| `herramientas/contrato.py`: especificación 0.9.3 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.3.0 | sin diferencias no declaradas | |
-| Especificación PIM 0.9.3 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
+| `herramientas/contrato.py`: especificación 0.9.4 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.3.1 | sin diferencias no declaradas | |
+| Especificación PIM 0.9.4 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
 | **Validador oficial de HL7** (IG Publisher con tx.fhir.org, en el CI): guía publicada en https://iproy-ar.github.io/iproy/ | **0 errores**, 132 advertencias (OID y marca «experimental» de los ValueSets, perfiles sin ejemplo) | |
 | Recorrido de la aplicación web y la consola PIM en Chromium | sin errores de consola | |
 | `incubar.php verificar` | sin secretos, sin datos institucionales, licencias libres | ídem |

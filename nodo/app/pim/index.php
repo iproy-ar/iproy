@@ -6,7 +6,7 @@
  *
  *   GET    /pim/r4/metadata                              CapabilityStatement (público)
  *   GET    /pim/r4/.well-known/smart-configuration       descubrimiento OAuth2 (público)
- *   GET    /pim/r4/{CodeSystem|ValueSet|StructureDefinition|CapabilityStatement|OperationDefinition}[/{id}]   guía PIM 0.9.2 (público)
+ *   GET    /pim/r4/{CodeSystem|ValueSet|ConceptMap|StructureDefinition|CapabilityStatement|OperationDefinition|SearchParameter}[/{id}]   guía PIM (público)
  *   GET    /pim/r4/Device/$refes · Device/{id}/$refes     datos mínimos del REFES (PIM-9; roles GM, RE, CI)
  *   GET    /pim/declaracion                              Declaración de Integración PIM (JSON, público)
  *   POST   /pim/auth/token                               SMART Backend Services → access_token (5 min)

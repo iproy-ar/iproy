@@ -1,0 +1,55 @@
+{
+  "resourceType": "ConceptMap",
+  "id": "pim-banda-a-prioridad",
+  "url": "https://iproy.com.ar/fhir/ConceptMap/pim-banda-a-prioridad",
+  "title": "PIM — Banda IRU → prioridad de la orden",
+  "description": "Cómo el Gestor traduce la banda vigente del IRU a request-priority al sugerir la prioridad de una orden. Es normativo para que dos implementaciones sugieran lo mismo; la persona responsable decide (pim-decision-prioridad).",
+  "name": "PimBandaAPrioridad",
+  "status": "draft",
+  "sourceUri": "https://iproy.com.ar/fhir/ValueSet/pim-banda-iru",
+  "targetUri": "http://hl7.org/fhir/ValueSet/request-priority",
+  "group": [
+    {
+      "source": "https://iproy.com.ar/fhir/CodeSystem/pim-valores",
+      "target": "http://hl7.org/fhir/request-priority",
+      "element": [
+        {
+          "code": "banda-A",
+          "target": [
+            {
+              "code": "stat",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "banda-B",
+          "target": [
+            {
+              "code": "asap",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "banda-C",
+          "target": [
+            {
+              "code": "urgent",
+              "equivalence": "equivalent"
+            }
+          ]
+        },
+        {
+          "code": "banda-D",
+          "target": [
+            {
+              "code": "routine",
+              "equivalence": "equivalent"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

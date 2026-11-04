@@ -193,8 +193,8 @@
           {
             "key": "pim-anmat-pm",
             "severity": "error",
-            "human": "El n.º de producto ANMAT tiene el formato PM-NNNN-NNNN.",
-            "expression": "matches('^PM-[0-9]{4}-[0-9]{4}$')",
+            "human": "El n.º de producto ANMAT tiene el formato PM-N-N, con uno a cinco dígitos por grupo (p. ej. PM-1137-45) [a confirmar con el padrón ANMAT].",
+            "expression": "matches('^PM-[0-9]{1,5}-[0-9]{1,5}$')",
             "source": "https://iproy.com.ar/fhir/StructureDefinition/pim-pma"
           }
         ]

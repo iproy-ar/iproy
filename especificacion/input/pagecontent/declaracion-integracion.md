@@ -17,7 +17,7 @@ La versión computable es la extensión `pim-conformidad` del CapabilityStatemen
 | Proveedor | |
 | Contacto | |
 | Fecha de emisión | |
-| Versión del PIM | 0.9.2 |
+| Versión del PIM | 0.9.4 |
 
 **2. Nivel de conformidad declarado:** Básico / Intermedio / Avanzado.
 

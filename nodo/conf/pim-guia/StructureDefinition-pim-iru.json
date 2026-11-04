@@ -5,7 +5,7 @@
   "name": "Iru",
   "title": "Índice de Riesgo Unificado (IRU)",
   "status": "draft",
-  "description": "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad.",
+  "description": "Índice de Riesgo Unificado: IRU = F + R + M + A. F = función asistencial (1 a 10), R = riesgo ante la falla (1 a 5; en instalaciones se deriva de la categoría NFPA 99: 1→5, 2→4, 3→2, 4→1), M = requisitos de mantenimiento (1 a 5), A = antecedentes (−2 a +2). banda = la banda que sale del total (A ≥ 18, B 14–17, C 10–13, D < 10). bandaAjustada y ajuste aparecen solo cuando la banda se mueve: sube un nivel si el activo está fuera de servicio sin contingencia; baja uno si tiene redundancia N+1 o 2N. prioridad = la request-priority que el Gestor sugiere para la orden según la banda vigente (ConceptMap pim-banda-a-prioridad).",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
@@ -28,7 +28,7 @@
         "id": "Extension",
         "path": "Extension",
         "short": "Índice de Riesgo Unificado (IRU)",
-        "definition": "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad."
+        "definition": "Índice de Riesgo Unificado: IRU = F + R + M + A. F = función asistencial (1 a 10), R = riesgo ante la falla (1 a 5; en instalaciones se deriva de la categoría NFPA 99: 1→5, 2→4, 3→2, 4→1), M = requisitos de mantenimiento (1 a 5), A = antecedentes (−2 a +2). banda = la banda que sale del total (A ≥ 18, B 14–17, C 10–13, D < 10). bandaAjustada y ajuste aparecen solo cuando la banda se mueve: sube un nivel si el activo está fuera de servicio sin contingencia; baja uno si tiene redundancia N+1 o 2N. prioridad = la request-priority que el Gestor sugiere para la orden según la banda vigente (ConceptMap pim-banda-a-prioridad)."
       },
       {
         "id": "Extension.extension",
@@ -59,7 +59,9 @@
           {
             "code": "integer"
           }
-        ]
+        ],
+        "minValueInteger": 1,
+        "maxValueInteger": 10
       },
       {
         "id": "Extension.extension:R",
@@ -85,7 +87,9 @@
           {
             "code": "integer"
           }
-        ]
+        ],
+        "minValueInteger": 1,
+        "maxValueInteger": 5
       },
       {
         "id": "Extension.extension:M",
@@ -111,7 +115,9 @@
           {
             "code": "integer"
           }
-        ]
+        ],
+        "minValueInteger": 1,
+        "maxValueInteger": 5
       },
       {
         "id": "Extension.extension:A",
@@ -137,7 +143,9 @@
           {
             "code": "integer"
           }
-        ]
+        ],
+        "minValueInteger": -2,
+        "maxValueInteger": 2
       },
       {
         "id": "Extension.extension:total",
@@ -163,12 +171,15 @@
           {
             "code": "integer"
           }
-        ]
+        ],
+        "minValueInteger": 1,
+        "maxValueInteger": 22
       },
       {
         "id": "Extension.extension:banda",
         "path": "Extension.extension",
         "sliceName": "banda",
+        "short": "Banda base: la que sale del total",
         "min": 1,
         "max": "1"
       },
@@ -193,6 +204,95 @@
         "binding": {
           "strength": "required",
           "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-banda-iru"
+        }
+      },
+      {
+        "id": "Extension.extension:bandaAjustada",
+        "path": "Extension.extension",
+        "sliceName": "bandaAjustada",
+        "short": "Banda vigente cuando difiere de la base (fuera de servicio sin contingencia: sube; redundancia N+1 o 2N: baja)",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:bandaAjustada.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:bandaAjustada.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "bandaAjustada"
+      },
+      {
+        "id": "Extension.extension:bandaAjustada.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "Coding"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://iproy.com.ar/fhir/ValueSet/pim-banda-iru"
+        }
+      },
+      {
+        "id": "Extension.extension:ajuste",
+        "path": "Extension.extension",
+        "sliceName": "ajuste",
+        "short": "Motivo del ajuste, legible",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:ajuste.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:ajuste.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "ajuste"
+      },
+      {
+        "id": "Extension.extension:ajuste.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:prioridad",
+        "path": "Extension.extension",
+        "sliceName": "prioridad",
+        "short": "Prioridad sugerida para la orden (banda vigente → request-priority)",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:prioridad.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:prioridad.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "prioridad"
+      },
+      {
+        "id": "Extension.extension:prioridad.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://hl7.org/fhir/ValueSet/request-priority"
         }
       },
       {

@@ -11,7 +11,7 @@ if command -v sushi >/dev/null; then sushi build "$R/especificacion" | tail -3; 
 G="$R/especificacion/fsh-generated/resources"; D="$R/nodo/conf/pim-guia"
 [[ -d "$G" ]] || { echo "falta $G (compilá la especificación)"; exit 1; }
 mkdir -p "$D"; rm -f "$D"/*.json
-n=0; for t in CodeSystem ValueSet StructureDefinition CapabilityStatement OperationDefinition ImplementationGuide; do
+n=0; for t in CodeSystem ValueSet ConceptMap StructureDefinition CapabilityStatement OperationDefinition SearchParameter ImplementationGuide; do
   for f in "$G"/$t-*.json; do [[ -e "$f" ]] || continue; cp "$f" "$D/"; n=$((n+1)); done
 done
 echo "✔ $n artefactos en nodo/conf/pim-guia"

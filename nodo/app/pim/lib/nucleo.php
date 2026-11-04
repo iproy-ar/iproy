@@ -12,7 +12,7 @@ namespace IproyPim;
 use PDO;
 
 const VERSION_API = '1.1.0';
-const VERSION_PIM = '0.9.3';
+const VERSION_PIM = '0.9.4';
 const MDC = 'urn:iso:std:iso:11073:10101';                          // nomenclatura ISO/IEEE 11073-10101 (IHE MEM-DMC)
 const UCUM = 'http://unitsofmeasure.org';
 const MCSD_TIPOS = 'https://profiles.ihe.net/ITI/mCSD/CodeSystem/IHE.mCSD.Organization.Location.Types';

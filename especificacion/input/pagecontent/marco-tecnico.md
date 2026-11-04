@@ -38,7 +38,7 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | PIM-5 | Actualizar orden | EJ, GM → GM | `PUT Task` con `If-Match` o `POST Task/{id}/$transicion` | Patrón de tareas de XDW |
 | PIM-6 | Enviar mediciones | FT → GM | `POST Observation` o `Bundle` batch; opción MQTT | — |
 | PIM-7 | Consultar riesgo | CI → GM | `GET RiskAssessment?subject=Group/{activo}-g` | — |
-| PIM-8 | Sincronizar cambios | GM → GM | `GET [tipo]/_history?_since=…` y `Provenance?target=…` | Semántica de ITI-91, extendida a todos los recursos |
+| PIM-8 | Sincronizar cambios | GM → GM | `GET [tipo]/_history?_since=…&_count=…&_offset=…` (orden cronológico, `link next`) y `Provenance?target=…` | Semántica de ITI-91, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task |
 | PIM-9 | Informar al registro estatal | RE → GM | `GET Device/$refes` | — |
 | PIM-10 | Informar ensayo | EJ → GM | `POST DiagnosticReport` (`pim-informe-ensayo`) | — |
 | PIM-11 | Exportar indicadores | CI → GM | `MeasureReport` o `$export` | — |
@@ -58,7 +58,7 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | PIM-ENS Ensayo reglamentario | PIM-10 | Intermedio |
 | PIM-KPI Indicadores | PIM-11 | Intermedio |
 | PIM-TEL Telemetría | PIM-6 | Avanzado |
-| PIM-ALR Alarmas técnicas | puente con IHE DEV ACM | Avanzado |
+| PIM-ALR Alarmas técnicas | alarmas ISA-18.2 del nodo; el puente con IHE DEV ACM (PCD-04/PCD-06) está **planificado** | Avanzado |
 | PIM-FED Federación | PIM-8 (+ ITI-91) | Avanzado |
 | PIM-EQM Equipos médicos | PCD-15, PCD-16 | Avanzado |
 
@@ -80,7 +80,7 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | rechazada | rejected | FAILED | — |
 | anulada | cancelled | — | — |
 
-El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revision. Cada transición genera una versión nueva del Task y su Provenance encadenado (equivale al historial de eventos de tarea de XDW). El PIM es un superconjunto de XDW: agrega aceptación, rechazo, espera y anulación, que el mantenimiento entre organismos necesita.
+El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revision. La vuelta `finalizada → en-ejecucion` (no conforme) es una extensión del PIM: XDW no sale de COMPLETED; en FHIR el `Task.status` vuelve de `completed` a `in-progress` y queda la versión y la Provenance de la reapertura. Cada transición genera una versión nueva del Task y su Provenance encadenado (equivale al historial de eventos de tarea de XDW). El PIM es un superconjunto de XDW: agrega aceptación, rechazo, espera y anulación, que el mantenimiento entre organismos necesita.
 
 #### Traducción de IHE PCD-15 a FHIR (PIM-EQM)
 
@@ -88,18 +88,38 @@ El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revisio
 |---|---|
 | MSH-3 / OBX-18 (EUI-64) | `Device.identifier` con system `…/sid/eui64` (se crea el Device si no existe, con etiqueta `mem-dmc`) |
 | OBX-3 `67880 MDC_ATTR_ID_MODEL` | `Device.manufacturer` y `Device.modelNumber` |
-| OBX-3 `67972 MDC_ATTR_SYS_ID` | `Device.identifier` (EUI-64) |
+| OBX-3 `67972 MDC_ATTR_SYS_ID` | Fuente del EUI-64 si no vino en OBX-18, OBR-3, OBR-2 ni MSH-3 (en ese orden) |
 | Cada otro OBX-3 | `DeviceMetric` (`pim-punto`, tipo = código MDC) + `Observation` (`pim-medicion`) |
 | OBX-2 NM / CWE / ST | `valueQuantity` (unidad OBX-6) / `valueCodeableConcept` / `valueString` |
 | OBX-14 (o OBX-7 en el ejemplo del suplemento) | `effectiveDateTime` |
 | `68513 MDC_ATTR_LS_LOCATION` (PL) | `Device.location` si el local existe (búsqueda por nombre en la cadena establecimiento › edificio › piso › sala) |
 | Autoprueba con resultado de falla | `ServiceRequest` + orden correctiva automática (`pim-orden`, `reasonReference` = la Observation) |
 | Carga de batería (NM, %) ≤ umbral configurable (20 % por defecto) | `ServiceRequest` + orden correctiva «Batería crítica» (una abierta por equipo) |
-| Paso a batería | Evento `alarmas/cambio` (PIM-ALR) |
+| Alimentación (67925), carga de batería y autoprueba | Mediciones normalizadas `ALIMENTACION`, `BATERIA` y `AUTOPRUEBA` publicadas en `telemetria/medicion`; una alarma ISA-18.2 las evalúa si está configurada (PIM-ALR) |
 
 La respuesta es un ACK de HL7 v2 (MSA-1 = AA, AE o AR) en el mismo canal MLLP. Un mensaje con PID o PV1 se rechaza con AR: PCD-15 no lleva datos de pacientes.
 
-**Canal y seguridad.** MLLP sobre TCP, con lista de IP permitidas; con la opción de configuración `tls`, MLLP sobre TLS 1.2 o 1.3 (certificado propio del nodo o el que indique la institución y, con `tls_cliente`, certificado de cliente del gateway firmado por una autoridad conocida). También se acepta por HTTPS (`POST /api/mem/pcd15`) con un cliente autorizado.
+**Canal y seguridad.** MLLP sobre TCP, con lista de IP permitidas; con la opción de configuración `tls`, MLLP sobre TLS 1.2 o 1.3 (certificado propio del nodo o el que indique la institución y, con `tls_cliente`, certificado de cliente del gateway firmado por una autoridad conocida). También se acepta por HTTPS (`POST /api/m/mem/pcd15`, cuerpo `{"mensaje": "MSH|…"}`) con un usuario autorizado (capacidad `mem.recibir`). `MSH-21` debería traer `IHE_PCD_015`: si falta, el mensaje se procesa igual y queda anotado en el registro (gateways anteriores a la Rev. 1.5). Con la opción `aceptar_r01` se admite también `ORU^R01` sin PID/PV1 (Rev. 1.3). Un mensaje con PID o PV1 se rechaza con `AR` y `ERR 100` (segmento no esperado); un tipo no soportado, con `AR` y `ERR 200`.
+
+#### Índice de Riesgo Unificado (PIM-RSG)
+
+**IRU = F + R + M + A**, con la estructura de Fennigkoh y Smith (1989), extendida a instalaciones:
+
+| Componente | Rango | Cómo se obtiene |
+|---|---|---|
+| F · función asistencial | 1 a 10 | Soporte vital o local del grupo 2b (AEA 90364-7-710) = 10 |
+| R · riesgo ante la falla | 1 a 5 | En instalaciones se deriva de la categoría NFPA 99: 1 → 5, 2 → 4, 3 → 2, 4 → 1 |
+| M · requisitos de mantenimiento | 1 a 5 | |
+| A · antecedentes | −2 a +2 | Historial de incidentes |
+
+| Banda base (del total) | Prioridad sugerida (`request-priority`) |
+|---|---|
+| A · IRU ≥ 18 | `stat` |
+| B · 14 a 17 | `asap` |
+| C · 10 a 13 | `urgent` |
+| D · < 10 | `routine` |
+
+**Ajustes** (dan la banda vigente, `pim-iru.bandaAjustada`): sube un nivel si el activo está **fuera de servicio sin contingencia** (lo declara la solicitud, `pim-estado-declarado`); baja un nivel si tiene **redundancia N+1 o 2N**. El mapa banda → prioridad es el ConceptMap `pim-banda-a-prioridad` y es normativo: dos implementaciones distintas tienen que sugerir la misma prioridad para el mismo activo. El RiskAssessment (PIM-7) publica los cuatro componentes, el total, la banda base y, si corresponde, la ajustada con su motivo.
 
 #### Decisión humana sobre la prioridad (PIM-RSG)
 

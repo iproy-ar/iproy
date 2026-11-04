@@ -1,0 +1,14 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "pim-task-decision-prioridad",
+  "url": "https://iproy.com.ar/fhir/SearchParameter/pim-task-decision-prioridad",
+  "description": "Decisión del Gestor sobre la prioridad sugerida por el IRU (extensión pim-decision-prioridad.decision). Sirve para medir el sesgo de automatización: Task?decision-prioridad=cambiada&_summary=count.",
+  "name": "PimTaskDecisionPrioridad",
+  "status": "draft",
+  "code": "decision-prioridad",
+  "base": [
+    "Task"
+  ],
+  "type": "token",
+  "expression": "Task.extension.where(url='https://iproy.com.ar/fhir/StructureDefinition/pim-decision-prioridad').extension.where(url='decision').value"
+}

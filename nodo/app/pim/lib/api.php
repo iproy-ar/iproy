@@ -1,7 +1,7 @@
 <?php
 /**
  * iProy · Servidor PIM v1.1 · operaciones REST (lectura, búsqueda, alta, modificación, transición, historial) · 02-11-2026
- * Perfiles de integración implementados (PIM 0.9.2, Tabla 9-4) y transacciones (Tabla 9-3):
+ * Perfiles de integración implementados (PIM 0.9.4, Tabla 9-4) y transacciones (Tabla 9-3):
  *   PIM-INV  también ITI-90 (mCSD) para Organization y Location; ITI-91 con _history?_since
  *   PIM-REG  operación Device/$refes y rol RE
  *   PIM-EQM  lo traduce el módulo «mem» (PCD-15 → Device + DeviceMetric + Observation) usando esta API
@@ -394,7 +394,7 @@ function alta_solicitud(array $f, array $cli): array {
     if ($f['activo_id'] && ($a = fila('pim_activo', $f['activo_id'])) && ($i = iru($a, $f['estado_declarado']))) {
         // la sugerencia del IRU se guarda siempre (1.4.0): así se mide si el auditor la acepta, la cambia o la rechaza
         $sug = BANDA_PRIORIDAD[$i['banda']];
-        $fund = mb_substr('IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ' · banda ' . $i['banda'] . ($i['ajuste'] ? ' (' . $i['ajuste'] . ')' : ''), 0, 160);
+        $fund = mb_substr('IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ' · banda ' . $i['banda_base'] . ($i['ajuste'] ? ' → ' . $i['banda'] . ' (' . $i['ajuste'] . ')' : ''), 0, 160);
         if ($prio === null) { $prio = $sug; $motivoPrio = 'Prioridad por IRU: banda ' . $i['banda'] . ' (' . $i['total'] . ')'; }
     }
     $prio ??= 'routine';
@@ -669,11 +669,19 @@ function historial(string $tipo, ?string $id): never {
     if (!empty($_GET['_since'])) { $f = fecha_param('ge' . preg_replace('/^(ge|gt)/', '', (string) $_GET['_since'])); $w[] = 'ts >= ?'; $a[] = $f[1]; }
     $count = max(1, min((int) cfg()['max_count'], (int) ($_GET['_count'] ?? cfg()['count_def'])));
     if ($tipo === 'Task' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
-    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . " ORDER BY ts DESC, version DESC LIMIT $count"); $q->execute($a);
+    // 1.5.1 (L-405): orden ASCENDENTE y paginación real. Con `_since` el que sincroniza (PIM-8 / ITI-91) recibe los cambios más viejos
+    // primero y, si hay más que `_count`, un `link next` con `_offset`: antes se devolvían los más nuevos y los viejos se perdían.
+    $offset = max(0, (int) ($_GET['_offset'] ?? 0));
+    $qt = pdo()->prepare('SELECT COUNT(*) FROM pim_version WHERE ' . implode(' AND ', $w)); $qt->execute($a); $total = (int) $qt->fetchColumn();
+    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . " ORDER BY ts ASC, version ASC LIMIT $count OFFSET $offset"); $q->execute($a);
     $e = [];
     foreach ($q->fetchAll() as $v) $e[] = ['fullUrl' => base() . "/$tipo/{$v['id']}", 'resource' => json_decode($v['contenido'], true),
         'request' => ['method' => $v['accion'] === 'create' ? 'POST' : 'PUT', 'url' => "$tipo/{$v['id']}"],
         'response' => ['status' => $v['accion'] === 'create' ? '201 Created' : '200 OK', 'lastModified' => iso($v['ts'])]];
     $GLOBALS['iproy_pim_audit']['n'] = count($e);
-    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => count($e), 'entry' => $e]);
+    $propia = base() . "/$tipo" . ($id !== null ? "/$id" : '') . '/_history';
+    $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count], fn($x) => $x !== null && $x !== '');
+    $link = [['relation' => 'self', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset])]];
+    if ($offset + count($e) < $total) $link[] = ['relation' => 'next', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset + $count])];
+    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link, 'entry' => $e]);
 }

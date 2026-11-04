@@ -5,7 +5,7 @@
   "name": "PimTipoVinculo",
   "id": "pim-tipo-vinculo",
   "title": "PIM — Tipo de vínculo entre nodos",
-  "description": "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.2].",
+  "description": "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.4].",
   "url": "https://iproy.com.ar/fhir/CodeSystem/pim-tipo-vinculo",
   "concept": [
     {

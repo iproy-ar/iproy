@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (C) 2026 Ovidio Francisco Arias
-// Perfiles PIM 0.9.2. Principio rector: apoyarse en los bordes que IHE ya estandarizó (mCSD, MEM, ACM, BALP)
+// Perfiles PIM 0.9.4. Principio rector: apoyarse en los bordes que IHE ya estandarizó (mCSD, MEM, ACM, BALP)
 // y crear solo lo que nadie cubre (el flujo del mantenimiento entre organismos y las instalaciones vinculadas al riesgo).
 Alias: $mCSDOrg = https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.mCSD.Organization
 Alias: $mCSDFacOrg = https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.mCSD.FacilityOrganization
@@ -9,9 +9,9 @@ Alias: $mCSDFacLoc = https://profiles.ihe.net/ITI/mCSD/StructureDefinition/IHE.m
 Alias: $mCSDTipos = https://profiles.ihe.net/ITI/mCSD/CodeSystem/IHE.mCSD.Organization.Location.Types
 
 Invariant: pim-anmat-pm
-Description: "El n.º de producto ANMAT tiene el formato PM-NNNN-NNNN."
+Description: "El n.º de producto ANMAT tiene el formato PM-N-N, con uno a cinco dígitos por grupo (p. ej. PM-1137-45) [a confirmar con el padrón ANMAT]."
 Severity: #error
-Expression: "matches('^PM-[0-9]{4}-[0-9]{4}$')"
+Expression: "matches('^PM-[0-9]{1,5}-[0-9]{1,5}$')"
 
 Invariant: pim-pma-refes
 Description: "Faltan datos mínimos del REFES (n.º PM ANMAT, pertenencia y fecha de fabricación o de puesta en marcha). Son obligatorios para las tipologías de la Res. SGS 532/2026; la operación Device/$refes informa cuáles faltan."

@@ -70,6 +70,7 @@ R=$(printf 'MSH|^~\\&|X||Y||%s||ADT^A01|EJ%s-4|P|2.6\nEVN|A01|%s\n' "$TS" "$S" "
 ver "tipo no soportado → AR" "$R" "MSA|AR|EJ$S-4"
 R=$(pcd15 "EJ$S-5" "AC" "PASS" "x" | sed '2i PID|1||123' | mllp)
 ver "PCD-15 con PID (datos de paciente) → AR" "$R" "MSA|AR|EJ$S-5"
+ver "ERR 100 (segmento no esperado) en el rechazo por PID" "$R" "ERR|||100^"
 R=$(pcd15 "EJ$S-6" "AC" "PASS" "x" | sed 's/69135^MDC_OBS_MEM/12345^OTRO/' | mllp)
 ver "OBR-4 distinto de MDC_OBS_MEM → AE" "$R" "MSA|AE|EJ$S-6"
 M=$(pcd15 "EJ$S-7" "AC" "PASS" "x" | python3 -c 'import json,sys; print(json.dumps({"mensaje": sys.stdin.read()}))')

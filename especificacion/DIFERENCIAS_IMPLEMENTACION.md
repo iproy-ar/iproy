@@ -5,9 +5,9 @@ Generado por `herramientas/contrato.py` el 03-11-2026. Es la verificación por m
 
 | | Versión |
 |---|---|
-| Especificación (guía FSH compilada por SUSHI) | **0.9.3** |
-| Servidor PIM (`nodo/app/pim`) | **1.1.0** (declara PIM 0.9.3) |
-| Contrato OpenAPI (`api/openapi_pim_v1_3_0.yaml`) | **1.3.0** |
+| Especificación (guía FSH compilada por SUSHI) | **0.9.4** |
+| Servidor PIM (`nodo/app/pim`) | **1.1.0** (declara PIM 0.9.4) |
+| Contrato OpenAPI (`api/openapi_pim_v1_3_1.yaml`) | **1.3.1** |
 
 **Cómo se mide:** toda extensión, perfil y CodeSystem que el código del servidor (y del módulo `mem`) emite o lee debe existir en la guía compilada;
 todo recurso del servidor debe estar en el CapabilityStatement del actor Gestor (`pim-gm`). Además, desde la 1.1 el servidor **no tiene copia
@@ -16,7 +16,7 @@ propia** de las terminologías: sirve los artefactos de la guía (`nodo/conf/pim
 
 **Resultado:** ✔ sin diferencias no declaradas.
 
-| Tipo | Artefacto | En la guía 0.9.3 | En el servidor 1.1.0 | Estado | Nota |
+| Tipo | Artefacto | En la guía 0.9.4 | En el servidor 1.1.0 | Estado | Nota |
 |---|---|---|---|---|---|
 | StructureDefinition | `pim-activo` | ✔ | ✔ | ✔ |  |
 | StructureDefinition | `pim-ambiente-controlado` | ✔ | ✔ | ✔ |  |

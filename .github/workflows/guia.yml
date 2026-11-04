@@ -65,4 +65,4 @@ jobs:
       - name: Contrato especificación ↔ implementación sin diferencias no declaradas y al día
         run: python3 herramientas/contrato.py > /tmp/d.md && diff <(sed 1,5d /tmp/d.md) <(sed 1,5d especificacion/DIFERENCIAS_IMPLEMENTACION.md)
       - name: Contrato OpenAPI válido
-        run: pip install openapi-spec-validator pyyaml && python3 -c "import yaml; from openapi_spec_validator import validate; validate(yaml.safe_load(open('api/openapi_pim_v1_3_0.yaml')))"
+        run: pip install openapi-spec-validator pyyaml && python3 -c "import yaml; from openapi_spec_validator import validate; validate(yaml.safe_load(open('api/openapi_pim_v1_3_1.yaml')))"

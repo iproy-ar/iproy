@@ -3,7 +3,7 @@
   "id": "ar.iproy.pim",
   "language": "es",
   "url": "https://iproy.com.ar/fhir/ImplementationGuide/ar.iproy.pim",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "name": "PIM",
   "title": "PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud",
   "status": "draft",
@@ -140,6 +140,14 @@
         },
         "name": "Decisión sobre la prioridad sugerida",
         "description": "Prioridad que el Gestor sugiere a partir del IRU del activo, su fundamento y lo que decidió la persona responsable (aceptarla, cambiarla o rechazarla), con motivo, autor y fecha. Sirve para auditar el sesgo de automatización: la sugerencia nunca reemplaza la decisión humana.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "SearchParameter/pim-device-categoria-alcance"
+        },
+        "name": "Device · categoria-alcance",
+        "description": "Categoría de alcance A, B, C o D del activo (extensión pim-categoria-alcance).",
         "exampleBoolean": false
       },
       {
@@ -332,6 +340,14 @@
         },
         "name": "PIM — Banda IRU",
         "description": "Bandas de prioridad del IRU.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "ConceptMap/pim-banda-a-prioridad"
+        },
+        "name": "PIM — Banda IRU → prioridad de la orden",
+        "description": "Cómo el Gestor traduce la banda vigente del IRU a request-priority al sugerir la prioridad de una orden. Es normativo para que dos implementaciones sugieran lo mismo; la persona responsable decide (pim-decision-prioridad).",
         "exampleBoolean": false
       },
       {
@@ -779,7 +795,7 @@
           "reference": "CodeSystem/pim-tipo-vinculo"
         },
         "name": "PIM — Tipo de vínculo entre nodos",
-        "description": "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.2].",
+        "description": "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.4].",
         "exampleBoolean": false
       },
       {
@@ -808,6 +824,22 @@
       },
       {
         "reference": {
+          "reference": "SearchParameter/pim-riskassessment-banda"
+        },
+        "name": "RiskAssessment · banda",
+        "description": "Banda vigente del IRU (A, B, C o D).",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
+          "reference": "SearchParameter/pim-task-decision-prioridad"
+        },
+        "name": "Task · decision-prioridad",
+        "description": "Decisión del Gestor sobre la prioridad sugerida por el IRU (extensión pim-decision-prioridad.decision). Sirve para medir el sesgo de automatización: Task?decision-prioridad=cambiada&_summary=count.",
+        "exampleBoolean": false
+      },
+      {
+        "reference": {
           "reference": "StructureDefinition/pim-tipo-mantenimiento"
         },
         "name": "Tipo de mantenimiento",
@@ -819,7 +851,7 @@
           "reference": "StructureDefinition/pim-iru"
         },
         "name": "Índice de Riesgo Unificado (IRU)",
-        "description": "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad.",
+        "description": "Índice de Riesgo Unificado: IRU = F + R + M + A. F = función asistencial (1 a 10), R = riesgo ante la falla (1 a 5; en instalaciones se deriva de la categoría NFPA 99: 1→5, 2→4, 3→2, 4→1), M = requisitos de mantenimiento (1 a 5), A = antecedentes (−2 a +2). banda = la banda que sale del total (A ≥ 18, B 14–17, C 10–13, D < 10). bandaAjustada y ajuste aparecen solo cuando la banda se mueve: sube un nivel si el activo está fuera de servicio sin contingencia; baja uno si tiene redundancia N+1 o 2N. prioridad = la request-priority que el Gestor sugiere para la orden según la banda vigente (ConceptMap pim-banda-a-prioridad).",
         "exampleBoolean": false
       }
     ],

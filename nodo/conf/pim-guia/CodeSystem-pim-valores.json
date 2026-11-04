@@ -16,22 +16,22 @@
         {
           "code": "banda-A",
           "display": "Banda A",
-          "definition": "IRU ≥ 18."
+          "definition": "Banda base: IRU ≥ 18. Sugiere prioridad stat."
         },
         {
           "code": "banda-B",
           "display": "Banda B",
-          "definition": "IRU 14 a 17."
+          "definition": "Banda base: IRU 14 a 17. Sugiere prioridad asap."
         },
         {
           "code": "banda-C",
           "display": "Banda C",
-          "definition": "IRU 10 a 13."
+          "definition": "Banda base: IRU 10 a 13. Sugiere prioridad urgent."
         },
         {
           "code": "banda-D",
           "display": "Banda D",
-          "definition": "IRU < 10."
+          "definition": "Banda base: IRU < 10. Sugiere prioridad routine. La banda vigente puede diferir de la base por el ajuste (pim-iru.bandaAjustada)."
         }
       ]
     },

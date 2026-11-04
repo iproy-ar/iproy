@@ -21,7 +21,7 @@ alias = dict(re.findall(r"'([A-Za-z\-]+)' => '(pim-[a-z\-]+)'", re.search(r"cons
 usados_cs = set(re.findall(r"cs\('([a-z0-9\-]+)'\)", src)) | set(re.findall(r"CS \. '(pim-[a-z0-9\-]+)'", src))
 recursos = set(re.findall(r"^\s*'([A-Z][A-Za-z]+)'\s*=>\s*\['tabla'", api, re.M))
 gm = cap.get("pim-gm", {}); gm_rec = {r["type"] for r in gm.get("rest", [{}])[0].get("resource", [])}
-oa = (R / "api/openapi_pim_v1_3_0.yaml").read_text(encoding="utf-8")
+oa = (R / "api/openapi_pim_v1_3_1.yaml").read_text(encoding="utf-8")
 v_oa = re.search(r"^  version: (\S+)", oa, re.M).group(1)
 
 DECLARADAS = {   # diferencias permitidas, con su motivo (se mantienen a la vista hasta resolverlas)
@@ -37,7 +37,7 @@ for a, n in sorted(alias.items()): fila("Alias de entrada", f"{a} → {n}", n in
 for n in sorted(usados_cs): fila("CodeSystem", n, n in cs, True)
 for t in sorted(gm_rec | recursos):
     if t in ("DiagnosticReport",): continue
-    fila("Recurso (actor GM)", t, t in gm_rec or t in ("Group", "RiskAssessment", "Provenance", "Observation"), t in recursos)
+    fila("Recurso (actor GM)", t, t in gm_rec, t in recursos)
 pendientes_niveles = {"PIM-PRV": "PlanDefinition, Questionnaire, QuestionnaireResponse", "PIM-ENS": "DiagnosticReport (pim-informe-ensayo)", "PIM-KPI": "Measure, MeasureReport"}
 
 print(f"""<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
@@ -49,7 +49,7 @@ Generado por `herramientas/contrato.py` el {datetime.date.today():%d-%m-%Y}. Es 
 |---|---|
 | Especificación (guía FSH compilada por SUSHI) | **{ver}** |
 | Servidor PIM (`nodo/app/pim`) | **{v_api}** (declara PIM {v_pim}) |
-| Contrato OpenAPI (`api/openapi_pim_v1_3_0.yaml`) | **{v_oa}** |
+| Contrato OpenAPI (`api/openapi_pim_v1_3_1.yaml`) | **{v_oa}** |
 
 **Cómo se mide:** toda extensión, perfil y CodeSystem que el código del servidor (y del módulo `mem`) emite o lee debe existir en la guía compilada;
 todo recurso del servidor debe estar en el CapabilityStatement del actor Gestor (`pim-gm`). Además, desde la 1.1 el servidor **no tiene copia

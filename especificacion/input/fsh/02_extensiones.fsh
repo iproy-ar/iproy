@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (C) 2026 Ovidio Francisco Arias
-// Extensiones PIM 0.9.2. Desde la 0.9.2 los ids siguen la convención de FHIR (minúsculas con guiones, prefijo pim-),
+// Extensiones PIM 0.9.4. Desde la 0.9.4 los ids siguen la convención de FHIR (minúsculas con guiones, prefijo pim-),
 // igual que la implementación de referencia. Los ids camelCase de la 0.9.1 se aceptan como alias de entrada (Anexo H).
 Alias: $UCUM = http://unitsofmeasure.org
 
@@ -99,16 +99,35 @@ Context: ServiceRequest
 Extension: Iru
 Id: pim-iru
 Title: "Índice de Riesgo Unificado (IRU)"
-Description: "Componentes F (función), R (riesgo), M (mantenimiento) y A (antecedentes) del IRU, su total y la banda de prioridad."
+Description: "Índice de Riesgo Unificado: IRU = F + R + M + A. F = función asistencial (1 a 10), R = riesgo ante la falla (1 a 5; en instalaciones se deriva de la categoría NFPA 99: 1→5, 2→4, 3→2, 4→1), M = requisitos de mantenimiento (1 a 5), A = antecedentes (−2 a +2). banda = la banda que sale del total (A ≥ 18, B 14–17, C 10–13, D < 10). bandaAjustada y ajuste aparecen solo cuando la banda se mueve: sube un nivel si el activo está fuera de servicio sin contingencia; baja uno si tiene redundancia N+1 o 2N. prioridad = la request-priority que el Gestor sugiere para la orden según la banda vigente (ConceptMap pim-banda-a-prioridad)."
 Context: Device, RiskAssessment
-* extension contains F 1..1 and R 1..1 and M 1..1 and A 1..1 and total 1..1 and banda 1..1
+* extension contains F 1..1 and R 1..1 and M 1..1 and A 1..1 and total 1..1 and banda 1..1 and bandaAjustada 0..1 and ajuste 0..1 and prioridad 0..1
 * extension[F].value[x] only integer
+* extension[F].valueInteger ^minValueInteger = 1
+* extension[F].valueInteger ^maxValueInteger = 10
 * extension[R].value[x] only integer
+* extension[R].valueInteger ^minValueInteger = 1
+* extension[R].valueInteger ^maxValueInteger = 5
 * extension[M].value[x] only integer
+* extension[M].valueInteger ^minValueInteger = 1
+* extension[M].valueInteger ^maxValueInteger = 5
 * extension[A].value[x] only integer
+* extension[A].valueInteger ^minValueInteger = -2
+* extension[A].valueInteger ^maxValueInteger = 2
 * extension[total].value[x] only integer
+* extension[total].valueInteger ^minValueInteger = 1
+* extension[total].valueInteger ^maxValueInteger = 22
 * extension[banda].value[x] only Coding
 * extension[banda].valueCoding from PimBandaIruVS (required)
+* extension[banda] ^short = "Banda base: la que sale del total"
+* extension[bandaAjustada].value[x] only Coding
+* extension[bandaAjustada].valueCoding from PimBandaIruVS (required)
+* extension[bandaAjustada] ^short = "Banda vigente cuando difiere de la base (fuera de servicio sin contingencia: sube; redundancia N+1 o 2N: baja)"
+* extension[ajuste].value[x] only string
+* extension[ajuste] ^short = "Motivo del ajuste, legible"
+* extension[prioridad].value[x] only code
+* extension[prioridad].valueCode from http://hl7.org/fhir/ValueSet/request-priority (required)
+* extension[prioridad] ^short = "Prioridad sugerida para la orden (banda vigente → request-priority)"
 
 Extension: DecisionPrioridad
 Id: pim-decision-prioridad

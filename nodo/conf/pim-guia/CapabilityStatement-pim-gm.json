@@ -24,7 +24,7 @@
   "rest": [
     {
       "mode": "server",
-      "documentation": "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría compatible con IHE BALP.",
+      "documentation": "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría interna por cliente y operación; la publicación como AuditEvent (IHE BALP) está planificada.",
       "security": {
         "service": [
           {
@@ -236,7 +236,8 @@
             },
             {
               "name": "categoria-alcance",
-              "type": "token"
+              "type": "token",
+              "definition": "https://iproy.com.ar/fhir/SearchParameter/pim-device-categoria-alcance"
             }
           ],
           "operation": [
@@ -394,6 +395,11 @@
             {
               "name": "based-on",
               "type": "reference"
+            },
+            {
+              "name": "decision-prioridad",
+              "type": "token",
+              "definition": "https://iproy.com.ar/fhir/SearchParameter/pim-task-decision-prioridad"
             }
           ],
           "operation": [
@@ -465,6 +471,13 @@
                 }
               ]
             }
+          ],
+          "searchParam": [
+            {
+              "name": "banda",
+              "type": "token",
+              "definition": "https://iproy.com.ar/fhir/SearchParameter/pim-riskassessment-banda"
+            }
           ]
         },
         {
@@ -489,12 +502,76 @@
               ]
             }
           ]
+        },
+        {
+          "type": "Group",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-grupo-activo"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "SHOULD"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "read",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "SHOULD"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "DiagnosticReport",
+          "supportedProfile": [
+            "https://iproy.com.ar/fhir/StructureDefinition/pim-informe-ensayo"
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+              "valueCode": "MAY"
+            }
+          ],
+          "interaction": [
+            {
+              "code": "create",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "MAY"
+                }
+              ]
+            },
+            {
+              "code": "search-type",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/capabilitystatement-expectation",
+                  "valueCode": "MAY"
+                }
+              ]
+            }
+          ]
         }
       ],
       "interaction": [
         {
           "code": "history-system",
-          "documentation": "PIM-8 Sincronizar cambios: _history con _since para todos los recursos (semántica de IHE ITI-91)."
+          "documentation": "PIM-8 Sincronizar cambios: _history con _since, paginado con _count y _offset (link next), en orden cronológico ascendente, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task (semántica de IHE ITI-91). Observation, DeviceMetric, RiskAssessment y Group no se versionan: las mediciones viajan por PIM-6 y los derivados se recalculan en cada nodo."
         }
       ]
     }

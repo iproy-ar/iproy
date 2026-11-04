@@ -4,7 +4,7 @@ name: PIM
 title: "PIM — Protocolo de Interoperabilidad de Mantenimiento en Salud"
 description: "Guía de implementación HL7 FHIR R4 para la gestión interoperable del mantenimiento de productos médicos activos e instalaciones de los establecimientos de salud (República Argentina)."
 status: draft
-version: 0.9.3
+version: 0.9.4
 fhirVersion: 4.0.1
 copyrightYear: 2026+
 releaseLabel: ci-build

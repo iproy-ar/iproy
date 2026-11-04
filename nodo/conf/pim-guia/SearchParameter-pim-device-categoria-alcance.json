@@ -1,0 +1,14 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "pim-device-categoria-alcance",
+  "url": "https://iproy.com.ar/fhir/SearchParameter/pim-device-categoria-alcance",
+  "description": "Categoría de alcance A, B, C o D del activo (extensión pim-categoria-alcance).",
+  "name": "PimDeviceCategoriaAlcance",
+  "status": "draft",
+  "code": "categoria-alcance",
+  "base": [
+    "Device"
+  ],
+  "type": "token",
+  "expression": "Device.extension.where(url='https://iproy.com.ar/fhir/StructureDefinition/pim-categoria-alcance').value"
+}

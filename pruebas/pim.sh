@@ -59,7 +59,7 @@ ver "identificador EUI-64" "$R" "\"system\":\"$NS/sid/eui64\",\"value\":\"$EUI\"
 ver "búsqueda por EUI-64" "$(A GET "Device?identifier=$NS/sid/eui64%7C$EUI")" "\"id\":\"$PMA\""
 R=$(A POST Device "{\"resourceType\":\"Device\",\"meta\":{\"profile\":[\"$NS/StructureDefinition/pim-equipo-medico\"]},\"identifier\":[{\"system\":\"$NS/sid/activo\",\"value\":\"EJ-PMA2-$S\"}],\"status\":\"active\",\"deviceName\":[{\"name\":\"Monitor EJ $S\",\"type\":\"user-friendly-name\"}]}")
 PMA2=$(printf '%s' "$R" | id_de Device); ver "perfil de la 1.0 (pim-equipo-medico) → pim-pma" "$R" "$NS/StructureDefinition/pim-pma"
-ver "n.º ANMAT inválido → 422" "$(A POST Device "{\"resourceType\":\"Device\",\"meta\":{\"profile\":[\"$NS/StructureDefinition/pim-pma\"]},\"identifier\":[{\"system\":\"$NS/sid/activo\",\"value\":\"EJ-X-$S\"},{\"system\":\"$NS/sid/anmat-pm\",\"value\":\"12\"}],\"deviceName\":[{\"name\":\"x\"}]}")" 'PM-NNNN-NNNN'
+ver "n.º ANMAT inválido → 422" "$(A POST Device "{\"resourceType\":\"Device\",\"meta\":{\"profile\":[\"$NS/StructureDefinition/pim-pma\"]},\"identifier\":[{\"system\":\"$NS/sid/activo\",\"value\":\"EJ-X-$S\"},{\"system\":\"$NS/sid/anmat-pm\",\"value\":\"12\"}],\"deviceName\":[{\"name\":\"x\"}]}")" 'ANMAT: PM-'
 R=$(A POST Device "{\"resourceType\":\"Device\",\"meta\":{\"profile\":[\"$NS/StructureDefinition/pim-sistema\"]},\"identifier\":[{\"system\":\"$NS/sid/activo\",\"value\":\"EJ-O2-$S\"}],\"status\":\"active\",\"type\":{\"coding\":[{\"system\":\"$NS/CodeSystem/pim-sistema\",\"code\":\"GAS-O2\"}]},\"deviceName\":[{\"name\":\"Red de oxígeno EJ $S\",\"type\":\"user-friendly-name\"}],\"extension\":[{\"url\":\"$NS/StructureDefinition/pim-categoria-riesgo\",\"valueCoding\":{\"system\":\"$NS/CodeSystem/pim-categoria-riesgo\",\"code\":\"1\"}},{\"url\":\"$NS/StructureDefinition/pim-iru\",\"extension\":[{\"url\":\"F\",\"valueInteger\":9},{\"url\":\"M\",\"valueInteger\":4},{\"url\":\"A\",\"valueInteger\":0}]},{\"url\":\"$NS/StructureDefinition/pim-punto-medicion\",\"extension\":[{\"url\":\"punto\",\"valueCode\":\"PRES-LINEA\"},{\"url\":\"unidad\",\"valueCode\":\"kPa\"},{\"url\":\"minimo\",\"valueDecimal\":380},{\"url\":\"maximo\",\"valueDecimal\":450}]}]}")
 O2=$(printf '%s' "$R" | id_de Device)
 ver "sistema GAS-O2: alcance B (Tabla 3-x)" "$R" "\"url\":\"$NS/StructureDefinition/pim-categoria-alcance\",\"valueCoding\":{\"system\":\"$NS/CodeSystem/pim-categoria-alcance\",\"code\":\"B\"}"
@@ -116,5 +116,18 @@ ver "asignar sin decidir → decisión implícita «aceptada»" "$R" '"code":"ac
 T5=$(sol 3)
 ver "rechazar la sugerencia sin motivo → 422" "$(A POST "Task/$T5/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"rechazada"}')")" 'exige el motivo'
 ver "decisión sobre una orden sin IRU → 422" "$(A POST "Task/$T2/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"aceptada"}')")" 'no tiene prioridad sugerida'
+
+echo "8) PIM-8: _history paginado en orden cronológico (1.5.1) · IRU normativo (0.9.4)"
+R=$(A GET "Task/_history?_count=2")
+ver "history con total real y link next" "$R" '"relation":"next"'
+P1=$(printf '%s' "$R" | grep -o '"lastModified":"[^"]*"' | head -1 | cut -d'"' -f4); P2=$(printf '%s' "$R" | grep -o '"lastModified":"[^"]*"' | sed -n 2p | cut -d'"' -f4)
+ver "orden cronológico ascendente" "$([[ "$P1" < "$P2" || "$P1" == "$P2" ]] && echo asc)" 'asc'
+ver "segunda página con _offset" "$(A GET "Task/_history?_count=2&_offset=2")" '_offset=4'
+R=$(A GET "Device/$O2")
+ver "pim-iru publica la banda base" "$R" '"url":"banda","valueCoding":{"system":"'"$NS"'/CodeSystem/pim-valores","code":"banda-A"'
+ver "pim-iru publica la prioridad sugerida (A → stat)" "$R" '"url":"prioridad","valueCode":"stat"'
+ver "ConceptMap banda → prioridad servido por el nodo" "$(G r4/ConceptMap/pim-banda-a-prioridad)" '"code":"banda-A","target":[{"code":"stat"'
+ver "SearchParameter decision-prioridad servido por el nodo" "$(G r4/SearchParameter/pim-task-decision-prioridad)" '"code":"decision-prioridad"'
+ver "CapabilityStatement declara decision-prioridad" "$(G r4/metadata)" '"name":"decision-prioridad"'
 
 echo; [[ $MAL -eq 0 ]] && echo "✔ $OK comprobaciones correctas" || echo "✘ $MAL fallas, $OK correctas"; exit $((MAL > 0))

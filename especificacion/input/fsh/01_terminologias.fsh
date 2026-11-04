@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-SA-4.0
 // Copyright (C) 2026 Ovidio Francisco Arias
-// ===== Sistemas de códigos del PIM (0.9.2: 11 de dominio + auxiliar + vínculo + 5 de conformidad y origen) =====
+// ===== Sistemas de códigos del PIM (0.9.4: 11 de dominio + auxiliar + vínculo + 5 de conformidad y origen) =====
 
 CodeSystem: PimCategoriaAlcance
 Id: pim-categoria-alcance
@@ -217,10 +217,10 @@ Description: "Sistema auxiliar con los valores codificados de las extensiones PI
 * ^content = #complete
 * ^hierarchyMeaning = #grouped-by
 * #banda-iru "Banda IRU" "Grupo: bandas de prioridad del IRU."
-  * #banda-A "Banda A" "IRU ≥ 18."
-  * #banda-B "Banda B" "IRU 14 a 17."
-  * #banda-C "Banda C" "IRU 10 a 13."
-  * #banda-D "Banda D" "IRU < 10."
+  * #banda-A "Banda A" "Banda base: IRU ≥ 18. Sugiere prioridad stat."
+  * #banda-B "Banda B" "Banda base: IRU 14 a 17. Sugiere prioridad asap."
+  * #banda-C "Banda C" "Banda base: IRU 10 a 13. Sugiere prioridad urgent."
+  * #banda-D "Banda D" "Banda base: IRU < 10. Sugiere prioridad routine. La banda vigente puede diferir de la base por el ajuste (pim-iru.bandaAjustada)."
 * #estado-declarado "Estado declarado" "Grupo: estado del activo declarado por el solicitante."
   * #operativo-con-falla "Operativo con falla"
   * #degradado "Degradado"
@@ -243,7 +243,7 @@ Description: "Sistema auxiliar con los valores codificados de las extensiones PI
 CodeSystem: PimTipoVinculo
 Id: pim-tipo-vinculo
 Title: "PIM — Tipo de vínculo entre nodos"
-Description: "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.2]."
+Description: "Tipos de vínculo institucional entre nodos de la red colmena [propuesta para la versión 0.9.4]."
 * ^status = #draft
 * ^caseSensitive = true
 * ^content = #complete
@@ -378,7 +378,7 @@ Description: "Pertenencia del PMA (REFES). Valores definitivos a confirmar con l
 * ^status = #draft
 * include codes from system PimValores where concept descendent-of #pertenencia
 
-// ===== 0.9.2: conformidad en formato IHE, origen y códigos MDC usados por MEM-DMC =====
+// ===== 0.9.4: conformidad en formato IHE, origen y códigos MDC usados por MEM-DMC =====
 Alias: $MDC = urn:iso:std:iso:11073:10101
 
 CodeSystem: PimNivelConformidad
@@ -510,3 +510,28 @@ Description: "Tipos de punto: códigos PIM para instalaciones y códigos MDC par
 * ^status = #draft
 * include codes from system PimPuntoCS
 * include codes from valueset PimMemDmcVS
+
+Instance: pim-banda-a-prioridad
+InstanceOf: ConceptMap
+Title: "PIM — Banda IRU → prioridad de la orden"
+Description: "Cómo el Gestor traduce la banda vigente del IRU a request-priority al sugerir la prioridad de una orden. Es normativo para que dos implementaciones sugieran lo mismo; la persona responsable decide (pim-decision-prioridad)."
+Usage: #definition
+* url = "https://iproy.com.ar/fhir/ConceptMap/pim-banda-a-prioridad"
+* name = "PimBandaAPrioridad"
+* status = #draft
+* sourceUri = "https://iproy.com.ar/fhir/ValueSet/pim-banda-iru"
+* targetUri = "http://hl7.org/fhir/ValueSet/request-priority"
+* group[0].source = "https://iproy.com.ar/fhir/CodeSystem/pim-valores"
+* group[0].target = "http://hl7.org/fhir/request-priority"
+* group[0].element[0].code = #banda-A
+* group[0].element[0].target[0].code = #stat
+* group[0].element[0].target[0].equivalence = #equivalent
+* group[0].element[1].code = #banda-B
+* group[0].element[1].target[0].code = #asap
+* group[0].element[1].target[0].equivalence = #equivalent
+* group[0].element[2].code = #banda-C
+* group[0].element[2].target[0].code = #urgent
+* group[0].element[2].target[0].equivalence = #equivalent
+* group[0].element[3].code = #banda-D
+* group[0].element[3].target[0].code = #routine
+* group[0].element[3].target[0].equivalence = #equivalent

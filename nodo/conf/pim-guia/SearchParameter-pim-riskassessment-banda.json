@@ -1,0 +1,14 @@
+{
+  "resourceType": "SearchParameter",
+  "id": "pim-riskassessment-banda",
+  "url": "https://iproy.com.ar/fhir/SearchParameter/pim-riskassessment-banda",
+  "description": "Banda vigente del IRU (A, B, C o D).",
+  "name": "PimRiskAssessmentBanda",
+  "status": "draft",
+  "code": "banda",
+  "base": [
+    "RiskAssessment"
+  ],
+  "type": "token",
+  "expression": "RiskAssessment.prediction.qualitativeRisk"
+}
