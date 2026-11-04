@@ -12,17 +12,17 @@ Objetivo: comprobar la interoperabilidad PIM entre nodos reales, en tres situaci
 | **A** | PC 1 de tu institución (Linux) | iProy | menú | `lan` |
 | **B** | PC 2 de tu institución, misma red (Windows) | producto incubado (p. ej. NodOvi) | widgets | `lan` |
 | **C** | PC de la otra institución | producto incubado con su nombre | a elección | `local` alcanza (sale por el hub) |
-| **Hub** | Un hosting PHP 8.1+ con SQLite y sodium | `hub/index.php` | — | HTTPS |
+| **Hub** | Hosting PHP del proyecto: `https://iproy.com.ar/colmena-hub/` (instalado y verificado el 04-11-2026 con dos nodos reales a través de Internet) | `hub/index.php` | — | HTTPS |
 
 - Los tres nodos con **iProy 1.5.1 o posterior** (instalador gráfico o actualización). Para actualizar un nodo existente: `stop`, reemplazar `app/`, `modulos/`, `tools/` y los lanzadores, `start`.
 - **Hora correcta** en las tres PC (`status` lo muestra). El hub rechaza pedidos con más de 5 minutos de desfase.
 - Un canal fuera de banda entre los responsables (teléfono o videollamada) para **comparar las huellas** de las claves al vincular.
 
-## 0. Instalar el hub (una vez, por quien administre el hosting)
+## 0. El hub
 
-1. Subir la carpeta `hub/` a una ruta pública con HTTPS (por ejemplo `https://<dominio>/hub/`).
-2. Copiar `config.ejemplo.php` como `config.php`; poner un `codigo_registro` (una palabra que solo conozcan las tres instituciones) y, si se puede, `dir_datos` fuera de la carpeta pública.
-3. Comprobar: `curl https://<dominio>/hub/?r=estado` → `{"servicio":"colmena-hub","protocolo":"colmena/1",…}`.
+Ya está instalado en `https://iproy.com.ar/colmena-hub/` con **código de registro**: solo se registran los nodos que lo presenten. El código no está en este repositorio ni en el sitio: lo entrega el administrador del proyecto a cada institución por un canal privado. Comprobación pública: `curl https://iproy.com.ar/colmena-hub/?r=estado` → `{"servicio":"colmena-hub","protocolo":"colmena/1",…}`.
+
+Para instalar otro hub propio: subir la carpeta `hub/`, copiar `config.ejemplo.php` como `config.php` con un `codigo_registro`, y si se puede poner `dir_datos` fuera de la carpeta pública (ver `hub/LEEME.md`).
 
 > El hub no puede leer ni modificar los sobres: solo los guarda hasta que el destinatario los retira. Si cae, los nodos de la misma red siguen hablándose en forma directa.
 
@@ -51,7 +51,7 @@ Cargar en cada nodo al menos un local y dos activos reales (Inventario → Ubica
 
 | Paso | En | Comando o acción | Resultado esperado |
 |---|---|---|---|
-| 3.1 | A, B, C | Configuración → Colmena → hub: URL y código; o `colmena hub https://<dominio>/hub/` | «registrado» |
+| 3.1 | A, B, C | `colmena hub https://iproy.com.ar/colmena-hub <código>` (o Configuración → Colmena → hub) | «registrado» |
 | 3.2 | C | `colmena vincular <node_id-de-A>` (por id: lo resuelve el hub) | solicitud en el buzón de A |
 | 3.3 | A | `colmena lista` → comparar huella con C por teléfono → `colmena aceptar <id-de-C> CI` | activo, rol CI (solo consulta) |
 | 3.4 | C | Colmena → A → Inventario | C lee a A por el hub (RPC asíncrona: hasta 15 s) |
