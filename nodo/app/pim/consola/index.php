@@ -78,6 +78,6 @@ main,.tarjeta{min-width:0;max-width:100%}
 <main id="main"></main>
 <div class="velo" id="velo"></div>
 <aside class="panel" id="panel"></aside>
-<script src="app.js?v=1.4.0"></script>
+<script src="app.js?v=1.5.0"></script>
 </body>
 </html>

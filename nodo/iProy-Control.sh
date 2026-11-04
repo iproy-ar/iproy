@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.4.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.5.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -50,7 +50,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.4.0"
+VER="1.5.0"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -631,6 +631,8 @@ cmd_modulo() {
   esac
 }
 leer_clave() {
+  # Instalador gráfico (1.5.0): la contraseña llega por IPROY_CLAVE_NUEVA solo para este proceso; nunca se escribe en disco ni en logs
+  if [[ -n "${IPROY_CLAVE_NUEVA:-}" ]]; then printf '%s' "$IPROY_CLAVE_NUEVA"; unset IPROY_CLAVE_NUEVA; return; fi
   local a b
   read -r -s -p "Contraseña (mínimo 10 caracteres): " a; echo >&2
   read -r -s -p "Repetila: " b; echo >&2

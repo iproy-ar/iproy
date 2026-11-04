@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.4.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
+#  iProy-Control · iProy Portable «Colmena» · v1.5.0 · 03-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
@@ -29,7 +29,7 @@ param(
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.4.0'
+$VER = '1.5.0'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
@@ -577,6 +577,8 @@ function AsegurarNucleo {
   if ($u.ok -and @($u.usuarios).Count -eq 0) { Log 'Todavía no hay usuarios. Creá el administrador: iProy-Control.bat usuario alta admin AD' }
 }
 function LeerClave {
+  # Instalador gráfico (1.5.0): la contraseña llega por IPROY_CLAVE_NUEVA solo para este proceso; nunca se escribe en disco ni en logs
+  if ($env:IPROY_CLAVE_NUEVA) { $c = $env:IPROY_CLAVE_NUEVA; Remove-Item Env:IPROY_CLAVE_NUEVA; return $c }
   $a = Read-Host -AsSecureString 'Contraseña (mínimo 10 caracteres)'; $b = Read-Host -AsSecureString 'Repetila'
   $pa = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($a))
   $pb = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($b))

@@ -1,0 +1,298 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalador iProy</title>
+<style>
+:root{--az:#1565c0;--az2:#1e88e5;--cel:#e3f2fd;--tx:#0d2b4e;--gr:#5b7086;--ok:#2e7d32;--av:#ef6c00;--er:#c62828;--bo:#d6e4f5;--bl:#fff}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,sans-serif;color:var(--tx);background:linear-gradient(135deg,#e3f2fd 0%,#bbdefb 45%,#e8f1fb 100%);min-height:100vh}
+header{background:linear-gradient(120deg,#0d47a1,#1976d2 55%,#42a5f5);color:#fff;padding:18px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 18px rgba(13,71,161,.25)}
+header .logo{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-weight:800;font-size:20px}
+header h1{font-size:20px;margin:0}header p{margin:0;opacity:.85;font-size:13px}
+main{max-width:980px;margin:22px auto 40px;padding:0 16px}
+.pasos-ui{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.pasos-ui span{flex:1;min-width:120px;text-align:center;padding:8px 6px;border-radius:999px;background:rgba(255,255,255,.6);color:var(--gr);font-size:13px;font-weight:600;border:1px solid var(--bo)}
+.pasos-ui span.on{background:var(--az);color:#fff;border-color:var(--az)}
+.pasos-ui span.hecho{background:#c8e6c9;color:var(--ok);border-color:#a5d6a7}
+.tarjeta{background:var(--bl);border-radius:16px;padding:22px;box-shadow:0 6px 24px rgba(21,101,192,.12);border:1px solid var(--bo);margin-bottom:16px}
+.tarjeta h2{margin:0 0 6px;font-size:19px}.chico{color:var(--gr);font-size:13px}
+.grilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px}
+.dato{background:var(--cel);border-radius:12px;padding:10px 12px}
+.dato b{display:block;font-size:12px;color:var(--gr);font-weight:600}
+.dato span{font-weight:700}
+.estado-ok{color:var(--ok)}.estado-av{color:var(--av)}.estado-er{color:var(--er)}
+label{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--bo);border-radius:10px;font:inherit;background:#fbfdff}
+input:focus,select:focus{outline:2px solid var(--az2);border-color:transparent}
+.fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.opciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:6px}
+.op{border:2px solid var(--bo);border-radius:14px;padding:12px;cursor:pointer;transition:.15s;background:#fbfdff}
+.op:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(21,101,192,.15)}
+.op.sel{border-color:var(--az);background:#e8f1fd}
+.op b{display:block}.op small{color:var(--gr)}
+.mini{height:54px;border-radius:8px;margin-bottom:8px;background:#e3f2fd;position:relative;overflow:hidden}
+.mini.w::before{content:"";position:absolute;left:0;top:0;bottom:0;width:22%;background:#90caf9}
+.mini.w::after{content:"";position:absolute;left:28%;right:6%;top:10px;height:14px;border-radius:4px;background:#bbdefb;box-shadow:0 20px 0 #bbdefb}
+.mini.m::before{content:"";position:absolute;left:0;right:0;top:0;height:20px;background:linear-gradient(90deg,#1565c0,#42a5f5)}
+.mini.m::after{content:"";position:absolute;left:8%;right:8%;top:28px;height:16px;border-radius:4px;background:#bbdefb}
+.btns{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:11px 20px;cursor:pointer;transition:.15s}
+.pri{background:linear-gradient(120deg,#1565c0,#1e88e5);color:#fff;box-shadow:0 4px 12px rgba(21,101,192,.3)}
+.pri:hover{transform:translateY(-1px)}.pri:disabled{opacity:.5;cursor:default;transform:none}
+.sec{background:#e3f2fd;color:var(--az)}
+.aviso{border-left:4px solid var(--av);background:#fff3e0;padding:10px 12px;border-radius:8px;margin-top:10px;font-size:14px}
+.nota{border-left:4px solid var(--az2);background:#e3f2fd;padding:10px 12px;border-radius:8px;margin-top:10px;font-size:14px}
+.error{border-left:4px solid var(--er);background:#ffebee;padding:10px 12px;border-radius:8px;margin-top:10px;font-size:14px}
+.barra{height:16px;background:#e3f2fd;border-radius:999px;overflow:hidden;margin:12px 0 4px}
+.barra i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1e88e5,#42a5f5,#1e88e5);background-size:200% 100%;animation:mov 2s linear infinite;transition:width .4s}
+@keyframes mov{to{background-position:-200% 0}}
+.sub{font-size:13px;color:var(--gr);min-height:18px}
+ol.lista{list-style:none;padding:0;margin:14px 0 0}
+ol.lista li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px}
+ol.lista li.en_curso{background:#e8f1fd}
+.ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:13px;font-weight:800;background:#e0e0e0;color:#fff}
+.pendiente .ic{background:#cfd8dc}.en_curso .ic{background:var(--az2);animation:lat 1s infinite alternate}.ok .ic{background:var(--ok)}.aviso .ic{background:var(--av)}.error .ic{background:var(--er)}.saltado .ic{background:#90a4ae}
+@keyframes lat{to{transform:scale(1.15)}}
+.li-t{font-weight:600}.li-d{font-size:13px;color:var(--gr)}
+details{margin-top:12px}summary{cursor:pointer;color:var(--az);font-weight:600}
+pre{background:#0d2b4e;color:#e3f2fd;border-radius:10px;padding:12px;max-height:280px;overflow:auto;font-size:12px;white-space:pre-wrap}
+.modal{position:fixed;inset:0;background:rgba(13,43,78,.45);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.modal .tarjeta{max-width:560px;width:100%}
+.escudo{width:46px;height:46px;border-radius:12px;background:#fff3e0;color:var(--av);display:grid;place-items:center;font-size:24px;margin-bottom:8px}
+code{background:#e3f2fd;padding:1px 5px;border-radius:5px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bo);vertical-align:top}th{background:#e3f2fd}
+.oculto{display:none}
+.fuerza{height:6px;border-radius:999px;background:#eceff1;margin-top:6px;overflow:hidden}.fuerza i{display:block;height:100%;width:0;transition:.3s}
+@media (max-width:600px){header{padding:14px 16px}.tarjeta{padding:16px}}
+</style>
+</head>
+<body>
+<header><div class="logo">i</div><div><h1>Instalador de iProy</h1><p>Sistema de gestión de mantenimiento para hospitales y centros de salud · estándar PIM</p></div></header>
+<main>
+  <div class="pasos-ui"><span id="e1" class="on">1 · Tu PC</span><span id="e2">2 · Opciones</span><span id="e3">3 · Instalación</span><span id="e4">4 · Informe</span></div>
+
+  <section id="v1" class="tarjeta">
+    <h2>Revisamos tu PC</h2>
+    <p class="chico">Antes de instalar nada, el instalador mira tu sistema. No cambia nada todavía.</p>
+    <div id="sis" class="grilla"><div class="dato"><b>Estado</b><span>Revisando…</span></div></div>
+    <div id="sisAvisos"></div>
+    <div class="btns"><button class="pri" id="b1" disabled>Continuar</button></div>
+  </section>
+
+  <section id="v2" class="tarjeta oculto">
+    <h2>Elegí cómo querés tu sistema</h2>
+    <p class="chico">Todo se puede cambiar después desde el propio sistema.</p>
+    <label>¿Qué vas a instalar?</label>
+    <div class="opciones" id="opTipo">
+      <div class="op sel" data-v="base"><b>iProy</b><small>El sistema base, tal cual se publica.</small></div>
+      <div class="op" data-v="propio"><b>Mi propio producto</b><small>Con tu nombre, sigla y color (lo crea la incubadora).</small></div>
+    </div>
+    <div id="propio" class="oculto">
+      <div class="fila">
+        <div><label for="nombre">Nombre del producto</label><input id="nombre" placeholder="MantSur" maxlength="20"><div class="chico">Solo letras y números, sin espacios.</div></div>
+        <div><label for="sigla">Sigla (3 letras)</label><input id="sigla" placeholder="MSR" maxlength="3"></div>
+        <div><label for="color">Color</label><input id="color" type="color" value="#0277bd" style="height:44px;padding:4px"></div>
+      </div>
+      <label for="plantilla">Plantilla</label>
+      <select id="plantilla"><option value="gestion-mantenimiento">Gestión de mantenimiento completa (recomendada)</option><option value="mantenimiento-basico">Mantenimiento básico (órdenes, inventario, preventivos)</option><option value="monitoreo-industrial">Monitoreo industrial (telemetría, alarmas, MQTT, Modbus)</option></select>
+    </div>
+    <div class="fila">
+      <div><label for="inst">Nombre de tu institución o sector</label><input id="inst" placeholder="Mantenimiento Hospital X" maxlength="60"></div>
+      <div><label for="dest">Carpeta donde se instala</label><input id="dest"></div>
+    </div>
+    <label>¿Cómo querés ver el sistema?</label>
+    <div class="opciones" id="opVista">
+      <div class="op sel" data-v="widgets"><div class="mini w"></div><b>Vista widgets</b><small>Inicio con indicadores y menú lateral.</small></div>
+      <div class="op" data-v="menu"><div class="mini m"></div><b>Vista menú</b><small>Encabezado de color con los módulos arriba.</small></div>
+    </div>
+    <label>¿Quién lo usa?</label>
+    <div class="opciones" id="opModo">
+      <div class="op sel" data-v="local"><b>Solo esta PC</b><small>Ideal para probar. No abre nada a la red.</small></div>
+      <div class="op" data-v="lan"><b>La red de la institución</b><small>Celulares y otras PC de la red local. Pide permiso de administrador para el firewall.</small></div>
+    </div>
+    <div class="fila">
+      <div><label for="puerto">Puerto web</label><input id="puerto" type="number" value="8095" min="1024" max="65000"><div class="chico" id="puertoEst"></div></div>
+      <div><label for="usu">Usuario administrador</label><input id="usu" value="admin" maxlength="30"></div>
+    </div>
+    <div class="fila">
+      <div><label for="c1">Contraseña (mínimo 10)</label><input id="c1" type="password" autocomplete="new-password"><div class="fuerza"><i id="fz"></i></div></div>
+      <div><label for="c2">Repetila</label><input id="c2" type="password" autocomplete="new-password"><div class="chico" id="cEst"></div></div>
+    </div>
+    <div class="nota">📝 <b>Anotá la contraseña</b> antes de seguir. No queda escrita en ningún archivo ni en el informe.</div>
+    <div id="opErr"></div>
+    <div class="btns"><button class="sec" id="b2v">Atrás</button><button class="pri" id="b2">Instalar</button></div>
+  </section>
+
+  <section id="v3" class="tarjeta oculto">
+    <h2 id="t3">Instalando…</h2>
+    <p class="chico">Podés dejar esta ventana abierta. Las descargas grandes (servidor web y base de datos) pueden tardar varios minutos.</p>
+    <div class="barra"><i id="bar"></i></div>
+    <div style="display:flex;justify-content:space-between"><div class="sub" id="sub"></div><b id="pct">0 %</b></div>
+    <ol class="lista" id="lista"></ol>
+    <details><summary>Ver el detalle técnico</summary><pre id="log"></pre></details>
+    <div class="btns"><button class="pri oculto" id="b3">Ver el informe</button></div>
+  </section>
+
+  <section id="v4" class="oculto">
+    <div class="tarjeta" id="inf"></div>
+    <div class="btns"><button class="sec" id="bGuardar">Descargar informe</button><button class="pri" id="bAbrir">Abrir el sistema</button></div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="tarjeta">
+  <div class="escudo">🛡️</div>
+  <h2 id="mTit">Hace falta permiso de administrador</h2>
+  <p id="mTxt"></p>
+  <div id="mCmd" class="oculto"><p class="chico" id="mCmdAyuda">Si preferís hacerlo a mano, abrí una terminal y corré:</p><pre id="mCmdTxt"></pre></div>
+  <div class="btns"><button class="sec" id="mNo">Saltar este paso</button><button class="sec oculto" id="mHecho">Ya lo hice</button><button class="pri" id="mSi">Autorizar</button></div>
+</div></div>
+
+<script>
+'use strict';
+const T = new URLSearchParams(location.search).get('t') || '';
+const $ = (s) => document.querySelector(s);
+const api = async (m, u, b) => { const r = await fetch(u, { method: m, headers: { 'X-Token': T, 'Content-Type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }); if (!r.ok) throw new Error((await r.text()) || r.status); return r.json(); };
+const h = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let SIS = null, EST = null, opc = { tipo: 'base', vista: 'widgets', modo: 'local' }, preguntaVista = null, informeHTML = '';
+function etapa(n) { for (let i = 1; i <= 4; i++) { $('#v' + i).classList.toggle('oculto', i !== n); $('#e' + i).className = i < n ? 'hecho' : (i === n ? 'on' : ''); } scrollTo(0, 0); }
+function grupo(id, k) { document.querySelectorAll('#' + id + ' .op').forEach((o) => o.onclick = () => { document.querySelectorAll('#' + id + ' .op').forEach((x) => x.classList.remove('sel')); o.classList.add('sel'); opc[k] = o.dataset.v; if (k === 'tipo') $('#propio').classList.toggle('oculto', opc.tipo !== 'propio'); }); }
+grupo('opTipo', 'tipo'); grupo('opVista', 'vista'); grupo('opModo', 'modo');
+
+// ---------- 1 · sistema ----------
+function datoSis(t, v, cls = '') { return `<div class="dato"><b>${h(t)}</b><span class="${cls}">${h(v)}</span></div>`; }
+function recomendaciones(s, pasos) {
+  // Lo que conviene instalar o revisar, según la PC (se usa en la pantalla 1 y en el informe)
+  const r = [];
+  if (s.bloqueante) r.push(['error', 'No se puede instalar', s.bloqueante]);
+  if (s.so === 'windows' && s.es_admin) r.push(['aviso', 'Estás usando una cuenta de Administrador', 'Conviene instalar con tu usuario de siempre: así el sistema y el icono quedan en tu perfil. El instalador pide permiso solo cuando hace falta.']);
+  if (s.ram_gb && s.ram_gb < 4) r.push(['aviso', 'Memoria justa', `Tu PC tiene ${s.ram_gb} GB de RAM. Funciona, pero con 4 GB o más va más fluido.`]);
+  if (s.disco_libre_gb !== undefined && s.disco_libre_gb < 3) r.push(['error', 'Poco espacio en disco', `Quedan ${s.disco_libre_gb} GB libres; hacen falta al menos 3 GB.`]);
+  if (s.hora_desfase !== null && s.hora_desfase !== undefined && Math.abs(s.hora_desfase) > 60) r.push(['aviso', 'La hora de la PC no está bien', `Está desfasada ${s.hora_desfase} s. Las órdenes y los mensajes de los equipos llevan esta hora: el instalador ofrece corregirla.`]);
+  if (s.hora_desfase === null) r.push(['nota', 'Sin Internet para comparar la hora', 'Revisala a mano en la configuración del sistema.']);
+  (s.puertos_ocupados || []).forEach((p) => r.push(['aviso', `Puerto ${p} ocupado`, p === 3407 || p === 3307 ? '¿Tenés XAMPP u otro MySQL abierto? Cerralo antes de instalar.' : 'Elegí otro puerto web en las opciones.']));
+  if (!s.git) r.push(['nota', 'Git (opcional)', s.so === 'windows' ? 'No hace falta para instalar. Sirve para actualizar con «git pull»: winget install --id Git.Git -e --source winget' : 'No hace falta para instalar. Sirve para actualizar: instalalo con el gestor de paquetes de tu distribución (paquete «git»).']);
+  if (s.so === 'linux' && !s.pkexec) r.push(['nota', 'Sin ventana gráfica de permisos (pkexec)', 'Si algún paso necesita permiso de administrador, el instalador te muestra el comando para pegar en una terminal.']);
+  (pasos || []).filter((p) => p.estado === 'error' || p.estado === 'aviso' || (p.estado === 'saltado' && /falló|sin /i.test(p.detalle || ''))).forEach((p) => r.push([p.estado === 'error' ? 'error' : 'aviso', p.titulo, p.detalle || '']));
+  (s.extras || []).forEach((x) => r.push(['nota', x.titulo, x.texto]));
+  return r;
+}
+function cajas(r) { return r.map(([c, t, x]) => `<div class="${c === 'error' ? 'error' : (c === 'aviso' ? 'aviso' : 'nota')}"><b>${h(t)}.</b> ${h(x)}</div>`).join(''); }
+async function cargarSistema() {
+  try { SIS = await api('GET', '/api/sistema'); } catch (e) { $('#sis').innerHTML = datoSis('Error', e.message, 'estado-er'); return; }
+  const s = SIS;
+  $('#sis').innerHTML = [
+    datoSis('Sistema', s.so_nombre), datoSis('Arquitectura', s.arq, s.arq_ok ? 'estado-ok' : 'estado-er'),
+    datoSis('Usuario', s.usuario + (s.es_admin ? ' (administrador)' : '')), datoSis('Memoria', s.ram_gb ? s.ram_gb + ' GB' : '—'),
+    datoSis('Disco libre', s.disco_libre_gb !== undefined ? s.disco_libre_gb + ' GB' : '—', s.disco_libre_gb < 3 ? 'estado-er' : 'estado-ok'),
+    datoSis('Internet', s.internet ? 'Sí' : 'No', s.internet ? 'estado-ok' : 'estado-er'),
+    datoSis('Hora', s.hora_desfase === null ? 'sin referencia' : (Math.abs(s.hora_desfase) <= 60 ? 'Correcta' : `Desfase ${s.hora_desfase} s`), s.hora_desfase !== null && Math.abs(s.hora_desfase) > 60 ? 'estado-av' : 'estado-ok'),
+    datoSis(s.so === 'windows' ? 'PowerShell' : 'Python', s.motor),
+  ].join('');
+  $('#sisAvisos').innerHTML = cajas(recomendaciones(s, []));
+  $('#dest').value = s.destino_sugerido;
+  $('#b1').disabled = !!s.bloqueante || !s.internet && !s.sin_internet_ok;
+  if (!s.internet && !s.sin_internet_ok) $('#sisAvisos').innerHTML += cajas([['error', 'Sin Internet', 'El instalador baja el servidor web y la base de datos (unos 250 a 550 MB). Conectá la PC y volvé a abrirlo.']]);
+}
+$('#b1').onclick = () => etapa(2);
+$('#b2v').onclick = () => etapa(1);
+
+// ---------- 2 · opciones ----------
+$('#nombre').oninput = () => { const n = $('#nombre').value.replace(/[^A-Za-z0-9]/g, ''); $('#nombre').value = n; if (!$('#sigla').dataset.tocada) $('#sigla').value = n.slice(0, 3).toUpperCase(); };
+$('#sigla').oninput = () => { $('#sigla').dataset.tocada = 1; $('#sigla').value = $('#sigla').value.replace(/[^A-Za-z]/g, '').toUpperCase(); };
+$('#c1').oninput = $('#c2').oninput = () => {
+  const c = $('#c1').value; let f = Math.min(100, c.length * 6 + (/[A-Z]/.test(c) ? 15 : 0) + (/[0-9]/.test(c) ? 15 : 0) + (/[^A-Za-z0-9]/.test(c) ? 15 : 0));
+  $('#fz').style.width = f + '%'; $('#fz').style.background = f < 50 ? '#c62828' : (f < 80 ? '#ef6c00' : '#2e7d32');
+  $('#cEst').textContent = $('#c2').value ? ($('#c2').value === c ? '✔ coinciden' : '✘ no coinciden') : '';
+};
+let tPuerto; $('#puerto').oninput = () => { clearTimeout(tPuerto); tPuerto = setTimeout(async () => { try { const r = await api('GET', '/api/puerto?n=' + (+$('#puerto').value)); $('#puertoEst').innerHTML = r.libre ? '<span class="estado-ok">✔ libre</span>' : '<span class="estado-er">✘ ocupado por otro programa</span>'; } catch (e) {} }, 300); };
+$('#b2').onclick = async () => {
+  const o = { tipo: opc.tipo, vista: opc.vista, modo: opc.modo, nombre: $('#nombre').value.trim(), sigla: $('#sigla').value.trim(), color: $('#color').value, plantilla: $('#plantilla').value,
+    institucion: $('#inst').value.trim(), destino: $('#dest').value.trim(), puerto: +$('#puerto').value, usuario: $('#usu').value.trim(), clave: $('#c1').value };
+  const err = [];
+  if (o.tipo === 'propio' && !/^[A-Za-z][A-Za-z0-9]{1,19}$/.test(o.nombre)) err.push('El nombre del producto tiene que empezar con una letra y tener solo letras y números (2 a 20).');
+  if (o.tipo === 'propio' && !/^[A-Z]{3}$/.test(o.sigla)) err.push('La sigla tiene que tener 3 letras.');
+  if (o.tipo === 'propio' && o.nombre.toLowerCase() === 'iproy') err.push('Para usar el nombre iProy elegí «iProy» arriba.');
+  if (!o.institucion) err.push('Escribí el nombre de tu institución o sector.');
+  if (!o.destino) err.push('Indicá la carpeta de instalación.');
+  if (!(o.puerto >= 1024 && o.puerto <= 65000)) err.push('El puerto tiene que estar entre 1024 y 65000.');
+  if (!/^[a-z0-9._-]{3,30}$/i.test(o.usuario)) err.push('El usuario: 3 a 30 letras, números, punto, guion o guion bajo.');
+  if (o.clave.length < 10) err.push('La contraseña tiene que tener al menos 10 caracteres.');
+  if (o.clave !== $('#c2').value) err.push('Las contraseñas no coinciden.');
+  $('#opErr').innerHTML = err.length ? cajas(err.map((e) => ['error', 'Revisá', e])) : '';
+  if (err.length) return;
+  $('#b2').disabled = true;
+  try { await api('POST', '/api/iniciar', o); $('#c1').value = $('#c2').value = ''; etapa(3); seguir(); }
+  catch (e) { $('#opErr').innerHTML = cajas([['error', 'No se pudo empezar', e.message]]); $('#b2').disabled = false; }
+};
+
+// ---------- 3 · instalación ----------
+const ICON = { pendiente: '', en_curso: '…', ok: '✓', aviso: '!', error: '✕', saltado: '–' };
+function pintar(e) {
+  $('#bar').style.width = e.progreso + '%'; $('#pct').textContent = Math.round(e.progreso) + ' %';
+  $('#sub').textContent = e.sub || '';
+  $('#lista').innerHTML = e.pasos.map((p) => `<li class="${p.estado}"><div class="ic">${ICON[p.estado] || ''}</div><div><div class="li-t">${h(p.titulo)}</div>${p.detalle ? `<div class="li-d">${h(p.detalle)}</div>` : ''}</div></li>`).join('');
+  const lg = $('#log'), abajo = lg.scrollTop + lg.clientHeight >= lg.scrollHeight - 20; lg.textContent = (e.log || []).join('\n'); if (abajo) lg.scrollTop = lg.scrollHeight;
+  if (e.pregunta && (!preguntaVista || preguntaVista !== e.pregunta.id)) mostrarPregunta(e.pregunta);
+  if (!e.pregunta) { $('#modal').classList.remove('on'); preguntaVista = null; }
+  if (e.fase === 'terminado' || e.fase === 'error') { $('#t3').textContent = e.fase === 'terminado' ? (e.pasos.some((p) => p.estado === 'error') ? 'Instalación terminada con errores' : '¡Listo! Tu sistema está instalado') : 'La instalación se detuvo'; $('#b3').classList.remove('oculto'); $('#bar').style.animation = 'none'; }
+}
+function mostrarPregunta(p) {
+  preguntaVista = p.id; $('#mTit').textContent = p.titulo; $('#mTxt').textContent = p.texto;
+  $('#mCmd').classList.toggle('oculto', !p.comando); $('#mCmdTxt').textContent = p.comando || '';
+  $('#mCmdAyuda').textContent = SIS && SIS.so === 'windows' ? 'Si preferís hacerlo a mano: botón derecho sobre Inicio → «Windows PowerShell (administrador)» y pegá:' : 'Si preferís hacerlo a mano, abrí una terminal y pegá:';
+  $('#mHecho').classList.toggle('oculto', !p.manual); $('#mSi').classList.toggle('oculto', !!p.manual && !p.puede_elevar);
+  $('#modal').classList.add('on');
+}
+async function responder(r) { const id = preguntaVista; $('#modal').classList.remove('on'); try { await api('POST', '/api/responder', { id, respuesta: r }); } catch (e) {} }
+$('#mSi').onclick = () => responder('autorizar'); $('#mNo').onclick = () => responder('saltar'); $('#mHecho').onclick = () => responder('hecho');
+async function seguir() {
+  try { EST = await api('GET', '/api/estado'); pintar(EST); } catch (e) { $('#sub').textContent = 'Reconectando con el instalador…'; }
+  if (!EST || (EST.fase !== 'terminado' && EST.fase !== 'error')) setTimeout(seguir, 800); else armarInforme();
+}
+$('#b3').onclick = () => { etapa(4); };
+
+// ---------- 4 · informe ----------
+function armarInforme() {
+  const e = EST, s = e.sistema || SIS, i = e.instalacion || {};
+  const errores = e.pasos.filter((p) => p.estado === 'error').length;
+  const filas = e.pasos.map((p) => `<tr><td>${ICON[p.estado] || ''} ${h(p.titulo)}</td><td>${h({ ok: 'Correcto', aviso: 'Con aviso', error: 'Error', saltado: 'Saltado', pendiente: 'No se hizo', en_curso: 'Interrumpido' }[p.estado])}</td><td>${h(p.detalle || '')}</td><td>${p.segundos !== undefined ? p.segundos + ' s' : ''}</td></tr>`).join('');
+  const comp = (i.componentes || []).map((c) => `<tr><td>${h(c.nombre)}</td><td>${h(c.version || '')}</td><td><code>${h((c.sha256 || '').slice(0, 16))}</code></td></tr>`).join('');
+  const rec = recomendaciones(s, e.pasos);
+  informeHTML = `<h2>${errores ? '⚠️' : '✅'} Informe de instalación de ${h(i.producto || 'iProy')}</h2>
+  <p class="chico">Generado por el instalador ${h(e.version_instalador || '')} el ${h(new Date().toLocaleString('es-AR'))}. Guardado también en <code>${h(i.carpeta_informe || '')}</code>.</p>
+  ${errores ? `<div class="error"><b>${errores} paso(s) con error.</b> Revisá la tabla y las recomendaciones; podés volver a ejecutar el instalador eligiendo otra carpeta.</div>` : `<div class="nota"><b>Todo listo.</b> Entrá con el usuario <b>${h(i.usuario || '')}</b> en <a href="${h(i.url || '#')}" target="_blank">${h(i.url || '')}</a>.</div>`}
+  <h3>Tu PC</h3><table><tr><th>Dato</th><th>Valor</th></tr>
+  <tr><td>Sistema</td><td>${h(s.so_nombre)} (${h(s.arq)})</td></tr><tr><td>Usuario</td><td>${h(s.usuario)}${s.es_admin ? ' · administrador' : ''}</td></tr>
+  <tr><td>Memoria / disco libre</td><td>${h(s.ram_gb)} GB / ${h(s.disco_libre_gb)} GB</td></tr><tr><td>${s.so === 'windows' ? 'PowerShell' : 'Python'}</td><td>${h(s.motor)}</td></tr>
+  <tr><td>Git / PHP del sistema</td><td>${s.git ? 'Git ' + h(s.git) : 'sin Git'} · ${s.php ? 'PHP ' + h(s.php) : 'sin PHP (no hace falta)'}</td></tr>
+  <tr><td>Hora</td><td>${s.hora_desfase === null ? 'sin referencia' : 'desfase ' + h(s.hora_desfase) + ' s'}</td></tr></table>
+  <h3>Qué se instaló</h3><table><tr><th>Dato</th><th>Valor</th></tr>
+  <tr><td>Producto</td><td>${h(i.producto)} ${h(i.version || '')}</td></tr><tr><td>Carpeta</td><td><code>${h(i.carpeta || '')}</code></td></tr>
+  <tr><td>Dirección</td><td>${h(i.url || '')}</td></tr><tr><td>Vista / alcance</td><td>${h(i.vista === 'menu' ? 'menú' : 'widgets')} · ${h(i.modo === 'lan' ? 'red de la institución' : 'solo esta PC')}</td></tr>
+  <tr><td>Lanzador</td><td><code>${h(i.lanzador || '')}</code></td></tr></table>
+  ${comp ? `<table><tr><th>Componente</th><th>Versión</th><th>SHA-256 (16)</th></tr>${comp}</table>` : ''}
+  <h3>Pasos</h3><table><tr><th>Paso</th><th>Resultado</th><th>Detalle</th><th>Tiempo</th></tr>${filas}</table>
+  <h3>Herramientas extra y recomendaciones para esta PC</h3>${rec.length ? cajas(rec) : '<p>Nada más que instalar.</p>'}
+  <h3>Para el día a día</h3><table>
+  <tr><td>Iniciar</td><td>Doble clic en el icono <b>${h(i.producto || 'iProy')}</b> del escritorio, o <code>${h(i.cmd_start || '')}</code></td></tr>
+  <tr><td>Detener</td><td>${s.so === 'windows' ? '«Detener ' + h(i.producto || '') + '» en el menú Inicio, o ' : ''}<code>${h(i.cmd_stop || '')}</code></td></tr>
+  <tr><td>Estado y hora</td><td><code>${h(i.cmd_status || '')}</code></td></tr>
+  <tr><td>Desinstalar</td><td>Detener y borrar la carpeta <code>${h(i.carpeta || '')}</code> (antes copiá <code>data</code> si querés guardar los datos).</td></tr></table>
+  <p class="chico">Este informe no contiene contraseñas. Tutorial completo: https://iproy.com.ar/pim/instalar</p>`;
+  $('#inf').innerHTML = informeHTML;
+  api('POST', '/api/informe', { html: '<!doctype html><html lang="es"><meta charset="utf-8"><title>Informe de instalación</title><style>' + document.querySelector('style').textContent + '</style><body><main><div class="tarjeta">' + informeHTML + '</div></main></body></html>' }).catch(() => {});
+  $('#bAbrir').disabled = !i.url || errores > 0 && !i.url_ok;
+}
+$('#bAbrir').onclick = () => { if (EST && EST.instalacion && EST.instalacion.url) window.open(EST.instalacion.url, '_blank'); };
+$('#bGuardar').onclick = () => { const b = new Blob(['<!doctype html><html lang="es"><meta charset="utf-8"><title>Informe de instalación</title><style>' + document.querySelector('style').textContent + '</style><body><main><div class="tarjeta">' + informeHTML + '</div></main></body></html>'], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'informe_instalacion_iproy.html'; a.click(); };
+
+// Si se recarga la página a mitad de la instalación, retoma
+(async () => { await cargarSistema(); try { const e = await api('GET', '/api/estado'); if (e.fase && e.fase !== 'espera') { EST = e; etapa(e.fase === 'terminado' || e.fase === 'error' ? 3 : 3); seguir(); } } catch (x) {} })();
+</script>
+</body>
+</html>

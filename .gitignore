@@ -9,3 +9,4 @@ hub/config.php
 hub/datos/*.sqlite*
 *.part
 .DS_Store
+instalador/dist/

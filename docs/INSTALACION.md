@@ -19,6 +19,17 @@ El mismo camino sirve para instalar **iProy tal cual** (saltá el paso 3) o un *
 
 ---
 
+## Lo más fácil: el instalador gráfico (desde la 1.5.0)
+
+Se abre en el navegador, revisa la PC, te deja elegir el producto, la vista y el alcance, instala todo con una barra de avance, pide permiso de administrador solo si hace falta y termina con un informe de lo que conviene instalar en esa PC. **No hace falta Git ni PHP.**
+
+| Sistema | Descarga | Uso |
+|---|---|---|
+| Windows 10/11 | [Instalador-iProy-Windows.zip](https://github.com/iproy-ar/iproy/releases/latest/download/Instalador-iProy-Windows.zip) | Descomprimir y doble clic en `Instalar-iProy.bat`, con tu usuario de siempre |
+| Linux x86_64 | [instalar-iproy-linux.sh](https://github.com/iproy-ar/iproy/releases/latest/download/instalar-iproy-linux.sh) | `bash instalar-iproy-linux.sh`, sin sudo |
+
+Detalle en [`instalador/LEEME.md`](../instalador/LEEME.md). Las secciones A y B explican la instalación a mano, paso por paso.
+
 ## A. Linux
 
 Probado en EndeavourOS. Los paquetes cambian de nombre según la distribución; el resto es idéntico.

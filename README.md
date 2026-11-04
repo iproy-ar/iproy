@@ -17,7 +17,7 @@
 |---|---|---|
 | **Estándar PIM** | **0.9.3** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
 | **API PIM** | **1.3.0** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.3. |
-| **Software iProy** | **1.4.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Software iProy** | **1.5.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -30,6 +30,7 @@ El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «est
 
 ```
 iproy/
+├── instalador/      instalador gráfico universal (navegador + motor Python/PowerShell, informe final)
 ├── nodo/            distribución base: un nodo completo, portable (Linux y Windows), sin instalar nada en el sistema
 │   ├── app/nucleo/  el núcleo: módulos, bus, planificador, diario firmado, usuarios, /api/proc, colmena
 │   ├── app/pim/     Servidor PIM (FHIR R4) · app/app/ aplicación web · app/_iproy/ utilidades del nodo
@@ -48,7 +49,9 @@ iproy/
 
 ## En 5 minutos
 
-> Requisitos: `git`, `curl` y `php` (8.1+). En Arch/EndeavourOS también `libxcrypt-compat`. Tutorial completo para **Linux y Windows**, con los errores típicos resueltos: [docs/INSTALACION.md](docs/INSTALACION.md).
+> **¿Primera vez? Usá el instalador gráfico** (Windows y Linux, sin Git ni PHP): [Windows](https://github.com/iproy-ar/iproy/releases/latest/download/Instalador-iProy-Windows.zip) · [Linux](https://github.com/iproy-ar/iproy/releases/latest/download/instalar-iproy-linux.sh) · [cómo funciona](instalador/LEEME.md).
+>
+> Instalación a mano. Requisitos: `git`, `curl` y `php` (8.1+). En Arch/EndeavourOS también `libxcrypt-compat`. Tutorial completo para **Linux y Windows**, con los errores típicos resueltos: [docs/INSTALACION.md](docs/INSTALACION.md).
 
 <sub>🎓 [Tutorial: instalar un sistema PIM en Linux y Windows →](https://iproy.com.ar/pim/instalar)</sub>
 
@@ -102,7 +105,7 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.4.0 · 03-11-2026)
+## Estado (v1.5.0 · 03-11-2026)
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 

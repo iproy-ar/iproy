@@ -1,0 +1,62 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+# Instalador gráfico de iProy (Linux y Windows)
+
+<sub>🎓 [Tutorial de instalación en la web de capacitación →](https://iproy.com.ar/pim/instalar)</sub>
+
+El instalador se abre en el navegador y deja un nodo funcionando, con su usuario administrador. El recorrido tiene 4 pantallas:
+
+1. **Tu PC.** Revisa el sistema, la arquitectura, la memoria, el disco, Internet, la hora, los puertos, si hay Git o PHP y si la sesión es de administrador. No cambia nada.
+2. **Opciones.** Elegís:
+   - **iProy** o **tu propio producto** (nombre, sigla, color y plantilla, armado con la incubadora);
+   - la carpeta, la vista (widgets o menú), el alcance (solo esta PC o la red), el puerto, el usuario y la contraseña.
+3. **Instalación.** Barra de avance con los pasos, las descargas en MB y MB/s, y el detalle técnico desplegable. Si hace falta permiso de administrador, aparece un aviso que dice para qué, con los botones *Autorizar* y *Saltar*.
+4. **Informe.** Resume la PC, lo instalado (con SHA-256), cada paso con su resultado y su tiempo, las **herramientas extra recomendadas para esa PC** y los comandos del día a día. Se guarda en la carpeta del producto como HTML y JSON, junto con el registro técnico. No contiene contraseñas.
+
+## Descarga
+
+| Sistema | Archivo | Cómo se usa |
+|---|---|---|
+| Windows 10/11 | [`Instalador-iProy-Windows.zip`](https://github.com/iproy-ar/iproy/releases/latest/download/Instalador-iProy-Windows.zip) | Descomprimir y hacer doble clic en `Instalar-iProy.bat` **con tu usuario de siempre** |
+| Linux x86_64 | [`instalar-iproy-linux.sh`](https://github.com/iproy-ar/iproy/releases/latest/download/instalar-iproy-linux.sh) | `bash instalar-iproy-linux.sh` **sin sudo** (hace falta Python 3, que viene en las distribuciones de escritorio) |
+
+Cada versión publica `SHA256SUMS.txt` para comprobar la descarga.
+
+## Qué resuelve, según lo aprendido en las instalaciones reales
+
+| Problema de la primera instalación en Windows | Qué hace el instalador |
+|---|---|
+| Git o PHP no instalados; winget con el error `0x8a15000f` | No los necesita: baja el código como ZIP y corre la incubadora con el PHP de FrankenPHP |
+| A PHP le faltaba `mbstring` | FrankenPHP trae `mbstring` y `gd` |
+| Instalar como Administrador deja el icono en otro escritorio | Instala con tu usuario y avisa si la sesión es de administrador. Pide permiso solo para lo que lo necesita |
+| PowerShell en otra carpeta; `bash` que abre WSL | No hay que escribir comandos |
+| Contraseña que no se ve mientras se escribe | Se escribe dos veces en la pantalla, con un indicador de fortaleza y la confirmación de que coinciden |
+
+**Pasos que piden permiso, y solo si hacen falta:**
+- firewall, en modo red;
+- sincronizar la hora, si se desfasó más de 60 s;
+- librerías que faltan para MariaDB en Linux (`libxcrypt-compat`, `libaio`, etc., según la distribución);
+- Visual C++ 2015-2022 en Windows, que se baja del sitio de Microsoft y se instala solo si su firma digital es válida.
+
+En Linux se usa `pkexec` (la ventana de contraseña del sistema). Sin entorno gráfico, el instalador muestra el comando para pegar en una terminal.
+
+## Para desarrollar
+
+| Archivo | Qué es |
+|---|---|
+| `ui.html` | La interfaz (única para los dos sistemas) |
+| `instalador.py` | Motor para Linux (Python 3, sin dependencias externas) |
+| `instalador.ps1` | Motor para Windows (PowerShell 5.1 o superior; servidor `TcpListener`, que no requiere permisos) |
+| `armar.sh` | Arma `dist/` con la interfaz embebida y `SHA256SUMS.txt` |
+
+**Variables de entorno para pruebas:**
+- `IPROY_INST_CODIGO`: carpeta o ZIP local con el repositorio.
+- `IPROY_INST_CACHE`: carpeta de descargas.
+- `IPROY_INST_SIMULAR=1` (solo Windows): recorre todo sin instalar nada.
+- `IPROY_INST_PERMITIR_ROOT=1`: para contenedores de prueba.
+
+**Prueba de punta a punta (Linux):**
+- el instalador, manejado desde la interfaz con Chromium, armó un producto incubado («SaludNorte»);
+- se ingresó con la contraseña elegida;
+- `pruebas/pim.sh` y `pruebas/mem.sh` dieron 61/61 y 27/27 sobre ese nodo.
+
+En Windows se probó la interfaz completa en modo simulado, incluido el pedido de permiso. **La primera corrida real en una PC con Windows está pendiente.**

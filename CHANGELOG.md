@@ -1,8 +1,15 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
-## Sin publicar
+## 1.5.0 · 03-11-2026 — Instalador gráfico universal (Linux y Windows)
 
+- **Instalador gráfico** (`instalador/`): se abre en el navegador y guía en 4 pantallas: revisión de la PC, opciones, instalación con barra de avance e informe final. Se distribuye como un solo archivo por sistema (`instalar-iproy-linux.sh`, `Instalador-iProy-Windows.zip`), armado con `instalador/armar.sh` y publicado en la versión de GitHub.
+  - **Sin Git, sin PHP, sin winget:** baja el código como ZIP de la etiqueta y corre la incubadora con el PHP de FrankenPHP. Así se evitan los cuatro errores de la primera instalación en Windows (Paso 114).
+  - **Descargas verificadas con SHA-256:** FrankenPHP y MariaDB oficiales, con avance en MB y MB/s, reintentos y caché para no volver a bajar.
+  - **Permiso de administrador solo cuando hace falta**, con un aviso que explica para qué: firewall en modo red, sincronizar la hora, librerías que faltan en Linux (`pkexec` o el comando para pegar en una terminal) y Visual C++ en Windows (UAC; el instalador se verifica con su firma de Microsoft). Cada uno se puede saltar.
+  - **Informe final** (HTML, JSON y registro técnico en la carpeta del producto): datos de la PC, componentes con su SHA-256, resultado y tiempo de cada paso, herramientas extra recomendadas para esa PC y comandos del día a día. No contiene contraseñas.
+  - **Seguridad:** el servidor del instalador escucha solo en 127.0.0.1, con un token por sesión; la contraseña del administrador pasa al lanzador por una variable de entorno de ese proceso y nunca se escribe en disco ni en el registro.
+- **Lanzadores:** `usuario alta` y `usuario clave` aceptan la contraseña por `<PRODUCTO>_CLAVE_NUEVA` (para el instalador); sin esa variable siguen preguntando como siempre.
 - **Textos para hospitales y centros de salud:** la aplicación dice «La de la institución» y «El de la institución» (vista y fondo heredados), «Red de instituciones» en el menú, y los textos de ayuda nombran al hospital o centro de salud.
 
 ## 1.4.0 · 03-11-2026 — Canal cifrado, batería crítica y decisión humana (PIM 0.9.3, API 1.3.0)
