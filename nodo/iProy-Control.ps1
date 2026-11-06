@@ -1,8 +1,8 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.6.0 · 06-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
+#  iProy-Control · iProy Portable «Colmena» · v1.6.1 · 06-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
-#    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080]
+#    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080] [-PuertoDb 3407]   (sin -PuertoDb: el primero libre desde 3407)
 #    iProy-Control.bat init [-Vista widgets|menu] · vista widgets|menu · abrir | acceso-directo [--quitar] | diagnostico | instalar-mariadb | start | stop | status | importar-app | importar-datos | respaldo | verificar
 #    iProy-Control.bat fhir-cliente alta <id> <jwks.json> ["system/*.read"] | baja <id> | lista | demo | token <id> <clave.xml>
 #    iProy-Control.bat pim importar | pim cliente alta <id> <jwks.json> <GM|EJ|SO|FT|CI|RE> [organización] [alcances] | pim cliente baja <id> | pim cliente lista
@@ -23,17 +23,21 @@ param(
   [string]$Nombre = 'Nodo IPROY',
   [ValidateSet('local', 'lan')][string]$Modo = 'local',
   [int]$Puerto = 8080,
+  [int]$PuertoDb = 0,   # 1.6.1: puerto de MariaDB; 0 = el primero libre entre 3407 y 3499
   [ValidateSet('', 'widgets', 'menu')][string]$Vista = '',
   [switch]$NoAbrir
 )
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.6.0'
+$VER = '1.6.1'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
 $FP = Join-Path $FPDIR 'frankenphp.exe'
+# 1.6.1: PHP para Windows busca openssl.cnf en «C:\Program Files\Common Files\SSL», que no existe: sin él openssl_pkey_new
+# falla y el nodo no puede crear su clave ES384 (identidad del PIM, tokens). FrankenPHP trae uno en extras\ssl.
+if (-not $env:OPENSSL_CONF -and (Test-Path (Join-Path $FPDIR 'extras\ssl\openssl.cnf'))) { $env:OPENSSL_CONF = Join-Path $FPDIR 'extras\ssl\openssl.cnf' }
 $MDB = if ($env:IPROY_MARIADB_DIR) { $env:IPROY_MARIADB_DIR } else { Join-Path $RT 'mariadb' }
 $DATA = Join-Path $RAIZ 'data'
 $APP = Join-Path $RAIZ 'app'
@@ -80,6 +84,18 @@ function Nativo([string]$Exe, [string[]]$Arg, [string]$Log, [switch]$Append) {
   try { if ($Log) { if ($Append) { & $Exe @Arg *>> $Log } else { & $Exe @Arg *> $Log } } else { & $Exe @Arg *> $null } }
   finally { $ErrorActionPreference = $eap }
   return $LASTEXITCODE
+}
+# 1.6.1: puertos sin Get-NetTCPConnection (no existe fuera de Windows ni en Wine): se prueba abrir el puerto
+function PuertoLibre([int]$n) {
+  foreach ($ip in @([Net.IPAddress]::Loopback, [Net.IPAddress]::Any)) {
+    $l = New-Object Net.Sockets.TcpListener($ip, $n)
+    try { $l.Start(); $l.Stop() } catch { return $false }
+  }
+  return $true
+}
+function PuertoDbLibre {
+  for ($n = 3407; $n -le 3499; $n++) { if (PuertoLibre $n) { return $n } }
+  Fallo 'no hay ningún puerto libre entre 3407 y 3499 para MariaDB: indicá uno con -PuertoDb'
 }
 function Cliente([string]$base, [string]$sql, [switch]$Tolerante) {
   # -Tolerante: sigue ante errores (--force) y devuelve $true/$false en vez de cortar el script
@@ -268,8 +284,18 @@ function ExportarRaices {
     if ($vistos.Count -gt 0) { Escribir "$DATA\php\cacert.pem" $sb.ToString() }
   } catch { Log "aviso: no se pudieron exportar los certificados raíz de Windows ($($_.Exception.Message))" }
 }
+# 1.6.1: IPv4 de la PC sin depender de Get-NetIPAddress (falta en Wine y en algunas ediciones recortadas de Windows)
+function IpsLocales {
+  $l = @()
+  if (Get-Command Get-NetIPAddress -ErrorAction SilentlyContinue) { $l = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Object { $_.IPAddress }) }
+  else {
+    try { $l = @([Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | Where-Object { $_.OperationalStatus -eq 'Up' } |
+                 ForEach-Object { $_.GetIPProperties().UnicastAddresses } | Where-Object { $_.Address.AddressFamily -eq 'InterNetwork' } | ForEach-Object { $_.Address.ToString() }) } catch { }
+  }
+  return @($l | Where-Object { $_ -and $_ -notlike '127.*' -and $_ -notlike '169.254.*' } | Select-Object -Unique)
+}
 function EscribirIps {
-  $ips = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | ForEach-Object { '"' + $_.IPAddress + '"' })
+  $ips = @(IpsLocales | ForEach-Object { '"' + $_ + '"' })
   Escribir "$RUN\ips.json" ('{"ipv4":[' + ($ips -join ',') + '],"ts":"' + (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') + '"}')
   # Proxy del sistema (si el hospital usa uno): PHP no lo detecta solo
   try {
@@ -308,7 +334,7 @@ function CmdRed([string]$acc, [string]$m) {
     'estado' {
       ModoRed; EscribirIps
       Write-Host ("Nodo {0} · modo {1} · HTTP {2} · HTTPS {3}" -f $E.IPROY_NODE, $E.IPROY_MODO, $E.IPROY_PUERTO, $E.IPROY_PUERTO_TLS)
-      Write-Host ('  IP          ' + ((Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' }).IPAddress -join ' '))
+      Write-Host ('  IP          ' + ((IpsLocales) -join ' '))
       try { Write-Host ('  central     ' + (Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 "http://127.0.0.1:$($E.IPROY_PUERTO)/_iproy/red.php?estado=1").Content) } catch { Write-Host '  central     nodo detenido' }
       Write-Host "  panel       http://localhost:$($E.IPROY_PUERTO)/_iproy/red.php"
     }
@@ -436,16 +462,23 @@ function CmdInit {
     Write-Host '¿Cómo querés ver el sistema?'; Write-Host '  1) Vista widgets: inicio con indicadores y accesos rápidos por categoría'; Write-Host '  2) Vista menú:    encabezado de color con todos los módulos arriba'
     $r = Read-Host 'Elegí 1 o 2 [1]'; $script:Vista = if ($r -eq '2') { 'menu' } else { 'widgets' }
   }
+  $pdb = $PuertoDb
+  if ($pdb -gt 0) { if (-not (PuertoLibre $pdb)) { Fallo "el puerto $pdb (MariaDB) está ocupado: elegí otro con -PuertoDb o no lo indiques" } }
+  else { $pdb = PuertoDbLibre; if ($pdb -ne 3407) { Log "aviso: el puerto 3407 está ocupado (¿otro MySQL o MariaDB?); la base de este nodo usa el $pdb" } }
   $id = NodoId
-  Log "nodo nuevo: $id · «$Nombre» · modo $Modo · puerto $Puerto"
-  Escribir "$DATA\iproy.env" ("IPROY_NODE=$id`nIPROY_NOMBRE=""$Nombre""`nIPROY_MODO=$Modo`nIPROY_PUERTO=$Puerto`nIPROY_PUERTO_TLS=$($Puerto + 363)`nIPROY_DB_PORT=3407`nIPROY_VERSION=$VER`n")
+  Log "nodo nuevo: $id · «$Nombre» · modo $Modo · puerto $Puerto · base $pdb"
+  Escribir "$DATA\iproy.env" ("IPROY_NODE=$id`nIPROY_NOMBRE=""$Nombre""`nIPROY_MODO=$Modo`nIPROY_PUERTO=$Puerto`nIPROY_PUERTO_TLS=$($Puerto + 363)`nIPROY_DB_PORT=$pdb`nIPROY_VERSION=$VER`n")
   Escribir "$DATA\secrets.env" ("IPROY_DB_ROOT_PASS=$(Aleatorio 32)`nIPROY_DB_APP_PASS=$(Aleatorio 32)`nIPROY_TICK_TOKEN=$(Aleatorio 40)`nIPROY_SESSION_SECRET=$(Aleatorio 48)`n")
   Proteger "$DATA\secrets.env"
   Escribir "$DATA\node.json" ('{"node_id":"' + $id + '","nombre":"' + ($Nombre -replace '"', '') + '","confirmado":false,"alta_utc":"' + (Get-Date).ToUniversalTime().ToString('s') + 'Z","version":"' + $VER + '"}')
   CargarEnv
 
   Log 'creando la base de datos (mariadb-install-db)…'
-  if ((Nativo (Bin 'mariadb-install-db') @("--datadir=$DATA\mariadb", "--password=$($E.IPROY_DB_ROOT_PASS)", "--port=$($E.IPROY_DB_PORT)", '--silent') "$DATA\logs\install-db.log") -ne 0) {
+  # 1.6.1: sin tope, InnoDB reserva memoria virtual para un buffer pool de hasta 8 TB (innodb_buffer_pool_size_max).
+  # En Windows eso es instantáneo; en Wine tarda minutos y mysqld se cae a mitad del arranque («Can't write to mysqld's stdin»).
+  # La plantilla --config lo limita al crear la base, y my.ini lo limita en cada arranque.
+  Escribir "$DATA\mariadb-plantilla.ini" "[mysqld]`r`nloose-innodb_buffer_pool_size_max=1G`r`n"
+  if ((Nativo (Bin 'mariadb-install-db') @("--datadir=$DATA\mariadb", "--password=$($E.IPROY_DB_ROOT_PASS)", "--port=$($E.IPROY_DB_PORT)", "--config=$DATA\mariadb-plantilla.ini", '--silent') "$DATA\logs\install-db.log") -ne 0) {
     Get-Content "$DATA\logs\install-db.log" -Tail 20
     Fallo 'mariadb-install-db falló. Antes de reintentar, renombrá data\ (init no reutiliza una data\ a medio crear).'
   }
@@ -491,6 +524,7 @@ character-set-server=utf8mb4
 collation-server=utf8mb4_unicode_ci
 default-time-zone=-03:00
 innodb_buffer_pool_size=256M
+loose-innodb_buffer_pool_size_max=1G
 max_allowed_packet=64M
 [client]
 port=$($E.IPROY_DB_PORT)
@@ -653,8 +687,7 @@ function CmdStart {
     $sitios = "https://localhost:$($E.IPROY_PUERTO_TLS), https://127.0.0.1:$($E.IPROY_PUERTO_TLS)"
     if ($E.IPROY_MODO -eq 'lan') {
       $env:IPROY_BIND = '0.0.0.0'
-      Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } |
-        ForEach-Object { $sitios += ", https://$($_.IPAddress):$($E.IPROY_PUERTO_TLS)" }
+      IpsLocales | ForEach-Object { $sitios += ", https://$($_):$($E.IPROY_PUERTO_TLS)" }
       $sitios += ", https://nodo-$($E.IPROY_NODE.ToLower()).local:$($E.IPROY_PUERTO_TLS)"
     } else { $env:IPROY_BIND = '127.0.0.1' }
     $env:IPROY_TLS_SITIOS = $sitios
@@ -897,9 +930,9 @@ function CmdDiagnostico {
   $vc = @('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll') | Where-Object { -not (Test-Path "$FPDIR\$_") -and -not (Test-Path "$MDB\bin\$_") -and -not (Test-Path "$env:WINDIR\System32\$_") }
   Chk (-not $vc) 'DLL de Visual C++ 2015-2022 disponibles' "Faltan: $($vc -join ', '). Se copian solas desde MariaDB al iniciar, o instalá vc_redist.x64.exe"
   foreach ($x in 'pdo_mysql', 'mbstring', 'openssl', 'sodium', 'intl', 'curl', 'zip', 'gd') { if (-not (Test-Path "$FPDIR\ext\php_$x.dll")) { Chk $false "Extensión PHP $x" 'El ZIP de FrankenPHP está incompleto: volvé a bajarlo' } }
-  $puertos = @(8080, 8443, 3407); if (Test-Path "$DATA\iproy.env") { CargarEnv; $puertos = @([int]$E.IPROY_PUERTO, [int]$E.IPROY_PUERTO_TLS, [int]$E.IPROY_DB_PORT) }
+  $puertos = @(8080, 8443); if (Test-Path "$DATA\iproy.env") { CargarEnv; $puertos = @([int]$E.IPROY_PUERTO, [int]$E.IPROY_PUERTO_TLS, [int]$E.IPROY_DB_PORT) }   # sin nodo, init elige solo el puerto de la base
   foreach ($pt in $puertos) {
-    $usado = [bool](Get-NetTCPConnection -State Listen -LocalPort $pt -ErrorAction SilentlyContinue)
+    $usado = -not (PuertoLibre $pt)
     $nuestro = $false; if ($usado -and (Test-Path "$DATA\iproy.env")) { $nuestro = (Vivo 'mariadb') -or (Vivo 'frankenphp') }
     Chk ((-not $usado) -or $nuestro) "Puerto $pt libre" "Otro programa (¿XAMPP, otro MySQL?) usa el puerto ${pt}: cerralo o cambiá el puerto en data\iproy.env"
   }

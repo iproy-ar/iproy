@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
-$VERSION = '1.6.0'
+$VERSION = '1.6.1'
 $UI_B64 = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
 $UNINSTALL_B64 = '__UNINSTALL_PS1_B64__'   # ídem: plantilla del desinstalador (plantillas\uninstall.ps1)
 $AQUI = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -26,7 +26,7 @@ $TOKEN = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) }
 $S = [hashtable]::Synchronized(@{
     fase = 'espera'; pasos = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); progreso = 0; sub = ''
     log = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); pregunta = $null; respuesta = $null
-    sistema = $null; instalacion = @{}; version_instalador = $VERSION; plantilla_uninstall = ''
+    sistema = $null; instalacion = @{}; version_instalador = $VERSION; plantilla_uninstall = ''; resultado = ''
   })
 
 function EsWindows { return ($env:OS -eq 'Windows_NT') }
@@ -71,7 +71,11 @@ function Sistema {
   $si.hora_desfase = DesfaseHora
   $si.vcredist = $(if ($win) { Test-Path "$env:WINDIR\System32\vcruntime140.dll" } else { $true })
   $si.destino_sugerido = Join-Path $HOME 'Proyectos\pim'
-  foreach ($p in 8095, 3407) { if (-not (PuertoLibre $p)) { $si.puertos_ocupados += $p } }
+  foreach ($p in @(8095)) { if (-not (PuertoLibre $p)) { $si.puertos_ocupados += $p } }
+  # 1.6.1: la base ya no exige el 3407: el nodo toma el primero libre entre 3407 y 3499
+  $si.puerto_db = 0; for ($n = 3407; $n -le 3499; $n++) { if (PuertoLibre $n) { $si.puerto_db = $n; break } }
+  if ($si.puerto_db -eq 0) { $si.puertos_ocupados += 3407 }
+  elseif ($si.puerto_db -ne 3407) { $si.extras += @{ titulo = 'Otra base de datos en el equipo'; texto = "El puerto 3407 está ocupado (¿otro MySQL o MariaDB?). No hace falta cerrarlo: la base de este sistema va a usar el $($si.puerto_db)." } }
   if ($win) { try { $pol = Get-ExecutionPolicy -Scope MachinePolicy; if ($pol -in @('Restricted', 'AllSigned')) { $si.extras += @{ titulo = 'Política de scripts del equipo'; texto = "La política de grupo ($pol) puede bloquear el sistema. Si algo no arranca, pedile a TI que permita scripts firmados localmente." } } } catch { } }
   if (-not $si.vcredist) { $si.extras += @{ titulo = 'Visual C++ 2015-2022'; texto = 'No está instalado en Windows. El sistema usa una copia propia; si hiciera falta, el instalador ofrece instalarlo (pide permiso de administrador).' } }
   if (-not $si.arq_ok) { $si.bloqueante = "El nodo necesita Windows de 64 bits (x64); este equipo es $($si.arq)." }
@@ -165,12 +169,43 @@ $TRABAJO = {
     if ($SIMULAR) { Start-Sleep -Milliseconds 700; Log '  (simulado)'; return @{ codigo = 0; salida = 'rol: AD sin problemas' } }
     $antes = @{}; if ($envExtra) { foreach ($k in $envExtra.Keys) { $antes[$k] = [Environment]::GetEnvironmentVariable($k); [Environment]::SetEnvironmentVariable($k, $envExtra[$k]) } }
     $lineas = New-Object System.Collections.ArrayList
+    # 1.6.1: la salida va a un archivo y se espera a que TERMINE EL PROCESO, no a que se cierre la tubería.
+    # Con «& powershell.exe ... | ForEach-Object» el paso «start» no terminaba nunca: MariaDB, FrankenPHP y los
+    # residentes heredan la tubería y la mantienen abierta mientras el sistema funciona.
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ('iproy-paso-' + [guid]::NewGuid().ToString('N'))
+    $out = "$tmp.out"; $err = "$tmp.err"; $vacio = "$tmp.in"; [IO.File]::WriteAllText($vacio, '')
+    $pos = @{ $out = 0L; $err = 0L }; $resto = @{ $out = ''; $err = '' }
+    $leer = {
+      param([bool]$final)
+      foreach ($f in @($out, $err)) {
+        if (-not (Test-Path $f)) { continue }
+        try {
+          $fs = New-Object IO.FileStream($f, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]'ReadWrite, Delete')
+          try { [void]$fs.Seek($pos[$f], 'Begin'); $buf = New-Object byte[] ([math]::Max(0, $fs.Length - $pos[$f])); $n = $fs.Read($buf, 0, $buf.Length); $pos[$f] += $n }
+          finally { $fs.Close() }
+        } catch { continue }
+        $txt = $resto[$f] + [Console]::OutputEncoding.GetString($buf, 0, $n)
+        $partes = $txt -split "`r?`n"
+        if ($final) { $resto[$f] = '' } else { $resto[$f] = $partes[-1]; $partes = @($partes | Select-Object -SkipLast 1) }
+        foreach ($l in $partes) {
+          if ($final -and $l -eq '') { continue }
+          if ($secreto) { $l = $l.Replace($secreto, '•••') }
+          [void]$lineas.Add($l); Log ('  ' + $l); if ($l.Length -gt 140) { $S.sub = $l.Substring(0, 140) } elseif ($l) { $S.sub = $l }
+        }
+      }
+    }
     try {
-      Push-Location $cwd
-      & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ps1 @argumentos 2>&1 | ForEach-Object {
-        $l = "$_"; if ($secreto) { $l = $l.Replace($secreto, '•••') }; [void]$lineas.Add($l); Log ('  ' + $l); if ($l.Length -gt 140) { $S.sub = $l.Substring(0, 140) } else { $S.sub = $l } }
-      $rc = $LASTEXITCODE
-    } finally { Pop-Location; if ($envExtra) { foreach ($k in $envExtra.Keys) { [Environment]::SetEnvironmentVariable($k, $antes[$k]) } } }
+      $q = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $ps1) + $argumentos | ForEach-Object { if ("$_" -match '[\s"]' -or "$_" -eq '') { '"' + ("$_" -replace '"', '\"') + '"' } else { "$_" } }
+      $p = Start-Process -FilePath 'powershell.exe' -ArgumentList ($q -join ' ') -WorkingDirectory $cwd -NoNewWindow -PassThru `
+           -RedirectStandardOutput $out -RedirectStandardError $err -RedirectStandardInput $vacio
+      $null = $p.Handle   # sin esto, ExitCode puede quedar vacío al terminar (Start-Process -PassThru)
+      while (-not $p.HasExited) { & $leer $false; Start-Sleep -Milliseconds 300 }
+      $p.WaitForExit(); & $leer $true
+      $rc = $p.ExitCode
+    } finally {
+      if ($envExtra) { foreach ($k in $envExtra.Keys) { [Environment]::SetEnvironmentVariable($k, $antes[$k]) } }
+      foreach ($f in @($out, $err, $vacio)) { Remove-Item -Force $f -ErrorAction SilentlyContinue }   # si un servicio lo tiene abierto, queda en TEMP
+    }
     return @{ codigo = $rc; salida = ($lineas -join "`n") }
   }
   function Extraer([string]$zip, [string]$dst) { New-Item -ItemType Directory -Force -Path $dst | Out-Null; [IO.Compression.ZipFile]::ExtractToDirectory($zip, $dst) }
@@ -255,7 +290,11 @@ $TRABAJO = {
     init = {
       $r = Correr $lanz @('init', '-Nombre', $O.institucion, '-Modo', $O.modo, '-Puerto', "$($O.puerto)", '-Vista', $O.vista) $raiz $null ''
       if ($r.codigo -ne 0) { throw 'init falló (ver el detalle técnico)' }
-      return "Nodo creado · vista $($O.vista) · icono en tu escritorio" }
+      $envf = Join-Path $raiz 'data\iproy.env'
+      if ((Test-Path $envf) -and ((Get-Content -Raw $envf) -match 'IPROY_DB_PORT=(\d+)')) { $i.puerto_db = [int]$matches[1] }
+      $extra = $(if ($i.puerto_db -and $i.puerto_db -ne 3407) { " · base en el puerto $($i.puerto_db)" } else { '' })
+      if ($r.salida -match 'no se pudo crear el acceso directo') { return @('aviso', "Nodo creado · vista $($O.vista)$extra · sin icono en el escritorio: después, $prod-Control.bat acceso-directo") }
+      return "Nodo creado · vista $($O.vista) · icono en tu escritorio$extra" }
     red = {
       if ($O.modo -ne 'lan') { return @('saltado', 'Solo esta PC: no hace falta abrir puertos') }
       $tls = [int]$O.puerto + 363
@@ -327,6 +366,9 @@ $TRABAJO = {
     [IO.File]::WriteAllText((Join-Path $dir "informe_instalacion_$marca.log"), ($S.log -join "`r`n"), (New-Object Text.UTF8Encoding $false))
     $i.carpeta_informe = $dir
   } catch { Log "No se pudo guardar el informe: $($_.Exception.Message)" }
+  # 1.6.1: «terminado» también cuando algo falló; el resultado lo dice (lo usan la interfaz y las pruebas automáticas)
+  $nerr = @($S.pasos | Where-Object { $_.estado -eq 'error' }).Count
+  $S.resultado = $(if ($nerr -gt 0) { 'con_errores' } else { 'ok' }); $i.pasos_con_error = $nerr
   $S.progreso = 100; $S.sub = ''; $S.fase = 'terminado'
 }
 
@@ -381,7 +423,7 @@ function LeerPedido($cli) {
 }
 function Estado {
   $pasos = @($S.pasos | ForEach-Object { $h = [ordered]@{}; foreach ($k in $_.Keys) { if (-not "$k".StartsWith('_')) { $h[$k] = $_[$k] } }; $h })
-  return [ordered]@{ fase = $S.fase; pasos = $pasos; progreso = $S.progreso; sub = $S.sub; log = @($S.log); pregunta = $S.pregunta; sistema = $S.sistema; instalacion = $S.instalacion; version_instalador = $S.version_instalador }
+  return [ordered]@{ fase = $S.fase; resultado = $S.resultado; pasos = $pasos; progreso = $S.progreso; sub = $S.sub; log = @($S.log); pregunta = $S.pregunta; sistema = $S.sistema; instalacion = $S.instalacion; version_instalador = $S.version_instalador }
 }
 function Atender($p) {
   $st = $p.stream; $ruta = ($p.ruta -split '\?')[0]

@@ -28,6 +28,8 @@ bash pruebas/colmena.sh nodo /tmp/colmen/Colmen-Portable http://127.0.0.1:8070
 
 Resultados del 06-11-2026 (iProy 1.6.0, nodo de desarrollo): unitarias 48/48, pim 70/70, mem 28/28, nucleo16 45/45, industrial 16/16 (sin simuladores).
 
+Resultados del 06-11-2026 (iProy 1.6.1, nodos recién instalados con los instaladores gráficos): Windows dentro de Wine (OviWine Soft) pim 70/70 y mem 28/28; Linux (EndeavourOS, base en el 3408) pim 70/70 y mem 28/28.
+
 Resultados del 02-11-2026 (iProy 1.1.0 y Colmen 0.2.0):
 
 - unitarias: 47/47;

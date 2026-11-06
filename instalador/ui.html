@@ -274,7 +274,7 @@ function armarInforme() {
   <h3>Qué se instaló</h3><table><tr><th>Dato</th><th>Valor</th></tr>
   <tr><td>Producto</td><td>${h(i.producto)} ${h(i.version || '')}</td></tr><tr><td>Carpeta</td><td><code>${h(i.carpeta || '')}</code></td></tr>
   <tr><td>Dirección</td><td>${h(i.url || '')}</td></tr><tr><td>Vista / alcance</td><td>${h(i.vista === 'menu' ? 'menú' : 'widgets')} · ${h(i.modo === 'lan' ? 'red de la institución' : 'solo esta PC')}</td></tr>
-  <tr><td>Lanzador</td><td><code>${h(i.lanzador || '')}</code></td></tr></table>
+  <tr><td>Lanzador</td><td><code>${h(i.lanzador || '')}</code></td></tr>${i.puerto_db ? `<tr><td>Base de datos</td><td>MariaDB en 127.0.0.1:${h(i.puerto_db)} (solo esta PC)</td></tr>` : ''}</table>
   ${comp ? `<table><tr><th>Componente</th><th>Versión</th><th>SHA-256 (16)</th></tr>${comp}</table>` : ''}
   <h3>Pasos</h3><table><tr><th>Paso</th><th>Resultado</th><th>Detalle</th><th>Tiempo</th></tr>${filas}</table>
   <h3>Herramientas extra y recomendaciones para esta PC</h3>${rec.length ? cajas(rec) : '<p>Nada más que instalar.</p>'}

@@ -18,7 +18,7 @@ import threading, time, urllib.request, webbrowser, zipfile
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-VERSION = '1.6.0'
+VERSION = '1.6.1'
 TAG = 'v' + VERSION
 URL_CODIGO = f'https://github.com/iproy-ar/iproy/archive/refs/tags/{TAG}.zip'
 FRANKEN = {'url': 'https://github.com/php/frankenphp/releases/download/v1.13.3/frankenphp-linux-x86_64',
@@ -42,7 +42,7 @@ GESTOR = {'arch': 'pacman -S --needed --noconfirm', 'fedora': 'dnf install -y', 
 # ------------------------------------------------------------------ estado compartido con la interfaz
 L = threading.Lock()
 E = {'fase': 'espera', 'pasos': [], 'progreso': 0, 'sub': '', 'log': [], 'pregunta': None, 'respuesta': None,
-     'sistema': None, 'instalacion': {}, 'version_instalador': VERSION}
+     'sistema': None, 'instalacion': {}, 'version_instalador': VERSION, 'resultado': ''}
 PASOS = [('carpeta', 'Preparar la carpeta'), ('runtime', 'Bajar el servidor web (FrankenPHP)'), ('codigo', 'Bajar el código de iProy'),
          ('producto', 'Armar el producto'), ('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), ('librerias', 'Revisar librerías del sistema'),
          ('init', 'Crear el nodo'), ('red', 'Abrir el acceso desde la red'), ('start', 'Arrancar el sistema'), ('usuario', 'Crear el usuario administrador'),
@@ -150,7 +150,12 @@ def sistema():
          'motor': 'Python ' + platform.python_version(), 'git': ver_cmd(['git', '--version']).replace('git version ', ''),
          'php': ver_cmd(['php', '-r', 'echo PHP_VERSION;']), 'pkexec': bool(shutil.which('pkexec')) and bool(os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')),
          'internet': internet(), 'hora_desfase': desfase_hora(), 'glibc': platform.libc_ver()[1],
-         'destino_sugerido': str(Path.home() / 'Proyectos' / 'pim'), 'puertos_ocupados': [p for p in (8095, 3407) if not puerto_libre(p)], 'extras': []}
+         'destino_sugerido': str(Path.home() / 'Proyectos' / 'pim'), 'puertos_ocupados': [p for p in (8095,) if not puerto_libre(p)], 'extras': []}
+    # 1.6.1: la base ya no exige el 3407: el nodo toma el primero libre entre 3407 y 3499
+    s['puerto_db'] = next((n for n in range(3407, 3500) if puerto_libre(n)), 0)
+    if not s['puerto_db']: s['puertos_ocupados'].append(3407)
+    elif s['puerto_db'] != 3407:
+        s['extras'].append({'titulo': 'Otra base de datos en el equipo', 'texto': f"El puerto 3407 está ocupado (¿otro MySQL o MariaDB?). No hace falta cerrarlo: la base de este sistema va a usar el {s['puerto_db']}."})
     if not s['arq_ok']: s['bloqueante'] = f'El nodo necesita una PC de 64 bits x86_64; esta es {arq}.'
     elif s['es_admin'] and not os.environ.get('IPROY_INST_PERMITIR_ROOT'): s['bloqueante'] = 'No ejecutes el instalador como root: usá tu usuario normal. Cuando haga falta, el instalador pide permiso.'
     elif libre < 3: s['bloqueante'] = f'Quedan {libre} GB libres en tu carpeta personal; hacen falta al menos 3 GB.'
@@ -340,9 +345,12 @@ def instalar(o):
         return ('aviso' if r == 'saltado' else 'error', f'Sin instalar: {cmd}')
 
     def p_init():
-        rc, _ = correr(['bash', lanz, 'init', '--nombre', o['institucion'], '--modo', o['modo'], '--puerto', str(o['puerto']), '--vista', o['vista']], cwd=raiz, pid='init')
+        pdb = next((n for n in range(3407, 3500) if puerto_libre(n)), 0)
+        if not pdb: raise RuntimeError('No hay ningún puerto libre entre 3407 y 3499 para la base de datos')
+        rc, _ = correr(['bash', lanz, 'init', '--nombre', o['institucion'], '--modo', o['modo'], '--puerto', str(o['puerto']), '--puerto-db', str(pdb), '--vista', o['vista']], cwd=raiz, pid='init')
         if rc != 0: raise RuntimeError('init falló (ver el detalle técnico)')
-        return f"Nodo creado · vista {o['vista']} · icono en el escritorio"
+        inst['puerto_db'] = pdb
+        return f"Nodo creado · vista {o['vista']} · icono en el escritorio" + (f' · base en el puerto {pdb}' if pdb != 3407 else '')
 
     def p_red():
         if o['modo'] != 'lan': return ('saltado', 'Solo esta PC: no hace falta abrir puertos')
@@ -416,7 +424,9 @@ def instalar(o):
                 if p['estado'] == 'pendiente': p['estado'] = 'saltado'; p['detalle'] = 'No se hizo porque falló un paso anterior'
             break
     guardar_informe_json()
-    with L: E['fase'] = 'terminado'; E['progreso'] = 100; E['sub'] = ''
+    # 1.6.1: «terminado» también cuando algo falló; el resultado lo dice (lo usan la interfaz y las pruebas automáticas)
+    nerr = sum(1 for p in E['pasos'] if p['estado'] == 'error')
+    with L: E['resultado'] = 'con_errores' if nerr else 'ok'; E['fase'] = 'terminado'; E['progreso'] = 100; E['sub'] = ''
 
 
 def guardar_informe_json(html=None):

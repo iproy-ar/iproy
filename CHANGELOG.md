@@ -1,6 +1,18 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.6.1 · 06-11-2026 — El instalador de Windows, probado de verdad (no simulado)
+
+Primera instalación real de punta a punta del instalador gráfico de Windows: dentro de Wine 11 (con OviWine Soft 0.2.1 y PowerShell 7.4) y, en paralelo, el de Linux en EndeavourOS. Aparecieron cinco fallas que la prueba simulada de la 1.6.0 no podía ver; las cinco afectan también a un Windows real o a una PC con otra base de datos.
+
+- **El instalador quedaba colgado para siempre en «Arrancar el sistema».** Leía la salida del lanzador por una tubería y esperaba a que se cerrara; MariaDB, FrankenPHP y los residentes la heredan y la mantienen abierta mientras el sistema funciona. Ahora la salida va a un archivo temporal, se muestra en vivo y se espera a que termine el proceso, no la tubería. El lanzador ya no puede quedarse esperando una respuesta por teclado (entrada vacía).
+- **El nodo no podía crear su clave ES384** («No se pudo crear la clave ES384 (openssl)»: fallaban el PIM, los tokens y MLLP sobre TLS). PHP para Windows busca `openssl.cnf` en una carpeta que no existe; el lanzador ahora usa el que trae FrankenPHP (`extras\ssl\openssl.cnf`) si no hay `OPENSSL_CONF`.
+- **La base de datos ya no exige el puerto 3407.** `init` toma el primero libre entre 3407 y 3499 (o el que se indique con `-PuertoDb`, como `--puerto-db` en Linux) y los dos instaladores lo informan: si hay otro MySQL o MariaDB abierto ya no hace falta cerrarlo. El informe muestra el puerto de la base.
+- **MariaDB en Wine:** `mariadb-install-db` y `mariadbd` arrancan con `innodb_buffer_pool_size_max=1G` (plantilla `--config` y `my.ini`). Sin ese tope InnoDB reserva memoria virtual para 8 TB: en Windows es instantáneo, pero en Wine tardaba minutos y la creación de la base se cortaba («Can't write to mysqld's stdin»). Con el tope la base se crea en 11 s.
+- **`start` en Wine:** las IP de la PC se leen sin `Get-NetIPAddress` cuando ese comando no existe (Wine, ediciones recortadas de Windows); el diagnóstico prueba los puertos abriéndolos, sin `Get-NetTCPConnection`.
+- El estado final del instalador trae `resultado` (`ok` o `con_errores`) además de `fase`, para las pruebas automáticas; si no se pudo crear el icono del escritorio, el paso «Crear el nodo» queda «con aviso» y dice cómo crearlo después.
+- Pruebas (nodo instalado con cada instalador, sin tocar nada a mano): **Windows en Wine** pim.sh 70/70 y mem.sh 28/28; **Linux** pim.sh 70/70 y mem.sh 28/28, con la base en el 3408 porque el 3407 estaba ocupado por el nodo de Windows.
+
 ## 1.6.0 · 06-11-2026 — Listas desplegables, stock del pañol y recuperación de la contraseña sin Internet
 
 Objetivo: que el usuario escriba lo menos posible y que nadie quede afuera de un nodo que trabaja sin Internet.
