@@ -116,7 +116,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
-| `pruebas/nucleo16.sh` (1.6.0): listas desplegables, recuperación de la contraseña sin Internet (códigos y clave temporal) y stock del pañol | 43/43 | |
+| `pruebas/nucleo16.sh` (1.6.0): listas desplegables, recuperación de la contraseña sin Internet (códigos y clave temporal), Ejecutor → responsable y stock del pañol | 45/45 | |
 | `herramientas/contrato.py`: especificación 0.9.4 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.3.1 | sin diferencias no declaradas | |
 | Especificación PIM 0.9.4 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
 | **Validador oficial de HL7** (IG Publisher con tx.fhir.org, en el CI): guía publicada en https://iproy-ar.github.io/iproy/ | **0 errores**, 132 advertencias (OID y marca «experimental» de los ValueSets, perfiles sin ejemplo) | |

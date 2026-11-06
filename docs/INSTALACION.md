@@ -30,6 +30,8 @@ Se abre en el navegador, revisa la PC, te deja elegir el producto, la vista y el
 
 Detalle en [`instalador/LEEME.md`](../instalador/LEEME.md). Las secciones A y B explican la instalación a mano, paso por paso.
 
+**Desinstalar (desde la 1.6.0):** en la carpeta del producto queda `uninstall-<Producto>.sh` (Linux) o `uninstall-<Producto>.bat` (Windows). Al ejecutarlo muestra qué va a hacer, pregunta si guardás una copia de los datos (recomendado) y pide confirmación; después detiene el nodo, quita los accesos directos, ofrece cerrar el puerto del firewall, borra la carpeta y deja un registro. Si instalaste a mano (secciones A y B), desinstalar es: `stop`, copiar `data/` si querés guardarla, `acceso-directo --quitar` y borrar la carpeta.
+
 ## A. Linux
 
 Probado en EndeavourOS. Los paquetes cambian de nombre según la distribución; el resto es idéntico.

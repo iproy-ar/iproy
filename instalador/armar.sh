@@ -4,14 +4,17 @@
 # Arma los instaladores gráficos de un solo archivo (la interfaz va embebida en base64):
 #   dist/instalar-iproy-linux.sh          (bash + Python 3, que traen todas las distribuciones de escritorio)
 #   dist/Instalador-iProy-Windows.zip     (Instalar-iProy.bat + Instalar-iProy.ps1 con BOM para PowerShell 5.1)
+#   Los dos llevan embebidas la interfaz y la plantilla del desinstalador (plantillas/).
 #   dist/SHA256SUMS.txt
 set -euo pipefail
 A="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; D="$A/dist"; rm -rf "$D"; mkdir -p "$D"
 UI="$(base64 -w0 "$A/ui.html")"
+USH="$(base64 -w0 "$A/plantillas/uninstall.sh")"
+UPS="$(base64 -w0 "$A/plantillas/uninstall.ps1")"
 VER="$(grep -m1 "^VERSION = " "$A/instalador.py" | cut -d"'" -f2)"
 
 # ---- Linux: un .sh que guarda el Python en la caché del usuario y lo ejecuta
-PY="$(sed "s|UI_EMBEBIDA = '__UI_HTML_B64__'|UI_EMBEBIDA = '$UI'|" "$A/instalador.py" | base64 -w0)"
+PY="$(sed -e "s|UI_EMBEBIDA = '__UI_HTML_B64__'|UI_EMBEBIDA = '$UI'|" -e "s|UNINSTALL_EMBEBIDO = '__UNINSTALL_SH_B64__'|UNINSTALL_EMBEBIDO = '$USH'|" "$A/instalador.py" | base64 -w0)"
 cat > "$D/instalar-iproy-linux.sh" <<EOF
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -33,7 +36,7 @@ chmod +x "$D/instalar-iproy-linux.sh"
 
 # ---- Windows: .bat (doble clic) + .ps1 con BOM (PowerShell 5.1 lee como ANSI los archivos sin BOM)
 W="$D/w"; mkdir -p "$W"
-{ printf '\xEF\xBB\xBF'; sed "s|\$UI_B64 = '__UI_HTML_B64__'|\$UI_B64 = '$UI'|" "$A/instalador.ps1" | sed '1s/^\xEF\xBB\xBF//'; } > "$W/Instalar-iProy.ps1"
+{ printf '\xEF\xBB\xBF'; sed -e "s|\$UI_B64 = '__UI_HTML_B64__'|\$UI_B64 = '$UI'|" -e "s|\$UNINSTALL_B64 = '__UNINSTALL_PS1_B64__'|\$UNINSTALL_B64 = '$UPS'|" "$A/instalador.ps1" | sed '1s/^\xEF\xBB\xBF//'; } > "$W/Instalar-iProy.ps1"
 printf '@echo off\r\nrem Instalador grafico de iProy %s - doble clic para empezar\r\ntitle Instalador de iProy\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%%~dp0Instalar-iProy.ps1" %%*\r\nif errorlevel 1 pause\r\n' "$VER" > "$W/Instalar-iProy.bat"
 printf 'Instalador de iProy %s para Windows 10/11\r\n\r\n1. Descomprimi esta carpeta (boton derecho > Extraer todo).\r\n2. Doble clic en Instalar-iProy.bat (con tu usuario de siempre, no como Administrador).\r\n3. Se abre el navegador: segui los pasos. Cuando haga falta, Windows pide permiso.\r\n\r\nNo hace falta instalar Git ni PHP. Tutorial: https://iproy.com.ar/pim/instalar\r\n' "$VER" > "$W/LEEME.txt"
 (cd "$W" && zip -q -X "$D/Instalador-iProy-Windows.zip" Instalar-iProy.bat Instalar-iProy.ps1 LEEME.txt)

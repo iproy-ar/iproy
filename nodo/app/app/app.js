@@ -313,7 +313,7 @@
         { t: 'Último ingreso', v: (u) => fecha(u.ultimo_ingreso) }], j.usuarios, (u) => editarUsuario(u, roles))}
       ${seccion('Nuevo usuario', form([{ n: 'usuario', t: 'Usuario', req: true, ph: 'ej.: ana.perez', ayuda: 'Minúsculas, números, punto o guion' }, { n: 'nombre', t: 'Nombre visible', req: true, ph: 'Ana Pérez' },
         { n: 'rol', t: 'Rol', tipo: 'select', op: roles.map(([k, t]) => [k, `${k} · ${t}`]), v: 'SO' },
-        { n: 'organizacion', t: 'Organización', tipo: 'opciones', cargar: opcionesOrg, vacio: '— ninguna —', ayuda: 'Obligatoria para un Ejecutor (empresa o área)' },
+        { n: 'organizacion', t: 'Empresa o área', tipo: 'opciones', cargar: opcionesOrg, vacio: '— ninguna / técnico propio —', ayuda: 'Un Ejecutor queda en la lista de «Responsable» de las órdenes: si no elegís una empresa, se crea una con su nombre' },
         { n: 'email', t: 'Correo (opcional)', tipo: 'email', ph: 'para recuperar la clave por enlace' }, { n: 'clave', t: 'Contraseña inicial', tipo: 'password', req: true, ayuda: '10 o más caracteres' },
         { n: 'cambiar_clave', t: 'Primer ingreso', tipo: 'check', v: true, ayudaCheck: 'Que elija su propia contraseña al entrar' }],
       'Crear usuario', async (d, m) => { await api('POST', 'usuarios', d); aviso(m, 'ok', 'Usuario creado.'); setTimeout(() => ir('usuarios'), 800); }))}</div>
@@ -321,7 +321,7 @@
   } });
   function editarUsuario(u, roles) {
     const p = panel('Usuario ' + u.usuario, `${form([{ n: 'nombre', t: 'Nombre visible', v: u.nombre, req: true }, { n: 'rol', t: 'Rol', tipo: 'select', op: roles.map(([k, t]) => [k, `${k} · ${t}`]), v: u.rol },
-        { n: 'organizacion', t: 'Organización', tipo: 'opciones', cargar: opcionesOrg, v: u.organizacion || '', vacio: '— ninguna —' }, { n: 'email', t: 'Correo', tipo: 'email', v: u.email || '' },
+        { n: 'organizacion', t: 'Empresa o área', tipo: 'opciones', cargar: opcionesOrg, v: u.organizacion || '', vacio: '— ninguna / técnico propio —', ayuda: u.rol === 'EJ' ? 'Es lo que aparece como «Responsable» al asignarle órdenes' : '' }, { n: 'email', t: 'Correo', tipo: 'email', v: u.email || '' },
         { n: 'activo', t: 'Estado', tipo: 'check', v: +u.activo, ayudaCheck: 'Puede ingresar' }], 'Guardar cambios', async (d, m) => {
           await api('PUT', 'usuarios/' + encodeURIComponent(u.usuario), d); aviso(m, 'ok', 'Guardado.'); setTimeout(() => { cerrar(); ir('usuarios'); }, 700); })}
       <h3>¿Olvidó su contraseña?</h3><p class="mini">Generá una <b>clave temporal</b> de un solo uso (vence en 72 h). Dásela en persona o por teléfono: al ingresar, el sistema le pide elegir una propia. Queda registrado en el diario firmado.</p>

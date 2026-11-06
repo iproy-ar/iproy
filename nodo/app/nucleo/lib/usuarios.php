@@ -98,12 +98,36 @@ function salir(): void { setcookie('nucleo_s', '', ['expires' => 1, 'path' => '/
 function validar_clave(string $c): void {
     if (mb_strlen($c) < 10) throw new Fallo(422, 'La contraseña debe tener al menos 10 caracteres');
 }
+/**
+ * Garantiza que la organización de un Ejecutor exista en el directorio PIM (pim-empresa), para que aparezca como
+ * «Responsable» al asignar una orden. Sin código, se arma uno a partir del usuario (EJ-ANA-PEREZ) con el nombre visible.
+ */
+function organizacion_ejecutor(string $usuario, string $nombre, string $codigo): string {
+    $codigo = trim($codigo);
+    if ($codigo === '') $codigo = 'EJ-' . strtoupper(trim(preg_replace('/[^A-Za-z0-9]+/', '-', sin_tildes($usuario)), '-'));
+    if (!preg_match('/^[A-Za-z0-9._-]{2,40}$/', $codigo)) throw new Fallo(422, 'Organización: código de 2 a 40 caracteres (letras, números, . _ -)');
+    $r = pim('GET', 'Organization?identifier=' . rawurlencode($codigo) . '&_count=1', null, ['rol' => 'GM']);
+    if (!empty($r['cuerpo']['entry'])) return $codigo;
+    $pc = json_decode((string) @file_get_contents(dirname(dir_datos()) . '/pim/config.json'), true) ?: [];
+    $ns = rtrim((string) ($pc['ns'] ?? 'https://iproy.com.ar/fhir'), '/'); if ($ns === 'https://iproy.com.ar/pim') $ns = 'https://iproy.com.ar/fhir';
+    $c = pim('POST', 'Organization', ['resourceType' => 'Organization', 'identifier' => [['system' => $ns . '/sid/empresa', 'value' => $codigo]],
+        'name' => mb_substr(trim($nombre) !== '' ? trim($nombre) : $codigo, 0, 120), 'active' => true,
+        'type' => [['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/organization-type', 'code' => 'bus']]]]], ['rol' => 'GM']);
+    if ($c['http'] >= 400) throw new Fallo(502, 'No se pudo crear la organización del Ejecutor en el PIM: ' . ($c['cuerpo']['issue'][0]['diagnostics'] ?? "HTTP {$c['http']}"));
+    asentar('usuario.organizacion', ['codigo' => $codigo, 'organization' => $c['cuerpo']['id'] ?? null], $usuario);
+    return $codigo;
+}
+
 function guardar_usuario(array $d, bool $nuevo): array {
     $u = (string) ($d['usuario'] ?? '');
     if (!preg_match('/^[a-z0-9._-]{3,60}$/', $u)) throw new Fallo(422, 'usuario: 3-60 caracteres (minúsculas, números, . _ -)');
     $rol = (string) ($d['rol'] ?? '');
     if ($nuevo || isset($d['rol'])) if (!isset(ROLES[$rol])) throw new Fallo(422, 'rol: ' . implode(' | ', array_keys(ROLES)));
-    if ($rol === 'EJ' && trim((string) ($d['organizacion'] ?? '')) === '') throw new Fallo(422, 'Un Ejecutor necesita su organización (código PIM de la empresa o área)');
+    // 1.6.0: un Ejecutor queda siempre en la lista de responsables de las órdenes: su organización se crea en el PIM si no existe
+    $rolEfectivo = $rol ?: (string) (valor('SELECT rol FROM nucleo_usuario WHERE usuario = ?', [$u]) ?? '');
+    if ($rolEfectivo === 'EJ' && ($nuevo || array_key_exists('organizacion', $d) || isset($d['rol'])))
+        $d['organizacion'] = organizacion_ejecutor($u, (string) ($d['nombre'] ?? (valor('SELECT nombre FROM nucleo_usuario WHERE usuario = ?', [$u]) ?? $u)),
+            (string) ($d['organizacion'] ?? (valor('SELECT organizacion FROM nucleo_usuario WHERE usuario = ?', [$u]) ?? '')));
     if ($nuevo) {
         if (fila('SELECT 1 FROM nucleo_usuario WHERE usuario = ?', [$u])) throw new Fallo(409, "Ya existe el usuario $u");
         validar_clave((string) ($d['clave'] ?? ''));

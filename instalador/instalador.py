@@ -30,6 +30,7 @@ REF_HORA = 'https://iproy.com.ar/'
 CACHE = Path(os.environ.get('IPROY_INST_CACHE') or Path.home() / '.cache' / 'iproy-instalador')
 AQUI = Path(__file__).resolve().parent
 UI_EMBEBIDA = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
+UNINSTALL_EMBEBIDO = '__UNINSTALL_SH_B64__'   # ídem: plantilla del desinstalador (plantillas/uninstall.sh)
 
 # Librerías que MariaDB necesita y el paquete que las trae en cada familia de distribuciones (L-395)
 LIBS = {'libcrypt.so.1': {'arch': 'libxcrypt-compat', 'fedora': 'libxcrypt-compat', 'suse': 'libcrypt1', 'debian': 'libcrypt1'},
@@ -45,8 +46,8 @@ E = {'fase': 'espera', 'pasos': [], 'progreso': 0, 'sub': '', 'log': [], 'pregun
 PASOS = [('carpeta', 'Preparar la carpeta'), ('runtime', 'Bajar el servidor web (FrankenPHP)'), ('codigo', 'Bajar el código de iProy'),
          ('producto', 'Armar el producto'), ('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), ('librerias', 'Revisar librerías del sistema'),
          ('init', 'Crear el nodo'), ('red', 'Abrir el acceso desde la red'), ('start', 'Arrancar el sistema'), ('usuario', 'Crear el usuario administrador'),
-         ('hora', 'Revisar la hora de la PC'), ('verificar', 'Comprobar que responde')]
-PESO = {'carpeta': 2, 'runtime': 22, 'codigo': 6, 'producto': 6, 'mariadb': 36, 'librerias': 2, 'init': 8, 'red': 2, 'start': 8, 'usuario': 3, 'hora': 2, 'verificar': 3}
+         ('hora', 'Revisar la hora de la PC'), ('verificar', 'Comprobar que responde'), ('desinstalador', 'Dejar el desinstalador')]
+PESO = {'carpeta': 2, 'runtime': 22, 'codigo': 6, 'producto': 6, 'mariadb': 36, 'librerias': 2, 'init': 8, 'red': 2, 'start': 8, 'usuario': 3, 'hora': 2, 'verificar': 3, 'desinstalador': 1}
 
 
 def log(t):
@@ -349,12 +350,13 @@ def instalar(o):
         if shutil.which('ufw'):
             _, out = correr(['sh', '-c', 'ufw status 2>/dev/null || true'])
             if 'inactive' in out or not out.strip(): return 'El firewall (ufw) está inactivo: no hace falta abrir puertos'
-            cmd = f'ufw allow {tls}/tcp && ufw allow 2575/tcp'
+            cmd = f'ufw allow {tls}/tcp && ufw allow 2575/tcp'; cerrar = f'ufw delete allow {tls}/tcp; ufw delete allow 2575/tcp'
         elif shutil.which('firewall-cmd'):
-            cmd = f'firewall-cmd --permanent --add-port={tls}/tcp && firewall-cmd --reload'
+            cmd = f'firewall-cmd --permanent --add-port={tls}/tcp && firewall-cmd --reload'; cerrar = f'firewall-cmd --permanent --remove-port={tls}/tcp && firewall-cmd --reload'
         else: return 'No se encontró un firewall activo conocido (ufw o firewalld)'
         r = elevar(f'Para que los celulares y otras PC de la red entren por https://<IP>:{tls}/ hay que abrir ese puerto en el firewall.', cmd, 'red')
-        return ('ok', f'Puerto {tls} abierto') if r in ('ok', 'hecho') else ('aviso', f'Sin abrir el puerto {tls}: {cmd}')
+        if r in ('ok', 'hecho'): inst['firewall_cerrar'] = cerrar; return ('ok', f'Puerto {tls} abierto')
+        return ('aviso', f'Sin abrir el puerto {tls}: {cmd}')
 
     def p_start():
         rc, out = correr(['bash', lanz, 'start', '--no-abrir'], cwd=raiz, pid='start')
@@ -383,8 +385,29 @@ def instalar(o):
             except Exception: time.sleep(2)
         return ('error', 'No responde en ' + inst['url'])
 
+    def p_desinstalador():
+        """Deja uninstall-<Producto>.sh (con todo lo registrado embebido) y uninstall-<Producto>.json en la carpeta del producto."""
+        slug = re.sub(r'[^a-z0-9]', '-', prod.lower()) + '-nodo'
+        archivos_base = sorted(f.name for f in (base / prod).iterdir() if f.is_file()) if (base / prod).exists() else []
+        rel = {'@@PROD@@': prod, '@@RAIZ@@': str(raiz), '@@LANZ@@': str(lanz), '@@BASE_PROD@@': str(base / prod), '@@CACHE@@': str(CACHE), '@@SLUG@@': slug,
+               '@@FW_CERRAR@@': inst.get('firewall_cerrar', ''), '@@PUERTO@@': str(o['puerto']), '@@FECHA@@': time.strftime('%d-%m-%Y %H:%M'), '@@VERSION@@': VERSION,
+               '@@NOMBRE@@': f'uninstall-{prod}.sh', '@@ARCHIVOS_BASE@@': ' '.join("'" + a.replace("'", "") + "'" for a in archivos_base)}
+        for k, v in rel.items():
+            if "'" in v and k not in ('@@ARCHIVOS_BASE@@',): raise RuntimeError(f'El valor de {k} tiene comilla simple')
+        txt = plantilla_uninstall()
+        for k, v in rel.items(): txt = txt.replace(k, v)
+        f = raiz / f'uninstall-{prod}.sh'; f.write_text(txt); f.chmod(0o755)
+        if subprocess.run(['bash', '-n', str(f)], capture_output=True).returncode != 0: raise RuntimeError('El desinstalador generado no pasa la verificación de sintaxis')
+        man = {'producto': prod, 'version': VERSION, 'instalado': time.strftime('%Y-%m-%d %H:%M'), 'carpeta': str(raiz), 'carpeta_producto': str(base / prod), 'lanzador': str(lanz),
+               'accesos': [str(Path.home() / '.local/share/applications' / f'{slug}.desktop'), f'<escritorio>/{slug}.desktop'], 'firewall_cerrar': inst.get('firewall_cerrar', ''),
+               'cache': str(CACHE), 'componentes': inst['componentes'], 'archivos_junto_a_la_carpeta': archivos_base, 'no_se_deshace': ['librerías del sistema', 'sincronización de hora (NTP)'],
+               'uso': f'bash {f.name}   (opciones: --si --sin-datos --destino-respaldo DIR --cache --conservar-firewall)'}
+        (raiz / f'uninstall-{prod}.json').write_text(json.dumps(man, ensure_ascii=False, indent=2))
+        inst['desinstalador'] = str(f); inst['cmd_uninstall'] = f'bash "{f}"'
+        return f'{f.name} (guarda los datos antes de borrar; --help para las opciones)'
+
     fn = {'carpeta': p_carpeta, 'runtime': p_runtime, 'codigo': p_codigo, 'producto': p_producto, 'mariadb': p_mariadb, 'librerias': p_librerias,
-          'init': p_init, 'red': p_red, 'start': p_start, 'usuario': p_usuario, 'hora': p_hora, 'verificar': p_verificar}
+          'init': p_init, 'red': p_red, 'start': p_start, 'usuario': p_usuario, 'hora': p_hora, 'verificar': p_verificar, 'desinstalador': p_desinstalador}
     criticos = {'carpeta', 'runtime', 'codigo', 'producto', 'init', 'start'}
     for pid, _ in PASOS:
         ok = etapa(pid, fn[pid])
@@ -412,6 +435,12 @@ def guardar_informe_json(html=None):
 
 # ------------------------------------------------------------------ servidor web local
 TOKEN = secrets.token_urlsafe(24)
+
+
+def plantilla_uninstall():
+    if not UNINSTALL_EMBEBIDO.startswith('__'):
+        import base64; return base64.b64decode(UNINSTALL_EMBEBIDO).decode('utf-8')
+    return (AQUI / 'plantillas' / 'uninstall.sh').read_text(encoding='utf-8')
 
 
 def ui():

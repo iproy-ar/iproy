@@ -35,6 +35,9 @@ echo "2) Usuario de prueba y códigos de recuperación"
 ORG="EJ-ORG-$S"; UU="ej$S"; C1="Ej-$(rnd)"
 A POST nucleo/usuario "{\"usuario\":\"$UU\",\"nombre\":\"Prueba $S\",\"rol\":\"EJ\",\"organizacion\":\"$ORG\",\"clave\":\"$C1\"}" >/dev/null
 ver "ingreso del usuario de prueba" "$(U POST sesion "{\"usuario\":\"$UU\",\"clave\":\"$C1\"}")" '"ok":true'
+ver "el Ejecutor queda como organización PIM (responsable asignable)" "$(U GET "pim/Organization?identifier=$ORG")" "\"value\":\"$ORG\""
+A POST nucleo/usuario "{\"usuario\":\"${UU}b\",\"nombre\":\"Tecnico Propio $S\",\"rol\":\"EJ\",\"clave\":\"$C1\"}" >/dev/null
+ver "Ejecutor sin empresa: se crea EJ-<usuario> con su nombre" "$(U GET "pim/Organization?identifier=EJ-$(echo "${UU}b" | tr a-z A-Z)")" "Tecnico Propio $S"
 ver "opciones de recuperación (pública)" "$(curl -s "$B/recuperar/opciones")" '"codigo":true'
 R=$(U POST sesion/codigos "{\"actual\":\"$C1\"}"); COD1=$(printf '%s' "$R" | js "d['codigos'][0]")
 ver "genera 8 códigos" "$(printf '%s' "$R" | js "len(d['codigos'])")" "8"

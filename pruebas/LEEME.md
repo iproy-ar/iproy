@@ -26,7 +26,7 @@ php -S 127.0.0.1:8070 -t hub &        # hub de relevo local
 bash pruebas/colmena.sh nodo /tmp/colmen/Colmen-Portable http://127.0.0.1:8070
 ```
 
-Resultados del 06-11-2026 (iProy 1.6.0, nodo de desarrollo): unitarias 48/48, pim 70/70, mem 28/28, nucleo16 43/43, industrial 16/16 (sin simuladores).
+Resultados del 06-11-2026 (iProy 1.6.0, nodo de desarrollo): unitarias 48/48, pim 70/70, mem 28/28, nucleo16 45/45, industrial 16/16 (sin simuladores).
 
 Resultados del 02-11-2026 (iProy 1.1.0 y Colmen 0.2.0):
 

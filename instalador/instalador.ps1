@@ -19,13 +19,14 @@ try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::
 
 $VERSION = '1.6.0'
 $UI_B64 = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
+$UNINSTALL_B64 = '__UNINSTALL_PS1_B64__'   # ídem: plantilla del desinstalador (plantillas\uninstall.ps1)
 $AQUI = Split-Path -Parent $MyInvocation.MyCommand.Path
 $TOKEN = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
 
 $S = [hashtable]::Synchronized(@{
     fase = 'espera'; pasos = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); progreso = 0; sub = ''
     log = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList)); pregunta = $null; respuesta = $null
-    sistema = $null; instalacion = @{}; version_instalador = $VERSION
+    sistema = $null; instalacion = @{}; version_instalador = $VERSION; plantilla_uninstall = ''
   })
 
 function EsWindows { return ($env:OS -eq 'Windows_NT') }
@@ -92,8 +93,8 @@ $TRABAJO = {
   $URL_CODIGO = "https://github.com/iproy-ar/iproy/archive/refs/tags/$TAG.zip"
   $CACHE = $(if ($env:IPROY_INST_CACHE) { $env:IPROY_INST_CACHE } else { Join-Path $env:LOCALAPPDATA 'iproy-instalador' })
   $SIMULAR = [bool]$env:IPROY_INST_SIMULAR
-  $PESO = @{ carpeta = 2; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6 }
-  $TOTAL = 0; foreach ($v in $PESO.Values) { $TOTAL += $v }
+  $PESO = @{ carpeta = 2; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6; desinstalador = 1 }
+  $PESO_TOTAL = 0; foreach ($v in $PESO.Values) { $PESO_TOTAL += $v }
   Add-Type -AssemblyName System.IO.Compression.FileSystem
 
   function Log([string]$t) { foreach ($l in ($t -split "`r?`n")) { [void]$S.log.Add((Get-Date -Format 'HH:mm:ss ') + $l) }; while ($S.log.Count -gt 400) { $S.log.RemoveAt(0) } }
@@ -103,11 +104,11 @@ $TRABAJO = {
         if ($estado -eq 'en_curso') { $p._t0 = Get-Date }
         elseif ($estado -and $p._t0) { $p.segundos = [int]((Get-Date) - $p._t0).TotalSeconds }
         if ($estado) { $p.estado = $estado }; if ($null -ne $detalle) { $p.detalle = $detalle } } }
-    $S.progreso = [math]::Round(100 * (Hecho) / $TOTAL, 1)
+    $S.progreso = [math]::Round(100 * (Hecho) / $PESO_TOTAL, 1)
   }
   function Sub([string]$t, $frac, [string]$id) {
     $S.sub = $t
-    if ($null -ne $frac -and $id) { $f = [math]::Max(0, [math]::Min(1, $frac)); $S.progreso = [math]::Round(100 * ((Hecho) + $PESO[$id] * $f) / $TOTAL, 1) }
+    if ($null -ne $frac -and $id) { $f = [math]::Max(0, [math]::Min(1, $frac)); $S.progreso = [math]::Round(100 * ((Hecho) + $PESO[$id] * $f) / $PESO_TOTAL, 1) }
   }
   function Preguntar([string]$titulo, [string]$texto, [string]$comando) {
     $id = [guid]::NewGuid().ToString('N').Substring(0, 8)
@@ -129,10 +130,10 @@ $TRABAJO = {
   function Sha([string]$f) { return (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() }
   function Bajar([string]$url, [string]$destino, [string]$sha, [string]$id, [string]$nombre, [long]$total) {
     New-Item -ItemType Directory -Force -Path $CACHE | Out-Null
-    $cache = Join-Path $CACHE ([IO.Path]::GetFileName(([Uri]$url).AbsolutePath))
-    if ((Test-Path $cache) -and $sha -and ((Sha $cache) -eq $sha)) { Log "${nombre}: ya estaba bajado y verificado ($($sha.Substring(0,16)))" }
+    $enCache = Join-Path $CACHE ([IO.Path]::GetFileName(([Uri]$url).AbsolutePath))
+    if ((Test-Path $enCache) -and $sha -and ((Sha $enCache) -eq $sha)) { Log "${nombre}: ya estaba bajado y verificado ($($sha.Substring(0,16)))" }
     else {
-      $tmp = "$cache.part"
+      $tmp = "$enCache.part"
       for ($i = 1; $i -le 3; $i++) {
         try {
           $req = [Net.HttpWebRequest]::Create($url); $req.UserAgent = "iproy-instalador/$($S.version_instalador)"; $req.Timeout = 60000
@@ -152,10 +153,10 @@ $TRABAJO = {
         } catch { Log "${nombre}: intento $i falló ($($_.Exception.Message))"; if ($i -eq 3) { throw "No se pudo bajar ${nombre}: $($_.Exception.Message)" }; Start-Sleep -Seconds (3 * $i) }
       }
       if ($sha) { $h = Sha $tmp; if ($h -ne $sha) { Remove-Item $tmp -Force; throw "${nombre}: el SHA-256 no coincide ($($h.Substring(0,16))); no se instala" }; Log "${nombre}: SHA-256 verificado ($($sha.Substring(0,16)))" }
-      Move-Item -Force $tmp $cache
+      Move-Item -Force $tmp $enCache
     }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destino) | Out-Null
-    if ($cache -ne $destino) { Copy-Item -Force $cache $destino }
+    if ($enCache -ne $destino) { Copy-Item -Force $enCache $destino }
     return $destino
   }
   function Correr([string]$ps1, [string[]]$argumentos, [string]$cwd, [hashtable]$envExtra, [string]$secreto) {
@@ -260,7 +261,7 @@ $TRABAJO = {
       $tls = [int]$O.puerto + 363
       $cmd = "New-NetFirewallRule -DisplayName '$prod (HTTPS $tls)' -Direction Inbound -Protocol TCP -LocalPort $tls -Action Allow -Profile Private | Out-Null"
       $e = Elevar "Para que los celulares y otras PC de la red entren por https://<IP>:$tls/ hay que permitir ese puerto en el firewall de Windows (solo redes privadas)." $cmd
-      if ($e -eq 'ok') { return "Puerto $tls permitido en redes privadas" } else { return @('aviso', "Sin permitir el puerto ${tls}: $cmd") } }
+      if ($e -eq 'ok') { $i.firewall_regla = "$prod (HTTPS $tls)"; return "Puerto $tls permitido en redes privadas" } else { return @('aviso', "Sin permitir el puerto ${tls}: $cmd") } }
     start = {
       $r = Correr $lanz @('start', '-NoAbrir') $raiz $null ''
       if ($r.codigo -ne 0) { throw 'start falló (ver el detalle técnico)' }
@@ -283,6 +284,30 @@ $TRABAJO = {
       if ($SIMULAR) { return 'Responde (simulado)' }
       for ($k = 0; $k -lt 20; $k++) { try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 ($i.url + 'app/'); $i.url_ok = $true; return "Responde en $($i.url)" } catch { Start-Sleep 2 } }
       return @('error', "No responde en $($i.url)") }
+    desinstalador = {
+      # uninstall-<Producto>.bat + .ps1 (con todo lo registrado embebido) + .json en la carpeta del producto
+      $baseProd = Join-Path $base $prod; $archivosBase = @()
+      if (Test-Path $baseProd) { $archivosBase = @(Get-ChildItem $baseProd -File | ForEach-Object { $_.Name }) }
+      $fw = ''; if ($i.firewall_regla) { $fw = $i.firewall_regla }
+      $rel = @{ '@@PROD@@' = $prod; '@@RAIZ@@' = $raiz; '@@LANZ@@' = $lanz; '@@BASE_PROD@@' = $baseProd; '@@CACHE@@' = $CACHE; '@@FW_NOMBRE@@' = $fw
+                '@@FECHA@@' = (Get-Date -Format 'dd-MM-yyyy HH:mm'); '@@VERSION@@' = $S.version_instalador; '@@NOMBRE@@' = "uninstall-$prod.ps1"; '@@NOMBRE_BAT@@' = "uninstall-$prod.bat"
+                '@@ARCHIVOS_BASE@@' = (($archivosBase | ForEach-Object { "'" + ($_ -replace "'", '') + "'" }) -join ', ') }
+      foreach ($k in $rel.Keys) { if ($k -ne '@@ARCHIVOS_BASE@@' -and "$($rel[$k])".Contains("'")) { throw "El valor de $k tiene comilla simple" } }
+      $txt = $S.plantilla_uninstall; foreach ($k in $rel.Keys) { $txt = $txt.Replace($k, "$($rel[$k])") }
+      $ps1 = Join-Path $raiz "uninstall-$prod.ps1"; $bat = Join-Path $raiz "uninstall-$prod.bat"
+      [IO.File]::WriteAllText($ps1, $txt, (New-Object Text.UTF8Encoding $true))
+      $errs = $null; $null = [Management.Automation.PSParser]::Tokenize($txt, [ref]$errs); if ($errs -and $errs.Count) { throw 'El desinstalador generado no pasa la verificación de sintaxis' }
+      $b = "@echo off`r`nrem Desinstalador de $prod - doble clic para empezar (con tu usuario de siempre)`r`ntitle Desinstalar $prod`r`n" +
+           "copy /y `"%~dp0uninstall-$prod.ps1`" `"%TEMP%\uninstall-$prod.ps1`" >nul`r`n" +
+           "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%TEMP%\uninstall-$prod.ps1`" %*`r`n"
+      [IO.File]::WriteAllText($bat, $b, [Text.Encoding]::ASCII)
+      $man = @{ producto = $prod; version = $S.version_instalador; instalado = (Get-Date -Format 'yyyy-MM-dd HH:mm'); carpeta = $raiz; carpeta_producto = $baseProd; lanzador = $lanz
+                accesos = @((Join-Path ([Environment]::GetFolderPath('Desktop')) "$prod.lnk"), (Join-Path ([Environment]::GetFolderPath('Programs')) $prod)); firewall_regla = $fw
+                cache = $CACHE; componentes = @($i.componentes); archivos_junto_a_la_carpeta = $archivosBase; no_se_deshace = @('Visual C++ 2015-2022', 'sincronización de hora')
+                uso = "uninstall-$prod.bat   (opciones: -Si -SinDatos -DestinoRespaldo D -Cache -ConservarFirewall)" }
+      [IO.File]::WriteAllText((Join-Path $raiz "uninstall-$prod.json"), ($man | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
+      $i.desinstalador = $bat; $i.cmd_uninstall = "uninstall-$prod.bat"
+      return "uninstall-$prod.bat (guarda los datos antes de borrar)" }
   }
   $criticos = @('carpeta', 'runtime', 'codigo', 'producto', 'mariadb', 'init', 'start')
   foreach ($id in $pasosFn.Keys) {
@@ -304,6 +329,10 @@ $TRABAJO = {
 }
 
 # ------------------------------------------------------------------ servidor web local (TcpListener: no necesita permisos)
+function PlantillaUninstall {
+  if (-not $UNINSTALL_B64.StartsWith('__')) { return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($UNINSTALL_B64)) }
+  return [IO.File]::ReadAllText((Join-Path $AQUI 'plantillas\uninstall.ps1'), [Text.Encoding]::UTF8)
+}
 function Ui {
   if (-not $UI_B64.StartsWith('__')) { return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($UI_B64)) }
   return [IO.File]::ReadAllText((Join-Path $AQUI 'ui.html'), [Text.Encoding]::UTF8)
@@ -373,10 +402,11 @@ function Atender($p) {
       $err = Validar $o; if ($err) { return Responder $st 422 (Json @{ error = $err }) }
       if (-not (PuertoLibre ([int]$o.puerto))) { return Responder $st 422 (Json @{ error = "El puerto $($o.puerto) está ocupado: elegí otro." }) }
       if (-not $S.sistema) { $S.sistema = Sistema }
-      $S.fase = 'instalando'
+      $S.fase = 'instalando'; $S.plantilla_uninstall = PlantillaUninstall
       foreach ($par in @(@('carpeta', 'Preparar la carpeta'), @('runtime', 'Bajar el servidor web (FrankenPHP)'), @('codigo', 'Bajar el código de iProy'), @('producto', 'Armar el producto'),
                          @('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), @('librerias', 'Revisar Windows y Visual C++'), @('init', 'Crear el nodo'), @('red', 'Abrir el acceso desde la red'),
-                         @('start', 'Arrancar el sistema'), @('usuario', 'Crear el usuario administrador'), @('hora', 'Revisar la hora de la PC'), @('verificar', 'Comprobar que responde'))) {
+                         @('start', 'Arrancar el sistema'), @('usuario', 'Crear el usuario administrador'), @('hora', 'Revisar la hora de la PC'), @('verificar', 'Comprobar que responde'),
+                         @('desinstalador', 'Dejar el desinstalador'))) {
         [void]$S.pasos.Add([hashtable]::Synchronized(@{ id = $par[0]; titulo = $par[1]; estado = 'pendiente'; detalle = '' })) }
       $rs = [runspacefactory]::CreateRunspace(); $rs.ApartmentState = 'STA'; $rs.Open()
       $ps = [powershell]::Create(); $ps.Runspace = $rs

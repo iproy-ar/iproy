@@ -12,6 +12,10 @@ El instalador se abre en el navegador y deja un nodo funcionando, con su usuario
 3. **Instalación.** Barra de avance con los pasos, las descargas en MB y MB/s, y el detalle técnico desplegable. Si hace falta permiso de administrador, aparece un aviso que dice para qué, con los botones *Autorizar* y *Saltar*.
 4. **Informe.** Resume la PC, lo instalado (con SHA-256), cada paso con su resultado y su tiempo, las **herramientas extra recomendadas para esa PC** y los comandos del día a día. Se guarda en la carpeta del producto como HTML y JSON, junto con el registro técnico. No contiene contraseñas.
 
+## Desinstalar
+
+El instalador deja en la carpeta del producto un **desinstalador** armado con lo que registró durante la instalación: `uninstall-<Producto>.sh` (Linux, `bash uninstall-iProy.sh`) o `uninstall-<Producto>.bat` (Windows, doble clic), más `uninstall-<Producto>.json` con el detalle. Es interactivo: muestra qué va a hacer, pregunta si guardás una copia de los datos (recomendado: `data/` comprimida en tu carpeta personal o Documentos, con SHA-256) y pide confirmación. Después detiene el nodo, quita los accesos directos, ofrece cerrar el puerto del firewall (pide permiso de administrador), borra la carpeta y deja un registro. Opciones para automatizar (`--help`): `--si`, `--sin-datos`, `--destino-respaldo DIR`, `--cache` (borra también las descargas que sirven para reinstalar) y `--conservar-firewall`; en Windows, las mismas con `-Si`, `-SinDatos`, `-DestinoRespaldo`, `-Cache`, `-ConservarFirewall`. No deshace lo que usan otros programas: librerías del sistema, Visual C++ y la sincronización de hora.
+
 ## Descarga
 
 | Sistema | Archivo | Cómo se usa |
@@ -46,7 +50,8 @@ En Linux se usa `pkexec` (la ventana de contraseña del sistema). Sin entorno gr
 | `ui.html` | La interfaz (única para los dos sistemas) |
 | `instalador.py` | Motor para Linux (Python 3, sin dependencias externas) |
 | `instalador.ps1` | Motor para Windows (PowerShell 5.1 o superior; servidor `TcpListener`, que no requiere permisos) |
-| `armar.sh` | Arma `dist/` con la interfaz embebida y `SHA256SUMS.txt` |
+| `plantillas/uninstall.sh`, `plantillas/uninstall.ps1` | Plantillas del desinstalador (el instalador las completa con lo registrado) |
+| `armar.sh` | Arma `dist/` con la interfaz y las plantillas embebidas, y `SHA256SUMS.txt` |
 
 **Variables de entorno para pruebas:**
 - `IPROY_INST_CODIGO`: carpeta o ZIP local con el repositorio.
@@ -57,6 +62,7 @@ En Linux se usa `pkexec` (la ventana de contraseña del sistema). Sin entorno gr
 **Prueba de punta a punta (Linux):**
 - el instalador, manejado desde la interfaz con Chromium, armó un producto incubado («SaludNorte»);
 - se ingresó con la contraseña elegida;
-- `pruebas/pim.sh` y `pruebas/mem.sh` dieron 70/70 y 28/28 sobre ese nodo.
+- `pruebas/pim.sh` y `pruebas/mem.sh` dieron 70/70 y 28/28 sobre ese nodo;
+- (1.6.0) el instalador de un solo archivo armó un producto incubado («PruebaDes») y su `uninstall-PruebaDes.sh` lo desinstaló: nodo detenido, `data/` guardada y verificada, accesos quitados, carpetas borradas.
 
 En Windows se probó la interfaz completa en modo simulado, incluido el pedido de permiso. **La primera corrida real en una PC con Windows está pendiente.**

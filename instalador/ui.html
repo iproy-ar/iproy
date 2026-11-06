@@ -282,7 +282,7 @@ function armarInforme() {
   <tr><td>Iniciar</td><td>Doble clic en el icono <b>${h(i.producto || 'iProy')}</b> del escritorio, o <code>${h(i.cmd_start || '')}</code></td></tr>
   <tr><td>Detener</td><td>${s.so === 'windows' ? '«Detener ' + h(i.producto || '') + '» en el menú Inicio, o ' : ''}<code>${h(i.cmd_stop || '')}</code></td></tr>
   <tr><td>Estado y hora</td><td><code>${h(i.cmd_status || '')}</code></td></tr>
-  <tr><td>Desinstalar</td><td>Detener y borrar la carpeta <code>${h(i.carpeta || '')}</code> (antes copiá <code>data</code> si querés guardar los datos).</td></tr></table>
+  <tr><td>Desinstalar</td><td>${i.desinstalador ? `Doble clic en <code>${h(i.desinstalador)}</code>${s.so === 'windows' ? '' : ' o <code>' + h(i.cmd_uninstall || '') + '</code>'}: detiene, guarda una copia de los datos, quita accesos y firewall y borra la carpeta.` : `Detener y borrar la carpeta <code>${h(i.carpeta || '')}</code> (antes copiá <code>data</code>).`}</td></tr></table>
   <p class="chico">Este informe no contiene contraseñas. Tutorial completo: https://iproy.com.ar/pim/instalar</p>`;
   $('#inf').innerHTML = informeHTML;
   api('POST', '/api/informe', { html: '<!doctype html><html lang="es"><meta charset="utf-8"><title>Informe de instalación</title><style>' + document.querySelector('style').textContent + '</style><body><main><div class="tarjeta">' + informeHTML + '</div></main></body></html>' }).catch(() => {});
