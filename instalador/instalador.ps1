@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
-$VERSION = '1.5.1'
+$VERSION = '1.6.0'
 $UI_B64 = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
 $AQUI = Split-Path -Parent $MyInvocation.MyCommand.Path
 $TOKEN = -join ((1..32) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })

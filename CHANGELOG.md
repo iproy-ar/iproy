@@ -1,10 +1,24 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
-## Sin publicar (próxima versión)
+## 1.6.0 · 06-11-2026 — Listas desplegables, stock del pañol y recuperación de la contraseña sin Internet
 
+Objetivo: que el usuario escriba lo menos posible y que nadie quede afuera de un nodo que trabaja sin Internet.
+
+- **Catálogos editables (listas desplegables)** en el núcleo (`nucleo_catalogo`, `nucleo_catalogo_valor`, migración 003): cada valor tiene un **código estable** y un texto que se puede corregir; nunca se borra, se desactiva. Vienen sembrados: unidades (SI y comerciales), tipos de mantenimiento (EN 13306), modos de falla (ISO 14224, 24 códigos), motivos de solicitud, rubros, fabricantes, frecuencias (el código son los días) y tipos de local. Los módulos suman los suyos en `modulo.json` (`"catalogos"`). El administrador los mantiene en **Configuración › Listas desplegables**; con permiso, el usuario agrega un valor desde el formulario con «＋ Otro…». Capacidades `catalogos.ver`, `catalogos.agregar` (GM, EJ) y `catalogos.admin`. Una semilla corregida por el administrador no se vuelve a pisar en el arranque.
+- **Formularios:** tipos `lista` (con lista dependiente, sigla y buscador desde 20 opciones), `opciones`, `decimal` (coma decimal y unidad) y `check`; ayuda bajo el campo, ejemplo en el campo, etiquetas de un renglón y **grilla simétrica** de 1 a 4 columnas sin campos huérfanos. Los formularios largos quedan plegados en «＋ Nuevo …».
+- **PIM y preventivos sin texto libre:** la solicitud elige el equipo de la lista y el motivo del catálogo; el cambio de estado de una orden elige responsable, tipo EN 13306 y modo de falla ISO 14224; el inventario sugiere el código del activo y de la ubicación y elige fabricante y tipo de local; el plan preventivo elige equipo, frecuencia, punto de uso y responsable. Estados en castellano.
+- **Celular:** indicadores y accesos de a dos (el último impar ocupa el renglón), tablas como tarjetas (`table.resp`, «etiqueta: valor»), botones y filtros a todo el ancho, etiquetas largas que cortan renglón. Verificado en 375, 768 y 1366 px sin desbordes ni errores de consola.
+- **Recuperación de la contraseña sin Internet** (migración 004, `nucleo_recuperacion`):
+  - **códigos de recuperación** (8, de un solo uso, generados por el usuario en «Mi perfil»; se guardan como HMAC);
+  - **clave temporal** del administrador (72 h; al ingresar se exige cambiarla y, mientras tanto, todo responde 428 `cambiar-clave`);
+  - **enlace por correo** solo si el nodo tiene SMTP configurado (Configuración › Correo y recuperación; 30 min, un solo uso, respuesta genérica para no revelar usuarios, hasta 3 por hora);
+  - y el lanzador (`<Producto>-Control usuario clave <u>`) para el administrador mismo.
+  Cambiar la contraseña cierra las demás sesiones (la cookie lleva una huella de la clave). Cinco intentos fallidos bloquean la recuperación por códigos un rato.
+- **Usuarios:** correo opcional, organización elegida de la lista PIM, «Generar clave temporal» y tarjeta de roles con su descripción.
+- **Nuevo módulo `stock` 1.0.0** (pañol): insumos con código automático `{n}-{CAT}-{SUB}` (categoría y subcategoría de catálogo, con sigla), marca, unidad, mínimo, último precio y depósito; **ingresos y egresos de varios renglones** por comprobante (`ING-000001`, `EGR-000001`), todo o nada y con bloqueo de fila; no deja sacar más de lo que hay; egreso para una orden de trabajo PIM o un servicio de destino; proveedores con rubro; ficha (kardex) por insumo, resumen con bajo mínimo y widget del inicio. Capacidades `stock.ver` (GM, EJ, CI), `stock.mover` (GM, EJ), `stock.editar` (GM). Las plantillas `gestion-mantenimiento` y `mantenimiento-basico` de la incubadora lo incluyen.
 - N.º de producto ANMAT: formato **confirmado** con la Disp. ANMAT 4831/05 y disposiciones de registro vigentes: `PM-<legajo de la empresa>-<número de producto>` (p. ej. `PM-2430-65`). El nodo acepta las variantes con espacio o dos puntos que usan las disposiciones («PM 2430-65», «PM: 2430-65») y las guarda normalizadas con guiones; la columna pasa a `VARCHAR(16)`.
-- Pruebas: `pim.sh` 70 (una nueva de normalización ANMAT); `docs/INSTALACION.md`, `instalador/LEEME.md` y el sitio de capacitación actualizan los conteos (70/28).
+- Pruebas: nueva `pruebas/nucleo16.sh` (43: catálogos, recuperación y stock); `pim.sh` 70, `mem.sh` 28, `industrial.sh` 16 (sin los simuladores Modbus y MQTT), unitarias 48.
 
 ## 1.5.1 · 04-11-2026 — Auditoría del estándar antes de las pruebas de colmena (PIM 0.9.4, API 1.3.1)
 

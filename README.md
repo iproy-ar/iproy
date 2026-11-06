@@ -17,7 +17,7 @@
 |---|---|---|
 | **Estándar PIM** | **0.9.4** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
 | **API PIM** | **1.3.1** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.4. |
-| **Software iProy** | **1.5.1** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Software iProy** | **1.6.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -34,7 +34,7 @@ iproy/
 ├── nodo/            distribución base: un nodo completo, portable (Linux y Windows), sin instalar nada en el sistema
 │   ├── app/nucleo/  el núcleo: módulos, bus, planificador, diario firmado, usuarios, /api/proc, colmena
 │   ├── app/pim/     Servidor PIM (FHIR R4) · app/app/ aplicación web · app/_iproy/ utilidades del nodo
-│   ├── modulos/     pim · telemetria · alarmas · preventivos · mqtt · modbus · mem (IHE MEM-DMC)  (cada uno con su modulo.json)
+│   ├── modulos/     pim · stock · telemetria · alarmas · preventivos · mqtt · modbus · mem (IHE MEM-DMC)  (cada uno con su modulo.json)
 │   ├── conf/pim-guia/  artefactos de la guía PIM tal como los compila la especificación (los sirve el Servidor PIM)
 │   ├── conf/ tools/ sdk/   Caddyfile, SQL, residente MQTT, SDK PHP y JS
 │   └── iProy-Control.sh / .ps1 / .bat   lanzador: init, start, stop, usuario, modulo, nucleo, colmena, pim…
@@ -105,7 +105,7 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.5.1 · 03-11-2026)
+## Estado (v1.6.0 · 06-11-2026)
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
@@ -116,6 +116,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
+| `pruebas/nucleo16.sh` (1.6.0): listas desplegables, recuperación de la contraseña sin Internet (códigos y clave temporal) y stock del pañol | 43/43 | |
 | `herramientas/contrato.py`: especificación 0.9.4 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.3.1 | sin diferencias no declaradas | |
 | Especificación PIM 0.9.4 (`sushi build especificacion`) | 0 errores, 0 advertencias | |
 | **Validador oficial de HL7** (IG Publisher con tx.fhir.org, en el CI): guía publicada en https://iproy-ar.github.io/iproy/ | **0 errores**, 132 advertencias (OID y marca «experimental» de los ValueSets, perfiles sin ejemplo) | |

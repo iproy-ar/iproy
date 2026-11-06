@@ -8,6 +8,7 @@
 |---|---|---|
 | `unitarias.php` | Solo PHP con sodium (y `nodo/conf/pim-guia`) | `php pruebas/unitarias.php` |
 | `pim.sh` | Un nodo iniciado | `bash pruebas/pim.sh <nodo>` |
+| `nucleo16.sh` | Un nodo 1.6.0 iniciado con el módulo `stock` | `bash pruebas/nucleo16.sh <nodo>` |
 | `mem.sh` | Un nodo iniciado con el módulo `mem` (la prueba lo habilita en 127.0.0.1) | `bash pruebas/mem.sh <nodo> [puerto-mllp]` |
 | `colmena.sh` | Dos nodos iniciados en el mismo equipo (pueden ser de productos distintos) y, opcionalmente, un hub | `bash pruebas/colmena.sh <nodo-A> <nodo-B> [http://127.0.0.1:8070]` |
 | `industrial.sh` | Un nodo iniciado; opcionales: `herramientas/simuladores/modbus_sim.py` (pymodbus) y un broker MQTT con `amqtt_pub` | `bash pruebas/industrial.sh <nodo>` |
@@ -24,6 +25,8 @@ php incubadora/incubar.php nuevo --nombre Colmen --version 0.2.0 --destino /tmp/
 php -S 127.0.0.1:8070 -t hub &        # hub de relevo local
 bash pruebas/colmena.sh nodo /tmp/colmen/Colmen-Portable http://127.0.0.1:8070
 ```
+
+Resultados del 06-11-2026 (iProy 1.6.0, nodo de desarrollo): unitarias 48/48, pim 70/70, mem 28/28, nucleo16 43/43, industrial 16/16 (sin simuladores).
 
 Resultados del 02-11-2026 (iProy 1.1.0 y Colmen 0.2.0):
 

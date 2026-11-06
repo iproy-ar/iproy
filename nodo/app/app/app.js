@@ -32,6 +32,7 @@
     reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', ojo: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
     ok: '<path d="M20 6L9 17l-5-5"/>', hist: '<path d="M3 3v5h5"/><path d="M3.1 13a9 9 0 1 0 .5-4.5L3 8"/><path d="M12 7v5l4 2"/>', arriba: '<path d="M18 15l-6-6-6 6"/>', abajo: '<path d="M6 9l6 6 6-6"/>',
     nodo: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>', modulo: '<path d="M12 2l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 17l9 5 9-5"/>',
+    stock: '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
     diario: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M9 7h7M9 11h5"/>',
   };
   const ic = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || P.modulo}</svg>`;
@@ -39,7 +40,7 @@
   // ---------------------------------------------------------------- categorías y metadatos de los accesos
   const GRUPOS = { mant: ['Mantenimiento', '#1e88e5'], plan: ['Planificación', '#43a047'], moni: ['Monitoreo', '#8e24aa'], red: ['Red de instituciones', '#00897b'],
     adm: ['Administración', '#546e7a'], otros: ['Otros módulos', '#8d6e63'] };
-  const META = { ordenes: ['mant', 'ordenes', 'Seguimiento de trabajos'], solicitud: ['mant', 'solicitud', 'Pedir un trabajo'], inventario: ['mant', 'inventario', 'Activos y ubicaciones'],
+  const META = { ordenes: ['mant', 'ordenes', 'Seguimiento de trabajos'], solicitud: ['mant', 'solicitud', 'Pedir un trabajo'], inventario: ['mant', 'inventario', 'Activos y ubicaciones'], stock: ['mant', 'stock', 'Insumos, ingresos y egresos'],
     preventivos: ['plan', 'preventivos', 'Planes por tiempo, uso o condición'], alarmas: ['moni', 'alarmas', 'ISA-18.2'], telemetria: ['moni', 'telemetria', 'Sensores y equipos'],
     colmena: ['red', 'colmena', 'Vínculos con otros nodos'], sistema: ['adm', 'sistema', 'Módulos, tareas y diario'], usuarios: ['adm', 'usuarios', 'Altas y roles'],
     configuracion: ['adm', 'config', 'Logo, fondos y tablero'] };
@@ -73,7 +74,8 @@
     else if (cuerpo !== undefined) { o.headers['Content-Type'] = 'application/json'; o.body = JSON.stringify(cuerpo); }
     const r = await fetch('/api/' + ruta, o);
     const j = await r.json().catch(() => ({ ok: false, error: 'Respuesta inválida (HTTP ' + r.status + ')' }));
-    if (r.status === 401 && ruta !== 'sesion') { S = null; pintar(); throw new Error('La sesión venció: ingresá de nuevo'); }
+    if (r.status === 401 && ruta !== 'sesion' && !ruta.startsWith('recuperar/')) { S = null; pintar(); throw new Error('La sesión venció: ingresá de nuevo'); }
+    if (r.status === 428 && j.codigo === 'cambiar-clave') { pintarCambioObligatorio(); throw new Error(j.error); }
     if (!r.ok || j.ok === false) { const e = new Error(j.error || 'HTTP ' + r.status); e.codigo = j.codigo; e.http = r.status; throw e; }
     return j;
   }
@@ -91,8 +93,9 @@
     if (!filas.length) return '<p class="mini">Sin datos.</p>';
     const id = 't' + Math.random().toString(36).slice(2);
     setTimeout(() => { const t = document.getElementById(id); if (t && alClic) t.querySelectorAll('tr[data-i]').forEach((tr) => tr.onclick = () => alClic(filas[+tr.dataset.i])); });
-    return `<table id="${id}"><thead><tr>${cols.map((c) => `<th>${h(c.t)}</th>`).join('')}</tr></thead><tbody>${filas.map((f, i) =>
-      `<tr data-i="${i}" class="${alClic ? 'clic' : ''}">${cols.map((c) => `<td>${c.html ? c.v(f) : h(c.v(f))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    // 1.6.0: en el celular cada fila es una tarjeta (la primera columna es el título; el resto, «etiqueta: valor»)
+    return `<table id="${id}" class="resp"><thead><tr>${cols.map((c) => `<th>${h(c.t)}</th>`).join('')}</tr></thead><tbody>${filas.map((f, i) =>
+      `<tr data-i="${i}" class="${alClic ? 'clic' : ''}">${cols.map((c) => { const v = c.html ? c.v(f) : h(c.v(f)); return `<td data-l="${h(c.t)}" class="${v === '' || v == null ? 'vacio' : ''}"><span class="tv">${v ?? ''}</span></td>`; }).join('')}</tr>`).join('')}</tbody></table>`;
   }
   function panel(titulo, html) {
     $('#panel').innerHTML = `<div style="display:flex;align-items:center;gap:8px"><h2 style="margin:0;color:var(--az);font-size:18px;flex:1">${h(titulo)}</h2><button class="b sec" id="pCerrar">Cerrar</button></div><div id="pCuerpo" style="margin-top:12px">${html}</div>`;
@@ -100,31 +103,120 @@
     $('#pCerrar').onclick = cerrar; return $('#pCuerpo');
   }
   function cerrar() { $('#panel').classList.remove('abierto'); $('#velo').classList.remove('abierto'); $('.lateral')?.classList.remove('abierto'); }
-  /** Formulario simple: campos [{n, t, tipo: text|number|date|select|textarea|check|password, op: [[v, texto]], v, req}] */
-  function form(campos, boton, alEnviar) {
+  // ---------------------------------------------------------------- listas desplegables (catálogos editables, 1.6.0)
+  const LISTAS = {}; let permisosListas = { agregar: false, admin: false };
+  /** Trae (y guarda) varias listas de una vez: {clave: {def, valores}} */
+  async function listas(claves, refrescar) {
+    const faltan = claves.filter((k) => refrescar || !LISTAS[k]);
+    if (faltan.length) {
+      const j = await api('GET', 'catalogos?valores=' + encodeURIComponent(faltan.join(',')));
+      Object.assign(LISTAS, j.listas); permisosListas = { agregar: j.puede_agregar, admin: j.puede_admin };
+    }
+    const o = {}; claves.forEach((k) => { o[k] = LISTAS[k]; }); return o;
+  }
+  const textoLista = (k, cod) => (LISTAS[k]?.valores.find((v) => v.codigo === cod)?.texto) || cod || '';
+  const numero = (s) => { if (s === '' || s == null) return null; const t = String(s).trim().replace(/\s/g, ''); const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t); return Number.isFinite(n) ? n : NaN; };
+
+  /** Columnas según el ancho del formulario; cada fila se completa (la última se reparte): 12 pistas. */
+  function simetria(f) {
+    const g = f.querySelector('.fgrid'); if (!g) return;
+    const w = g.clientWidth; const cols = w >= 980 ? 4 : w >= 700 ? 3 : w >= 440 ? 2 : 1;
+    const items = [...g.children]; let fila = []; const filas = [];
+    items.forEach((it) => { if (it.dataset.todo) { if (fila.length) filas.push(fila); filas.push([it]); fila = []; return; } fila.push(it); if (fila.length === cols) { filas.push(fila); fila = []; } });
+    if (fila.length) filas.push(fila);
+    filas.forEach((fl) => fl.forEach((it) => { it.style.gridColumn = `span ${fl.length === 1 && it.dataset.todo ? 12 : 12 / (fl.length === cols ? cols : fl.length) | 0}`; }));
+  }
+  /** Llena un <select> de lista con sus valores (filtrados por el padre si corresponde). */
+  function llenarLista(sel, c, valorPadre) {
+    const L = LISTAS[c.lista]; if (!L) return;
+    const elegido = sel.value || sel.dataset.v || '';
+    let vals = L.valores; if (c.padre) vals = valorPadre ? vals.filter((v) => v.padre === valorPadre) : [];
+    const otro = (c.otro ?? true) && (+L.def.permite_otro ? permisosListas.agregar : permisosListas.admin);
+    sel.innerHTML = `<option value="">${h(c.padre && !valorPadre ? '— elegí primero ' + (c.padreT || 'la anterior') + ' —' : (c.vacio || '— elegí —'))}</option>`
+      + vals.map((v) => `<option value="${h(v.codigo)}" ${v.codigo === elegido ? 'selected' : ''}>${h(v.texto)}${c.sigla && v.sigla ? ' · ' + h(v.sigla) : ''}</option>`).join('')
+      + (otro && (!c.padre || valorPadre) ? '<option value="__otro">＋ Otro… (agregar a la lista)</option>' : '');
+    if (elegido && !vals.some((v) => v.codigo === elegido)) sel.value = '';
+    const caja = sel.closest('.fcampo')?.querySelector('.fbus'); if (caja) caja.hidden = vals.length < 20;
+  }
+  /**
+   * Formulario. Campos: {n, t, tipo, v, req, ayuda, ph, ancho:'todo'}
+   *   tipo: text | number | decimal | date | select (op: [[v, t]]) | lista (lista: clave del catálogo, padre: campo, sigla) |
+   *         opciones (cargar: async () => [[v, t]]) | textarea | check | password
+   */
+  function form(campos, boton, alEnviar, o = {}) {
     const id = 'f' + Math.random().toString(36).slice(2);
-    setTimeout(() => {
+    const ctl = (c) => {
+      const req = c.req ? 'required' : ''; const ph = c.ph ? `placeholder="${h(c.ph)}"` : '';
+      if (c.tipo === 'select') return `<select name="${c.n}" ${req}>${c.op.map(([v, t]) => `<option value="${h(v)}" ${String(v) === String(c.v ?? '') ? 'selected' : ''}>${h(t)}</option>`).join('')}</select>`;
+      if (c.tipo === 'lista' || c.tipo === 'opciones') return `<div class="fbus" hidden><input type="search" placeholder="Buscar en la lista…" aria-label="Buscar en ${h(c.t)}"></div><select name="${c.n}" ${req} data-v="${h(c.v ?? '')}"><option value="">Cargando…</option></select><div class="fotro" hidden></div>`;
+      if (c.tipo === 'textarea') return `<textarea name="${c.n}" ${req} ${ph}>${h(c.v ?? '')}</textarea>`;
+      if (c.tipo === 'check') return `<label class="fchk"><input type="checkbox" name="${c.n}" ${c.v ? 'checked' : ''}> ${h(c.ayudaCheck || 'Sí')}</label>`;
+      if (c.tipo === 'number' || c.tipo === 'decimal') return `<div class="fnum"><input name="${c.n}" inputmode="decimal" autocomplete="off" value="${h(c.v ?? '')}" ${req} ${ph}>${c.unidad ? `<span>${h(c.unidad)}</span>` : ''}</div>`;
+      return `<input name="${c.n}" type="${c.tipo || 'text'}" value="${h(c.v ?? '')}" ${req} ${ph} ${c.tipo === 'password' ? 'autocomplete="new-password"' : ''}>`;
+    };
+    setTimeout(async () => {
       const f = document.getElementById(id); if (!f) return;
+      simetria(f); if (window.ResizeObserver) new ResizeObserver(() => simetria(f)).observe(f);
+      // listas de catálogo y opciones cargadas
+      const cl = campos.filter((c) => c.tipo === 'lista');
+      if (cl.length) {
+        try { await listas([...new Set(cl.map((c) => c.lista))]); } catch (x) { cl.forEach((c) => { f.elements[c.n].innerHTML = `<option value="">(no se pudo cargar: ${h(x.message)})</option>`; }); }
+        cl.forEach((c) => { const pc = campos.find((x) => x.n === c.padre); c.padreT = pc ? '«' + pc.t + '»' : ''; llenarLista(f.elements[c.n], c, c.padre ? f.elements[c.padre]?.value : null); });
+      }
+      for (const c of campos.filter((x) => x.tipo === 'opciones')) {
+        const s = f.elements[c.n];
+        try { const op = await c.cargar(); s.innerHTML = `<option value="">${h(c.vacio || '— elegí —')}</option>` + op.map(([v, t]) => `<option value="${h(v)}" ${String(v) === String(c.v ?? '') ? 'selected' : ''}>${h(t)}</option>`).join('');
+          s.closest('.fcampo').querySelector('.fbus').hidden = op.length < 20; } catch (x) { s.innerHTML = `<option value="">(no se pudo cargar)</option>`; }
+      }
+      // búsqueda dentro de la lista: filtra las opciones (el <select> nativo sigue funcionando con teclado y en el celular)
+      f.querySelectorAll('.fbus input').forEach((q) => { q.oninput = () => { const s = q.closest('.fcampo').querySelector('select'); const t = q.value.trim().toLowerCase();
+        let primero = null; [...s.options].forEach((op) => { const ok = !t || !op.value || op.value === '__otro' || op.text.toLowerCase().includes(t); op.hidden = !ok; if (ok && op.value && op.value !== '__otro' && !primero) primero = op; });
+        if (t && primero && (s.selectedOptions[0]?.hidden || !s.value)) s.value = primero.value; s.dispatchEvent(new Event('change')); }; });
+      // dependientes y «Otro…»
+      cl.forEach((c) => {
+        const s = f.elements[c.n];
+        s.addEventListener('change', async () => {
+          campos.filter((x) => x.tipo === 'lista' && x.padre === c.n).forEach((hijo) => { f.elements[hijo.n].dataset.v = ''; llenarLista(f.elements[hijo.n], hijo, s.value === '__otro' ? '' : s.value); });
+          if (s.value !== '__otro') return;
+          const caja = s.closest('.fcampo').querySelector('.fotro'); const L = LISTAS[c.lista];
+          caja.hidden = false; caja.innerHTML = `<div class="fotro-in"><input placeholder="Nuevo valor para «${h(L.def.nombre)}»" maxlength="160">${+L.def.con_sigla ? '<input class="sig" placeholder="Sigla" maxlength="6" title="Sigla de 2 a 6 letras (vacía: se genera)">' : ''}
+            <button type="button" class="b">Agregar</button><button type="button" class="b sec">Cancelar</button></div><div class="fotro-msg"></div>`;
+          const [inp, sig] = caja.querySelectorAll('input'); const [bA, bC] = caja.querySelectorAll('button'); inp.focus();
+          bC.onclick = () => { caja.hidden = true; s.value = ''; };
+          const agregar = async () => { try { bA.disabled = true;
+              const r = await api('POST', 'catalogos/' + c.lista, { texto: inp.value, padre: c.padre ? f.elements[c.padre].value : undefined, sigla: sig?.value || undefined });
+              await listas([c.lista], true); s.dataset.v = r.valor.codigo; llenarLista(s, c, c.padre ? f.elements[c.padre].value : null); s.value = r.valor.codigo; caja.hidden = true;
+              s.dispatchEvent(new Event('change'));
+            } catch (x) { aviso(caja.querySelector('.fotro-msg'), 'mal', x.message); } finally { bA.disabled = false; } };
+          bA.onclick = agregar; inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); agregar(); } };
+        });
+      });
+      if (o.alCargar) o.alCargar(f);
       f.onsubmit = async (e) => {
         e.preventDefault(); const d = {}; const msg = f.querySelector('.fmsg'); const b = f.querySelector('button[type=submit]');
-        campos.forEach((c) => { const x = f.elements[c.n]; if (!x) return; d[c.n] = c.tipo === 'number' ? (x.value === '' ? null : Number(x.value)) : c.tipo === 'check' ? x.checked : x.value; });
-        b.disabled = true; try { await alEnviar(d, msg); } catch (x) { aviso(msg, 'mal', x.message); } finally { b.disabled = false; }
+        try {
+          campos.forEach((c) => { const x = f.elements[c.n]; if (!x) return;
+            if (c.tipo === 'number' || c.tipo === 'decimal') { const n = numero(x.value); if (Number.isNaN(n)) throw new Error(`«${c.t}»: escribí un número (la coma decimal vale)`); d[c.n] = n; }
+            else if (c.tipo === 'check') d[c.n] = x.checked;
+            else if (x.value === '__otro') throw new Error(`«${c.t}»: escribí el valor nuevo y tocá «Agregar», o elegí uno de la lista`);
+            else d[c.n] = x.value; });
+          b.disabled = true; await alEnviar(d, msg, f);
+        } catch (x) { aviso(msg, 'mal', x.message); } finally { b.disabled = false; }
       };
     });
-    return `<form id="${id}"><div class="grid2">${campos.map((c) => `<div style="${c.tipo === 'textarea' ? 'grid-column:1/-1' : ''}"><label>${h(c.t)}${c.req ? ' *' : ''}</label>${
-      c.tipo === 'select' ? `<select name="${c.n}">${c.op.map(([v, t]) => `<option value="${h(v)}" ${String(v) === String(c.v ?? '') ? 'selected' : ''}>${h(t)}</option>`).join('')}</select>`
-      : c.tipo === 'textarea' ? `<textarea name="${c.n}">${h(c.v ?? '')}</textarea>`
-      : c.tipo === 'check' ? `<input type="checkbox" name="${c.n}" style="width:auto;min-height:0" ${c.v ? 'checked' : ''}>`
-      : `<input name="${c.n}" type="${c.tipo || 'text'}" ${c.tipo === 'number' ? 'step="any"' : ''} value="${h(c.v ?? '')}" ${c.req ? 'required' : ''}>`}</div>`).join('')}</div>
-      <div class="acciones"><button class="b" type="submit">${h(boton)}</button></div><div class="fmsg"></div></form>`;
+    return `<form id="${id}" class="form"><div class="fgrid">${campos.map((c) => `<div class="fcampo" ${c.tipo === 'textarea' || c.ancho === 'todo' ? 'data-todo="1"' : ''}>
+      <label title="${h(c.t)}">${h(c.t)}${c.req ? ' <b class="req">*</b>' : ''}</label>${ctl(c)}${c.ayuda ? `<small class="fayuda">${h(c.ayuda)}</small>` : ''}</div>`).join('')}</div>
+      <div class="acciones"><button class="b" type="submit">${h(boton)}</button>${o.extra || ''}</div><div class="fmsg"></div></form>`;
   }
+  /** Bloque plegable con un botón claro («＋ Nuevo activo»): lo que no se usa siempre, queda guardado. */
+  const seccion = (titulo, html, abierta) => `<details class="desp" ${abierta ? 'open' : ''}><summary><span class="mas">＋</span>${h(titulo)}</summary><div class="desp-c">${html}</div></details>`;
   const puede = (cap) => !!S && (S.usuario.rol === 'AD' || S.capacidades.includes(cap));
   /** Tarjetas de indicadores con el estilo del tablero: [{n, t, sub, icono, color}] */
   const kpis = (l) => `<div class="kpis">${l.map((k) => `<div class="kpi" style="--kc:${h(k.color || 'var(--az3)')}"><div class="ico">${ic(k.icono || 'modulo')}</div>
     <div class="tx"><small>${h(k.t)}</small><b>${h(k.n ?? '—')}</b>${k.sub ? `<span>${h(k.sub)}</span>` : ''}</div></div>`).join('')}</div>`;
 
   window.Nucleo = {
-    api, pim, h, fecha, aviso, tabla, panel, cerrar, form, puede, kpis, icono: ic,
+    api, pim, h, fecha, aviso, tabla, panel, cerrar, form, puede, kpis, icono: ic, listas, textoLista, numero, seccion,
     get sesion() { return S; },
     /** Un módulo registra su acceso: {id, titulo, orden, cap, render(el), grupo?, icono?, desc?} */
     pestana(p) { pestanas.push(p); pestanas.sort((a, b) => (a.orden ?? 50) - (b.orden ?? 50)); },
@@ -202,14 +294,47 @@
     $('#mAct').onclick = async () => { try { await api('POST', `modulos/${x.id}/${x.estado === 'desactivado' ? 'activar' : 'desactivar'}`); location.reload(); } catch (e) { aviso($('#mMsg'), 'mal', e.message); } };
   }
 
+  /** Organizaciones del directorio PIM (empresas y áreas) para elegir en vez de escribir el código. */
+  async function opcionesOrg() {
+    const l = ((await pim('GET', 'Organization?_count=300')).cuerpo.entry || []).map((x) => x.resource);
+    return l.map((o) => [o.identifier?.[0]?.value || o.id, `${o.name || o.id}${o.identifier?.[0]?.value ? ' · ' + o.identifier[0].value : ''}`]).sort((a, b) => a[1].localeCompare(b[1]));
+  }
+  const ROLES_AYUDA = { AD: 'Todo, incluida la configuración', GM: 'Gestiona órdenes, inventario, stock y preventivos', EJ: 'Ejecuta trabajos (técnico o empresa)', SO: 'Pide trabajos', FT: 'Sistemas y sensores', CI: 'Solo consulta' };
   Nucleo.pestana({ id: 'usuarios', titulo: 'Usuarios', orden: 95, cap: 'usuarios.admin', render: async (el) => {
     const j = await api('GET', 'usuarios'); const roles = Object.entries(j.roles);
-    el.innerHTML = `<div class="tarjeta"><h2>Usuarios del nodo</h2>${tabla([{ t: 'Usuario', v: (u) => u.usuario }, { t: 'Nombre', v: (u) => u.nombre }, { t: 'Rol', v: (u) => u.rol + ' · ' + j.roles[u.rol] },
-      { t: 'Organización', v: (u) => u.organizacion || '' }, { t: 'Activo', v: (u) => +u.activo ? 'sí' : 'no' }, { t: 'Último ingreso', v: (u) => fecha(u.ultimo_ingreso) }], j.usuarios)}
-      <h2 style="margin-top:16px">Nuevo usuario</h2>${form([{ n: 'usuario', t: 'Usuario', req: true }, { n: 'nombre', t: 'Nombre visible', req: true },
-        { n: 'rol', t: 'Rol', tipo: 'select', op: roles }, { n: 'organizacion', t: 'Organización (código PIM, solo Ejecutor)' }, { n: 'clave', t: 'Contraseña inicial (10+)', tipo: 'password', req: true }],
-      'Crear', async (d, m) => { await api('POST', 'usuarios', d); aviso(m, 'ok', 'Usuario creado.'); setTimeout(() => ir('usuarios'), 800); })}</div>`;
+    const act = j.usuarios.filter((u) => +u.activo).length;
+    el.innerHTML = `${kpis([{ t: 'Usuarios', n: j.usuarios.length, sub: `${act} activos`, icono: 'usuarios', color: '#546e7a' },
+        { t: 'Con correo', n: j.usuarios.filter((u) => u.email).length, sub: 'pueden recuperar por enlace', icono: 'perfil', color: '#1e88e5' },
+        { t: 'Clave temporal', n: j.usuarios.filter((u) => +u.cambiar_clave).length, sub: 'deben cambiarla al entrar', icono: 'candado', color: '#ef6c00' }])}
+      <div class="tarjeta" style="margin-top:12px"><div class="tcab"><h2>Usuarios del nodo</h2><span class="mini">Tocá un usuario para editarlo o darle una clave temporal.</span></div>
+      ${tabla([{ t: 'Usuario', v: (u) => u.usuario }, { t: 'Nombre', v: (u) => u.nombre }, { t: 'Rol', html: true, v: (u) => `<span class="et">${h(u.rol)}</span> ${h(j.roles[u.rol] || '')}` },
+        { t: 'Organización', v: (u) => u.organizacion || '' }, { t: 'Correo', v: (u) => u.email || '' },
+        { t: 'Estado', html: true, v: (u) => !+u.activo ? '<span class="et gris">baja</span>' : +u.cambiar_clave ? '<span class="et nar">clave temporal</span>' : '<span class="et verde">activo</span>' },
+        { t: 'Último ingreso', v: (u) => fecha(u.ultimo_ingreso) }], j.usuarios, (u) => editarUsuario(u, roles))}
+      ${seccion('Nuevo usuario', form([{ n: 'usuario', t: 'Usuario', req: true, ph: 'ej.: ana.perez', ayuda: 'Minúsculas, números, punto o guion' }, { n: 'nombre', t: 'Nombre visible', req: true, ph: 'Ana Pérez' },
+        { n: 'rol', t: 'Rol', tipo: 'select', op: roles.map(([k, t]) => [k, `${k} · ${t}`]), v: 'SO' },
+        { n: 'organizacion', t: 'Organización', tipo: 'opciones', cargar: opcionesOrg, vacio: '— ninguna —', ayuda: 'Obligatoria para un Ejecutor (empresa o área)' },
+        { n: 'email', t: 'Correo (opcional)', tipo: 'email', ph: 'para recuperar la clave por enlace' }, { n: 'clave', t: 'Contraseña inicial', tipo: 'password', req: true, ayuda: '10 o más caracteres' },
+        { n: 'cambiar_clave', t: 'Primer ingreso', tipo: 'check', v: true, ayudaCheck: 'Que elija su propia contraseña al entrar' }],
+      'Crear usuario', async (d, m) => { await api('POST', 'usuarios', d); aviso(m, 'ok', 'Usuario creado.'); setTimeout(() => ir('usuarios'), 800); }))}</div>
+      <div class="tarjeta"><h2>Roles</h2><div class="grid2">${roles.map(([k, t]) => `<div class="rolc"><span class="et">${h(k)}</span> <b>${h(t)}</b><br><small class="mini">${h(ROLES_AYUDA[k] || '')}</small></div>`).join('')}</div></div>`;
   } });
+  function editarUsuario(u, roles) {
+    const p = panel('Usuario ' + u.usuario, `${form([{ n: 'nombre', t: 'Nombre visible', v: u.nombre, req: true }, { n: 'rol', t: 'Rol', tipo: 'select', op: roles.map(([k, t]) => [k, `${k} · ${t}`]), v: u.rol },
+        { n: 'organizacion', t: 'Organización', tipo: 'opciones', cargar: opcionesOrg, v: u.organizacion || '', vacio: '— ninguna —' }, { n: 'email', t: 'Correo', tipo: 'email', v: u.email || '' },
+        { n: 'activo', t: 'Estado', tipo: 'check', v: +u.activo, ayudaCheck: 'Puede ingresar' }], 'Guardar cambios', async (d, m) => {
+          await api('PUT', 'usuarios/' + encodeURIComponent(u.usuario), d); aviso(m, 'ok', 'Guardado.'); setTimeout(() => { cerrar(); ir('usuarios'); }, 700); })}
+      <h3>¿Olvidó su contraseña?</h3><p class="mini">Generá una <b>clave temporal</b> de un solo uso (vence en 72 h). Dásela en persona o por teléfono: al ingresar, el sistema le pide elegir una propia. Queda registrado en el diario firmado.</p>
+      <div class="acciones"><button class="b sec" id="bTemp">${ic('candado')} Generar clave temporal</button></div><div id="tMsg"></div>`);
+    p.querySelector('#bTemp').onclick = async () => {
+      if (!confirm(`¿Generar una clave temporal para ${u.usuario}? Su contraseña actual deja de servir.`)) return;
+      try { const r = await api('POST', `usuarios/${encodeURIComponent(u.usuario)}/clave-temporal`);
+        p.querySelector('#tMsg').innerHTML = `<div class="aviso ok imprimible">Clave temporal de <b>${h(u.usuario)}</b> (vence en ${r.vence_horas} h):<div class="codigos" style="grid-template-columns:1fr"><span>${h(r.clave)}</span></div>
+          <small>Se muestra una sola vez. No la mandes por un canal inseguro.</small></div><div class="acciones"><button class="b sec" id="bCopT">Copiar</button></div>`;
+        p.querySelector('#bCopT').onclick = () => navigator.clipboard?.writeText(r.clave);
+      } catch (x) { aviso(p.querySelector('#tMsg'), 'mal', x.message); }
+    };
+  }
 
   // ---------------------------------------------------------------- imágenes: se achican en el navegador antes de subir
   function elegirImagen(max, png) {
@@ -261,8 +386,23 @@
         <div style="margin-top:14px;max-width:420px"><label>Transparencia del tablero sobre el fondo: <b id="opV">${100 - v.opacidad}%</b></label><input type="range" id="opR" min="0" max="60" value="${100 - v.opacidad}"></div><div id="pfMsg"></div></div>
       <div class="tarjeta"><h2>Widgets de tu inicio</h2><p class="mini">Ocultá los que no uses. El administrador define el orden.</p><ul class="orden-w" id="wLista">${widgets.filter((w) => !v.widgets.ocultos_nodo.includes(w.id)).map((w) =>
         `<li><input type="checkbox" data-w="${h(w.id)}" ${v.widgets.ocultos.includes(w.id) ? '' : 'checked'}><b>${h(w.titulo)}</b></li>`).join('')}</ul></div>
-      <div class="tarjeta"><h2>Cambiar contraseña</h2>${form([{ n: 'actual', t: 'Contraseña actual', tipo: 'password', req: true }, { n: 'nueva', t: 'Nueva (10 o más caracteres)', tipo: 'password', req: true }, { n: 'repite', t: 'Repetila', tipo: 'password', req: true }],
-        'Cambiar', async (d, m) => { if (d.nueva !== d.repite) throw new Error('Las contraseñas nuevas no coinciden'); await api('POST', 'sesion/clave', { actual: d.actual, nueva: d.nueva }); aviso(m, 'ok', 'Contraseña cambiada.'); })}</div>`;
+      <div class="tarjeta"><h2>Contraseña y recuperación</h2><p class="mini">Si un día te olvidás la contraseña, vas a poder cambiarla vos mismo con un <b>código de recuperación</b> (funciona sin Internet) o con un <b>enlace por correo</b> (si el nodo tiene Internet).</p>
+        <div id="recEst" class="mini">…</div>
+        ${seccion('Generar códigos de recuperación', form([{ n: 'actual', t: 'Tu contraseña actual', tipo: 'password', req: true }], 'Generar 8 códigos nuevos', async (d, m) => {
+          const r = await api('POST', 'sesion/codigos', { actual: d.actual });
+          m.innerHTML = `<div class="aviso info imprimible"><b>Tus códigos de recuperación</b> · usuario ${h(S.usuario.usuario)} · ${h(S.producto.nombre)} nodo ${h(S.nodo.id)}
+            <div class="codigos">${r.codigos.map((c) => `<span>${h(c)}</span>`).join('')}</div><small>Cada uno sirve una sola vez. Los anteriores dejaron de valer. Guardalos impresos o en un lugar seguro: se muestran solo ahora.</small></div>
+            <div class="acciones"><button type="button" class="b sec" id="cImp">Imprimir</button><button type="button" class="b sec" id="cTxt">Descargar .txt</button></div>`;
+          $('#cImp').onclick = () => print();
+          $('#cTxt').onclick = () => { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([`Códigos de recuperación · ${S.usuario.usuario} · ${S.producto.nombre} ${S.nodo.id}\n\n${r.codigos.join('\n')}\n\nCada código sirve una sola vez.\n`], { type: 'text/plain' })); a2.download = `codigos-${S.usuario.usuario}.txt`; a2.click(); };
+          estadoRec();
+        }))}
+        ${seccion('Correo para recuperar por enlace', form([{ n: 'email', t: 'Tu correo', tipo: 'email', v: '', ph: 'nombre@institucion.org' }], 'Guardar correo', async (d, m) => { await api('PUT', 'perfil', { email: d.email }); aviso(m, 'ok', 'Guardado.'); estadoRec(); }, { alCargar: async (f) => { try { f.email.value = (await api('GET', 'sesion/codigos')).email || ''; } catch (x) { /* nada */ } } }))}
+        ${seccion('Cambiar la contraseña', form([{ n: 'actual', t: 'Contraseña actual', tipo: 'password', req: true }, { n: 'nueva', t: 'Nueva', tipo: 'password', req: true, ayuda: '10 o más caracteres' }, { n: 'repite', t: 'Repetila', tipo: 'password', req: true }],
+        'Cambiar', async (d, m) => { if (d.nueva !== d.repite) throw new Error('Las contraseñas nuevas no coinciden'); await api('POST', 'sesion/clave', { actual: d.actual, nueva: d.nueva }); aviso(m, 'ok', 'Contraseña cambiada. Las otras sesiones abiertas se cerraron.'); }))}</div>`;
+    const estadoRec = async () => { try { const r = await api('GET', 'sesion/codigos'); const c = r.codigos;
+      $('#recEst').innerHTML = `${c.libres ? `<span class="et verde">${c.libres} códigos disponibles</span>` : '<span class="et nar">sin códigos</span>'} ${r.email ? `<span class="et">correo: ${h(r.email)}</span>` : '<span class="et gris">sin correo</span>'}${!c.libres ? ' — <b>generá tus códigos</b> para no depender del administrador.' : ''}`; } catch (x) { /* nada */ } };
+    estadoRec();
     $$('#selVista [data-v]').forEach((b) => b.onclick = async () => { try { V = (await api('PUT', 'perfil', { vista: b.dataset.v === '__nodo' ? null : b.dataset.v })).vista; actual = 'perfil'; pintar(); } catch (x) { aviso($('#vMsg'), 'mal', x.message); } });
     const r = $('#opR'); let t; r.oninput = () => { $('#opV').textContent = r.value + '%'; document.documentElement.style.setProperty('--op', String((100 - r.value) / 100)); clearTimeout(t);
       t = setTimeout(async () => { V = (await api('PUT', 'perfil', { opacidad: 100 - +r.value })).vista; }, 500); };
@@ -283,7 +423,7 @@
     const imgDe = (v) => (/^[a-f0-9]{24}\.(png|jpg)$/.test(v) ? `/api/apariencia/imagen/${v}` : '');
     const guardar = async (d, m) => { const r = await api('PUT', 'config/apariencia', d); pub = r.publica; aviso(m, 'ok', 'Guardado.'); await refrescarVista(); return r; };
     const subir = async (tipo, max, png, m) => { try { const b = await elegirImagen(max, png); const r = await api('POST', `config/imagen/${tipo}`, undefined, b); pub = r.publica; await refrescarVista(); ir('configuracion'); } catch (x) { aviso(m, 'mal', x.message); } };
-    const tabs = { identidad: 'Identidad institucional', fondos: 'Fondos', tablero: 'Tablero' };
+    const tabs = { identidad: 'Identidad institucional', fondos: 'Fondos', tablero: 'Tablero', listas: 'Listas desplegables', correo: 'Correo y recuperación' };
     el.innerHTML = `<div class="pest">${Object.entries(tabs).map(([k, t]) => `<button data-t="${k}" class="${pestCfg === k ? 'activo' : ''}">${t}</button>`).join('')}</div><div id="cfgC"></div>`;
     $$('.pest button', el).forEach((b) => b.onclick = () => { pestCfg = b.dataset.t; ir('configuracion'); });
     const c = $('#cfgC');
@@ -308,6 +448,8 @@
           <div style="margin-top:14px;max-width:420px"><label>Transparencia por defecto: <b id="oV">${100 - a.opacidad}%</b></label><input type="range" id="oR" min="0" max="60" value="${100 - a.opacidad}"></div></div><div id="fMsg"></div>`;
       const r = $('#oR'); let t; r.oninput = () => { $('#oV').textContent = r.value + '%'; clearTimeout(t); t = setTimeout(() => guardar({ opacidad: 100 - +r.value }, $('#fMsg')), 500); };
     }
+    if (pestCfg === 'listas') await cfgListas(c);
+    if (pestCfg === 'correo') await cfgCorreo(c);
     if (pestCfg === 'tablero') {
       const base = a.widgets.orden.length ? a.widgets.orden : ['pim.ordenes', 'alarmas.activas', 'nucleo.nodo'];
       const orden = [...base.filter((id) => widgets.some((w) => w.id === id)), ...widgets.map((w) => w.id).filter((id) => !base.includes(id))];
@@ -319,6 +461,54 @@
       $('#wGuardar').onclick = () => guardar({ widgets: { orden: $$('#ow li').map((x) => x.dataset.id), ocultos: $$('#ow li').filter((x) => !x.querySelector('input').checked).map((x) => x.dataset.id) } }, $('#wMsg'));
     }
   } });
+
+  // ---------------------------------------------------------------- Configuración › Listas desplegables (1.6.0)
+  let catSel = null;
+  async function cfgListas(c) {
+    const j = await api('GET', 'catalogos'); if (!catSel || !j.catalogos.some((x) => x.clave === catSel)) catSel = j.catalogos[0]?.clave;
+    const ORIG = (o) => o === 'nucleo' ? 'Núcleo' : 'Módulo ' + o;
+    c.innerHTML = `<div class="tarjeta"><h2>Listas desplegables</h2><p class="mini">Todo lo que se elige de una lista en el sistema sale de acá. Corregí textos, ordená, agregá valores o desactivá los que no se usan.
+      Los valores <b>no se borran</b>: al desactivarlos dejan de ofrecerse, pero los registros viejos siguen mostrando su texto. Las listas marcadas «＋ Otro» se completan también desde los formularios.</p>
+      <div class="cats">${j.catalogos.map((x) => `<button class="cat ${x.clave === catSel ? 'sel' : ''}" data-k="${h(x.clave)}"><b>${h(x.nombre)}</b><small>${h(ORIG(x.origen))}${x.norma ? ' · ' + h(x.norma) : ''}</small>
+        <span><em>${+x.activos || 0}</em> valores${+x.permite_otro ? ' · ＋ Otro' : ''}${x.padre ? ' · depende de ' + h(x.padre) : ''}</span></button>`).join('')}</div></div><div id="catV"></div>`;
+    $$('.cat', c).forEach((b) => b.onclick = () => { catSel = b.dataset.k; cfgListas(c); });
+    if (!catSel) return;
+    const v = await api('GET', `catalogos/${catSel}?todos=1`); const cat = v.catalogo; let padres = [];
+    if (cat.padre) padres = (await api('GET', `catalogos/${cat.padre}`)).valores;
+    const tp = (cod) => padres.find((x) => x.codigo === cod)?.texto || cod || '';
+    $('#catV').innerHTML = `<div class="tarjeta"><div class="tcab"><h2>${h(cat.nombre)}</h2><span class="mini">${h(cat.descripcion || '')}</span></div>
+      ${tabla([{ t: 'Texto', v: (x) => x.texto }, ...(cat.padre ? [{ t: 'Pertenece a', v: (x) => tp(x.padre) }] : []), ...(+cat.con_sigla ? [{ t: 'Sigla', v: (x) => x.sigla || '' }] : []),
+        { t: 'Código', html: true, v: (x) => `<code>${h(x.codigo)}</code>` }, { t: 'Estado', html: true, v: (x) => +x.activo ? '<span class="et verde">activo</span>' : '<span class="et gris">desactivado</span>' },
+        { t: 'Origen', v: (x) => +x.semilla ? 'valor de fábrica' : 'agregado' }], v.valores, (x) => editarValor(cat, x))}
+      ${seccion('Agregar un valor', form([{ n: 'texto', t: 'Texto', req: true }, ...(cat.padre ? [{ n: 'padre', t: 'Pertenece a', tipo: 'lista', lista: cat.padre, otro: false }] : []),
+        ...(+cat.con_sigla ? [{ n: 'sigla', t: 'Sigla (2 a 6)', ph: 'vacía: se genera' }] : []), { n: 'codigo', t: 'Código (opcional)', ph: 'vacío: se genera del texto' }], 'Agregar', async (d, m) => {
+          const r = await api('POST', 'catalogos/' + cat.clave, d); delete LISTAS[cat.clave]; aviso(m, 'ok', `Agregado: ${r.valor.texto} (${r.valor.codigo}).`); setTimeout(() => cfgListas(c), 600); }))}</div>`;
+  }
+  function editarValor(cat, x) {
+    const p = panel(cat.nombre, `<dl><dt>Código</dt><dd><code>${h(x.codigo)}</code> <span class="mini">(no cambia nunca: los registros lo guardan)</span></dd></dl>
+      ${form([{ n: 'texto', t: 'Texto', v: x.texto, req: true }, ...(+cat.con_sigla ? [{ n: 'sigla', t: 'Sigla', v: x.sigla || '' }] : []), { n: 'orden', t: 'Orden', tipo: 'number', v: x.orden, ayuda: 'Menor = más arriba' },
+        { n: 'activo', t: 'Estado', tipo: 'check', v: +x.activo, ayudaCheck: 'Se ofrece en las listas' }], 'Guardar', async (d, m) => {
+          await api('PUT', `catalogos/${cat.clave}/${encodeURIComponent(x.codigo)}`, d); delete LISTAS[cat.clave]; aviso(m, 'ok', 'Guardado.'); setTimeout(() => { cerrar(); const c = $('#cfgC'); if (c) cfgListas(c); }, 600); })}`);
+    return p;
+  }
+  // ---------------------------------------------------------------- Configuración › Correo y recuperación (1.6.0)
+  async function cfgCorreo(c) {
+    const k = (await api('GET', 'config/correo')).correo;
+    c.innerHTML = `<div class="tarjeta"><h2>Recuperación de contraseña</h2><div class="grid2">
+        <div class="rolc"><b>Códigos de recuperación</b><br><small class="mini">Cada usuario los genera en «Mi perfil» y los guarda impresos. Funcionan <b>sin Internet</b>.</small></div>
+        <div class="rolc"><b>Clave temporal</b><br><small class="mini">La das vos desde Usuarios (vence en 72 h) y obliga a elegir una propia al entrar.</small></div>
+        <div class="rolc"><b>Enlace por correo</b><br><small class="mini">Solo si el nodo tiene salida a Internet y configurás el correo abajo. ${k.activo ? '<span class="et verde">activo</span>' : '<span class="et gris">apagado</span>'}</small></div>
+        <div class="rolc"><b>Último recurso</b><br><small class="mini">Si el único administrador olvidó su clave: en la PC del nodo, <code>${h(S.producto.nombre)}-Control usuario clave admin</code>.</small></div></div></div>
+      <div class="tarjeta"><h2>Correo saliente (SMTP)</h2><p class="mini">Los datos del servidor de correo los da el área de sistemas o el proveedor (por ejemplo, el correo institucional). La contraseña se guarda en el nodo y no se vuelve a mostrar.</p>
+      ${form([{ n: 'host', t: 'Servidor SMTP', v: k.host, ph: 'smtp.institucion.org' }, { n: 'puerto', t: 'Puerto', tipo: 'select', v: String(k.puerto), op: [['587', '587 (STARTTLS)'], ['465', '465 (SSL)'], ['25', '25 (sin cifrar)'], ['2525', '2525']] },
+        { n: 'seguridad', t: 'Seguridad', tipo: 'select', v: k.seguridad, op: [['tls', 'STARTTLS'], ['ssl', 'SSL/TLS directo'], ['ninguna', 'Ninguna (solo intranet)']] },
+        { n: 'usuario', t: 'Usuario SMTP', v: k.usuario }, { n: 'clave', t: 'Contraseña SMTP', tipo: 'password', ph: k.clave_cargada ? '•••••• (cargada; vacía = no cambia)' : '' },
+        { n: 'remitente', t: 'Correo del remitente', tipo: 'email', v: k.remitente, ph: 'mantenimiento@institucion.org' }, { n: 'nombre', t: 'Nombre del remitente', v: k.nombre, ph: 'Mantenimiento' },
+        { n: 'url_app', t: 'Dirección de la aplicación', v: k.url_app || location.origin, ayuda: 'La que va en el enlace; tiene que abrirse desde la red de los usuarios' },
+        { n: 'activo', t: 'Estado', tipo: 'check', v: k.activo, ayudaCheck: 'Ofrecer «Por correo» en el ingreso' }], 'Guardar', async (d, m) => {
+          d.puerto = +d.puerto; await api('PUT', 'config/correo', d); aviso(m, 'ok', 'Guardado.'); })}
+      ${seccion('Probar el envío', form([{ n: 'para', t: 'Mandar un correo de prueba a', tipo: 'email', req: true }], 'Enviar prueba', async (d, m) => { await api('POST', 'config/correo/prueba', d); aviso(m, 'ok', 'Enviado: revisá la bandeja (y el spam).'); }))}</div>`;
+  }
 
   // ---------------------------------------------------------------- inicio: saludo, resumen y accesos rápidos
   const visibles = () => pestanas.filter((p) => !p.oculta && p.id !== 'inicio' && (!p.cap || puede(p.cap)));
@@ -350,20 +540,96 @@
   } });
 
   // ---------------------------------------------------------------- ingreso
-  function pintarIngreso() {
-    const a = pub || {}; const f = a.fondo_login || { tipo: 'tema', tema: 'cielo' };
+  const vidrio = (a, cuerpo) => {
+    const f = a.fondo_login || { tipo: 'tema', tema: 'cielo' };
     document.body.style.background = ''; document.documentElement.style.setProperty('--op', '1');
     $('#raiz').innerHTML = `<div class="ingreso" style="background:${(cssFondo(f) || TEMAS.cielo[1]).replace(/"/g, "'")};background-size:cover;background-position:center">
       <div class="vidrio"><img class="logo" src="${h(a.logo || 'logo.png')}" alt="">
         <h1>${h(a.institucion || a.producto || 'Ingresar')}</h1><p class="sub">${h(a.lema || '')}${a.lema ? ' · ' : ''}${h(a.producto || '')}${a.nodo ? ' · ' + h(a.nodo) : ''}</p>
-        <form id="fLogin"><div class="campo"><label>Usuario</label>${ic('perfil')}<input name="u" autocomplete="username" required autofocus></div>
-          <div class="campo"><label>Contraseña</label>${ic('candado')}<input name="c" type="password" autocomplete="current-password" required><button type="button" class="ojo" title="Mostrar u ocultar">${ic('ojo')}</button></div>
+        ${cuerpo}<div class="pie2">${h(a.producto || '')} ${h(a.version || '')} · software libre · estándar PIM</div></div></div>`;
+  };
+  const campoClave = (n, t, ac) => `<div class="campo"><label>${t}</label>${ic('candado')}<input name="${n}" type="password" autocomplete="${ac || 'new-password'}" required minlength="10"><button type="button" class="ojo" title="Mostrar u ocultar">${ic('ojo')}</button></div>`;
+  const ojos = () => $$('.ojo').forEach((b) => b.onclick = () => { const i = b.parentElement.querySelector('input'); i.type = i.type === 'password' ? 'text' : 'password'; });
+  function pintarIngreso() {
+    const a = pub || {};
+    const tok = (location.hash.match(/^#recuperar=([A-Za-z0-9_-]{20,})$/) || [])[1];
+    if (tok) return pintarEnlace(tok);
+    vidrio(a, `<form id="fLogin"><div class="campo"><label>Usuario</label>${ic('perfil')}<input name="u" autocomplete="username" required autofocus></div>
+          ${campoClave('c', 'Contraseña', 'current-password')}
           <button class="b" style="width:100%">Ingresar</button><div id="lMsg"></div></form>
-        <div class="pie2">${h(a.producto || '')} ${h(a.version || '')} · software libre · estándar PIM</div></div></div>`;
-    $('.ojo').onclick = () => { const i = $('#fLogin').c; i.type = i.type === 'password' ? 'text' : 'password'; };
+        <button type="button" class="enlace" id="bOlvido">¿Olvidaste tu contraseña?</button>`);
+    ojos();
+    $('#bOlvido').onclick = () => pintarRecuperar('codigo', $('#fLogin').u.value.trim());
     $('#fLogin').onsubmit = async (e) => {
       e.preventDefault(); const b = e.target.querySelector('button.b'); b.disabled = true;
       try { await api('POST', 'sesion', { usuario: e.target.u.value.trim(), clave: e.target.c.value }); await iniciar(); } catch (x) { aviso($('#lMsg'), 'mal', x.message); } finally { b.disabled = false; }
+    };
+  }
+  /** «¿Olvidaste tu contraseña?»: con un código guardado, por correo (si el nodo tiene Internet) o con el administrador. */
+  async function pintarRecuperar(modo, usuario) {
+    const a = pub || {}; let op = { codigo: true, email: false, lanzador: (a.producto || 'iProy') + '-Control' };
+    try { op = await api('GET', 'recuperar/opciones'); } catch (x) { /* se ofrece lo que funciona sin red */ }
+    const tabs = [['codigo', 'Tengo un código'], ...(op.email ? [['email', 'Por correo']] : []), ['admin', 'No tengo nada']];
+    const cuerpo = {
+      codigo: `<p class="mini">Usá uno de los <b>códigos de recuperación</b> que generaste en «Mi perfil» (cada uno sirve una sola vez).</p>
+        <form id="fRec"><div class="campo"><label>Usuario</label>${ic('perfil')}<input name="u" value="${h(usuario || '')}" autocomplete="username" required></div>
+          <div class="campo"><label>Código de recuperación</label>${ic('candado')}<input name="cod" placeholder="XXXXX-XXXXX" autocomplete="one-time-code" required style="text-transform:uppercase;letter-spacing:.08em"></div>
+          ${campoClave('n', 'Contraseña nueva (10 o más caracteres)')}${campoClave('r', 'Repetila')}
+          <button class="b" style="width:100%">Cambiar la contraseña</button><div id="rMsg"></div></form>`,
+      email: `<p class="mini">Te mandamos un enlace al correo que tenés cargado. Funciona solo si el nodo tiene Internet.</p>
+        <form id="fRec"><div class="campo"><label>Usuario</label>${ic('perfil')}<input name="u" value="${h(usuario || '')}" autocomplete="username" required></div>
+          <button class="b" style="width:100%">Enviarme el enlace</button><div id="rMsg"></div></form>`,
+      admin: `<div class="pasos"><p><b>1.</b> Pedile al <b>administrador</b> una <b>clave temporal</b> (la genera en Usuarios). Al ingresar con ella, el sistema te pide elegir una propia.</p>
+        <p><b>2.</b> Si sos <b>el único administrador</b>, en la PC donde está instalado el nodo abrí una terminal en su carpeta y escribí:</p>
+        <pre>bash ${h(op.lanzador)}.sh usuario clave ${h(usuario || 'admin')}</pre><p class="mini">En Windows: <code>${h(op.lanzador)}.bat usuario clave ${h(usuario || 'admin')}</code>. Pide la contraseña nueva dos veces y no la muestra.</p>
+        <p><b>3.</b> Para la próxima: en «Mi perfil» generá tus <b>códigos de recuperación</b> y guardalos impresos.</p></div>`,
+    };
+    vidrio(a, `<h2 class="rec-t">Recuperar el acceso</h2><div class="pest rec-p">${tabs.map(([k, t]) => `<button type="button" data-m="${k}" class="${k === modo ? 'activo' : ''}">${t}</button>`).join('')}</div>
+      ${cuerpo[modo] || cuerpo.codigo}<button type="button" class="enlace" id="bVolver">← Volver al ingreso</button>`);
+    ojos();
+    $$('.rec-p [data-m]').forEach((b) => b.onclick = () => pintarRecuperar(b.dataset.m, $('#fRec')?.u?.value?.trim() || usuario));
+    $('#bVolver').onclick = () => pintarIngreso();
+    const f = $('#fRec'); if (!f) return;
+    f.onsubmit = async (e) => {
+      e.preventDefault(); const b = f.querySelector('button.b'); b.disabled = true;
+      try {
+        if (modo === 'email') { const r = await api('POST', 'recuperar/email', { usuario: f.u.value.trim() }); aviso($('#rMsg'), 'ok', r.mensaje); }
+        else {
+          if (f.n.value !== f.r.value) throw new Error('Las contraseñas nuevas no coinciden');
+          const r = await api('POST', 'recuperar/codigo', { usuario: f.u.value.trim(), codigo: f.cod.value, nueva: f.n.value });
+          vidrio(a, `<div class="aviso ok">Listo: tu contraseña cambió. ${r.quedan <= 2 ? `<b>Te quedan ${r.quedan} códigos:</b> generá nuevos en «Mi perfil».` : `Te quedan ${r.quedan} códigos.`}</div><button class="b" style="width:100%" id="bIr">Ingresar</button>`);
+          $('#bIr').onclick = () => pintarIngreso();
+        }
+      } catch (x) { aviso($('#rMsg'), 'mal', x.message); } finally { b.disabled = false; }
+    };
+  }
+  /** Enlace que llegó por correo: #recuperar=<token> */
+  function pintarEnlace(tok) {
+    const a = pub || {};
+    vidrio(a, `<h2 class="rec-t">Elegí tu nueva contraseña</h2><form id="fEnl">${campoClave('n', 'Contraseña nueva (10 o más caracteres)')}${campoClave('r', 'Repetila')}
+      <button class="b" style="width:100%">Guardar</button><div id="eMsg"></div></form><button type="button" class="enlace" id="bVolver">← Volver al ingreso</button>`);
+    ojos(); const salirEnl = () => { history.replaceState(null, '', location.pathname); pintarIngreso(); };
+    $('#bVolver').onclick = salirEnl;
+    $('#fEnl').onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target;
+      try { if (f.n.value !== f.r.value) throw new Error('Las contraseñas no coinciden');
+        const r = await api('POST', 'recuperar/enlace', { token: tok, nueva: f.n.value }); history.replaceState(null, '', location.pathname);
+        vidrio(a, `<div class="aviso ok">Listo, ${h(r.usuario)}: tu contraseña cambió.</div><button class="b" style="width:100%" id="bIr">Ingresar</button>`); $('#bIr').onclick = () => pintarIngreso();
+      } catch (x) { aviso($('#eMsg'), 'mal', x.message); }
+    };
+  }
+  /** Clave temporal del administrador: antes de cualquier otra cosa, el usuario elige la suya. */
+  function pintarCambioObligatorio() {
+    const a = pub || {};
+    vidrio(a, `<h2 class="rec-t">Elegí tu contraseña</h2><p class="mini">Entraste con una <b>clave temporal</b>. Para seguir, cambiala por una tuya (10 o más caracteres). La temporal deja de servir.</p>
+      <form id="fObl">${campoClave('t', 'Clave temporal', 'current-password')}${campoClave('n', 'Contraseña nueva')}${campoClave('r', 'Repetila')}
+      <button class="b" style="width:100%">Guardar y entrar</button><div id="oMsg"></div></form><button type="button" class="enlace" id="bSalir2">Salir</button>`);
+    ojos();
+    $('#bSalir2').onclick = async () => { await api('DELETE', 'sesion').catch(() => {}); S = null; pintarIngreso(); };
+    $('#fObl').onsubmit = async (e) => {
+      e.preventDefault(); const f = e.target;
+      try { if (f.n.value !== f.r.value) throw new Error('Las contraseñas nuevas no coinciden');
+        await api('POST', 'sesion/clave', { actual: f.t.value, nueva: f.n.value }); await iniciar(); } catch (x) { aviso($('#oMsg'), 'mal', x.message); }
     };
   }
 
@@ -441,6 +707,7 @@
     const j = await api('GET', 'sesion');
     if (!j.ok) { S = null; await cargarPublica(); pintar(); return; }
     S = j;
+    if (j.cambiar_clave) { await cargarPublica(); pintarCambioObligatorio(); return; }
     for (const u of j.ui) {   // cada módulo con interfaz aporta su ui.js (se carga en orden, una sola vez)
       if (cargados.has(u.modulo)) continue; cargados.add(u.modulo);
       await new Promise((ok) => { const s = document.createElement('script'); s.src = `/api/modulos/${u.modulo}/ui.js?v=${encodeURIComponent(u.version)}`; s.onload = ok; s.onerror = ok; document.head.appendChild(s); });

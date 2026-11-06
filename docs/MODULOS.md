@@ -90,6 +90,31 @@ Desde la 1.2.0 la aplicación es un tablero con **accesos rápidos por categorí
 
 `api(metodo, ruta, cuerpo)` llama a `/api/…` con la sesión y el encabezado anti-CSRF. `pim(metodo, ruta, cuerpo, cab)` llama a la API PIM con el rol del usuario.
 
+### Listas desplegables y formularios (1.6.0)
+
+Para que el usuario escriba lo menos posible, un módulo declara sus **catálogos editables** en el manifiesto. El núcleo los siembra en cada arranque (si el administrador corrigió un texto, no lo pisa) y el administrador los mantiene en **Configuración › Listas desplegables**. Los valores nunca se borran: se desactivan, así lo ya cargado sigue mostrando su texto.
+
+```json
+"catalogos": {
+  "calib_metodo": { "nombre": "Métodos de calibración", "permite_otro": 1, "con_sigla": 0, "norma": "ISO/IEC 17025",
+    "valores": [["COMP", "Por comparación"], ["DIR", "Medición directa"]] },
+  "calib_sub": { "nombre": "Submétodos", "padre": "calib_metodo", "valores": [["COMP-PAT", "Con patrón", "COMP"]] }
+}
+```
+
+Cada valor es `[código, texto, código del padre, sigla]`. El código es estable (es lo que se guarda en las tablas); el texto se puede corregir. Con `permite_otro: 1`, quien tenga `catalogos.agregar` (GM y EJ) suma valores desde el formulario con «＋ Otro…»; si no, solo el administrador.
+
+En el servidor: `catalogo_valores(clave)`, `catalogo_texto(clave, código)` y `catalogo_existe_valor(clave, código)` (para validar lo que llega). En la interfaz, `form()` acepta estos tipos de campo:
+
+| Tipo | Para qué |
+|---|---|
+| `lista` (`lista`, `padre`, `sigla`, `otro`, `vacio`) | un catálogo; con `padre`, la lista depende de otro campo; buscador si tiene 20 opciones o más |
+| `opciones` (`cargar: async () => [[valor, texto]]`) | opciones que vienen de otro lado (activos, organizaciones, proveedores…) |
+| `decimal` (`unidad`) | número con coma decimal y su unidad al costado |
+| `check` (`ayudaCheck`) | sí/no |
+
+Todos aceptan `ayuda`, `ph` (ejemplo) y `ancho: 'todo'`. El formulario se reparte solo en 1 a 4 columnas según el ancho, y la última fila ocupa todo el renglón (no quedan campos «huérfanos»). `Nucleo.seccion(título, html)` lo guarda en un bloque plegable «＋ Nuevo …», `Nucleo.listas([claves])` trae varias listas de una vez y `Nucleo.textoLista(clave, código)` muestra el texto de un código. En el celular, `tabla()` muestra cada fila como una tarjeta.
+
 ## 4. Funciones del núcleo disponibles
 
 <sub>🎓 [Planos y diagramas de la arquitectura →](https://iproy.com.ar/pim/planos)</sub>
@@ -104,6 +129,7 @@ Todas están en el espacio `Nucleo\`:
 | `pim(metodo, ruta, cuerpo, ['rol' => 'GM'\|'FT'\|…])`, `pim_lista()` | Servidor PIM por la API |
 | `cfg_modulo(id)`, `estado(clave, ?nuevo)` | Configuración (de `data/`) y estado chico persistente |
 | `exigir(capacidad)`, `puede(capacidad)` | Permisos |
+| `catalogo_valores()`, `catalogo_texto()`, `catalogo_existe_valor()` | Listas desplegables (1.6.0) |
 | `evento_remoto(par, tema, datos)`, `rpc(par, …)` | Colmena |
 
 ## 5. Reglas

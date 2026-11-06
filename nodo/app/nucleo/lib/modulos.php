@@ -157,6 +157,7 @@ function arrancar(): array {
             asentar('modulo.estado', ['version' => $m['version'] ?? null, 'estado' => $est, 'error' => $err], $id);
     }
     registrar_tareas();
+    $res['catalogos'] = sembrar_catalogos();
     asentar('nucleo.arranque', ['version' => VERSION, 'producto' => producto()['nombre'], 'modulos' => $r['orden'], 'contaminado' => contaminado()]);
     return $res + ['estado' => $r['estado']];
 }

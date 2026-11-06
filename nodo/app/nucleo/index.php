@@ -13,7 +13,9 @@
  *  módulos    POST /api/modulos/{id}/{activar|desactivar} · GET|PUT /api/modulos/{id}/config · GET /api/modulos/{id}/ui.js
  *             POST /api/tareas/{modulo:tarea}/ejecutar
  *  bus        GET  /api/bus/eventos?desde=&tema= · POST /api/bus/publicar {tema, datos}
- *  usuarios   GET|POST /api/usuarios · PUT /api/usuarios/{u} · POST /api/usuarios/{u}/token {dias}
+ *  usuarios   GET|POST /api/usuarios · PUT /api/usuarios/{u} · POST /api/usuarios/{u}/token {dias} · POST /api/usuarios/{u}/clave-temporal
+ *  recuperar  GET /api/recuperar/opciones · POST /api/recuperar/{codigo|email|enlace} (públicas) · GET|POST /api/sesion/codigos
+ *             GET|PUT /api/config/correo · POST /api/config/correo/prueba {para}   (1.6.0)
  *  PIM        /api/pim/{ruta FHIR}            la API PIM con el rol del usuario (en el mismo proceso)
  *  colmena    GET /api/colmena/vinculos · POST /api/colmena/vincular {destino} · POST /api/colmena/vinculos/{par}/{aceptar|revocar|rol|ping}
  *             POST /api/colmena/rpc {par, metodo, ruta, cuerpo, esperar} · GET /api/colmena/rpc/{id} · POST /api/colmena/evento {par, tema, datos}
@@ -21,6 +23,8 @@
  *  apariencia GET /api/apariencia (pública: logo, institución, fondo del ingreso) · GET /api/apariencia/imagen/{archivo}
  *             GET /api/perfil · PUT /api/perfil {nombre, vista, fondo, opacidad, recientes, widgets_ocultos} · POST /api/perfil/fondo (imagen cruda)
  *             POST /api/sesion/config {clave} (2 h) · GET|PUT /api/config/apariencia · POST /api/config/imagen/{logo|fondo_login|fondo_tablero}
+ *  catálogos  GET /api/catalogos[?valores=a,b] · GET /api/catalogos/{k}[?padre=&todos=1] · POST /api/catalogos/{k} {texto, padre, sigla}
+ *             PUT /api/catalogos/{k}/{codigo} {texto, sigla, orden, activo}   listas desplegables editables (1.6.0)
  *  módulos    /api/m/{modulo}/{ruta}          rutas propias de cada módulo (rutas.php)
  *  internas   POST /api/nucleo/{arranque|tick|usuario}   solo el lanzador (127.0.0.1 + token del worker)
  */
@@ -71,6 +75,11 @@ try {
 
     // ---------------------------------------------------------------- sesión
     if ($es('POST', 'sesion')) responder(200, ['ok' => true] + ingresar((string) $c('usuario', ''), (string) $c('clave', '')));
+    // recuperación de contraseña (1.6.0, públicas): código de un solo uso, enlace por correo o clave temporal del administrador
+    if ($es('GET', 'recuperar', 'opciones')) responder(200, ['ok' => true] + recuperacion_opciones());
+    if ($es('POST', 'recuperar', 'codigo')) responder(200, ['ok' => true] + recuperar_con_codigo((string) $c('usuario', ''), (string) $c('codigo', ''), (string) $c('nueva', '')));
+    if ($es('POST', 'recuperar', 'email')) responder(200, ['ok' => true] + pedir_enlace((string) $c('usuario', '')));
+    if ($es('POST', 'recuperar', 'enlace')) responder(200, ['ok' => true] + recuperar_con_enlace((string) $c('token', ''), (string) $c('nueva', '')));
     if ($es('DELETE', 'sesion')) { salir(); responder(200, ['ok' => true]); }
     if ($es('GET', 'sesion')) {
         if (!$u) responder(200, ['ok' => false, 'producto' => producto()['nombre'], 'nodo' => nodo()]);
@@ -78,21 +87,28 @@ try {
         $ui = [];
         foreach (activos() as $x) if (!empty($x['ui']['script'])) $ui[] = ['modulo' => $x['id'], 'version' => $x['version'], 'orden' => (int) ($x['ui']['orden'] ?? 50)];
         usort($ui, fn($a, $b) => $a['orden'] <=> $b['orden']);
-        responder(200, ['ok' => true, 'usuario' => array_intersect_key($u, array_flip(['usuario', 'nombre', 'rol', 'organizacion'])), 'rol_pim' => rol_pim($u['rol']),
+        responder(200, ['ok' => true, 'usuario' => array_intersect_key($u, array_flip(['usuario', 'nombre', 'rol', 'organizacion'])), 'rol_pim' => rol_pim($u['rol']), 'cambiar_clave' => (bool) (int) ($u['cambiar_clave'] ?? 0),
             'capacidades' => $caps, 'ui' => $ui, 'producto' => producto(), 'nodo' => nodo(), 'roles' => ROLES]);
     }
     if ($es('POST', 'sesion', 'clave')) {
         $yo = exigir('pim.usar') + ['usuario' => ''];
         $h = valor('SELECT clave_hash FROM nucleo_usuario WHERE usuario = ?', [$yo['usuario']]);
         if (!$h || !password_verify((string) $c('actual', ''), (string) $h)) throw new Fallo(403, 'La contraseña actual no es correcta');
+        if ((string) $c('nueva', '') === (string) $c('actual', '')) throw new Fallo(422, 'La contraseña nueva tiene que ser distinta de la actual');
         guardar_usuario(['usuario' => $yo['usuario'], 'clave' => (string) $c('nueva', '')], false);
+        if (($yo['via'] ?? '') === 'sesion') fijar_sesion(fila('SELECT * FROM nucleo_usuario WHERE usuario = ?', [$yo['usuario']]));   // las demás sesiones quedan cerradas
         responder(200, ['ok' => true]);
     }
+    // 1.6.0: con una clave temporal, lo único que se puede hacer es cambiarla (o salir)
+    if ($u && (int) ($u['cambiar_clave'] ?? 0)) throw new Fallo(428, 'Antes de seguir, cambiá la contraseña temporal por una tuya', 'cambiar-clave');
     if (!$u) throw new Fallo(401, 'Ingresá con tu usuario');
 
     // ---------------------------------------------------------------- perfil propio y configuración de apariencia (1.2.0)
+    if ($es('GET', 'sesion', 'codigos')) responder(200, ['ok' => true, 'codigos' => codigos_estado($u['usuario']), 'email' => valor('SELECT email FROM nucleo_usuario WHERE usuario = ?', [$u['usuario']])]);
+    if ($es('POST', 'sesion', 'codigos')) responder(200, ['ok' => true, 'codigos' => generar_codigos($u['usuario'], (string) $c('actual', ''))]);
     if ($es('GET', 'perfil')) responder(200, ['ok' => true, 'vista' => vista_usuario($u['usuario']), 'perfil' => perfil($u['usuario']), 'config_confirmada' => config_confirmada()]);
     if ($es('PUT', 'perfil')) {
+        if (array_key_exists('email', cuerpo())) guardar_usuario(['usuario' => $u['usuario'], 'email' => $c('email')], false);
         if (($n = $c('nombre')) !== null) { $n = trim((string) $n); if ($n === '' || mb_strlen($n) > 120) throw new Fallo(422, 'Nombre visible: 1 a 120 caracteres'); guardar_usuario(['usuario' => $u['usuario'], 'nombre' => $n], false); }
         perfil($u['usuario'], array_intersect_key(cuerpo(), PERFIL_DEF));
         responder(200, ['ok' => true, 'vista' => vista_usuario($u['usuario'])]);
@@ -102,6 +118,13 @@ try {
         responder(201, ['ok' => true, 'vista' => vista_usuario($u['usuario'])]);
     }
     if ($es('POST', 'sesion', 'config')) responder(200, ['ok' => true] + confirmar_config((string) $c('clave', '')));
+    if ($es('GET', 'config', 'correo')) { exigir_config(); responder(200, ['ok' => true, 'correo' => correo_publico()]); }
+    if ($es('PUT', 'config', 'correo')) { exigir_config(); correo_cfg(cuerpo()); responder(200, ['ok' => true, 'correo' => correo_publico()]); }
+    if ($es('POST', 'config', 'correo', 'prueba')) {
+        exigir_config(); $para = email_valido($c('para')) ?? throw new Fallo(422, 'Indicá a qué correo mandar la prueba');
+        enviar_correo($para, producto()['nombre'] . ' · prueba de correo', "Si te llegó este mensaje, el nodo " . nodo()['id'] . " puede enviar enlaces de recuperación de contraseña.\n");
+        asentar('config.correo_prueba', ['ok' => true]); responder(200, ['ok' => true]);
+    }
     if ($es('GET', 'config', 'apariencia')) { exigir_config(); responder(200, ['ok' => true, 'apariencia' => apariencia(), 'publica' => apariencia_publica(), 'temas' => array_values(array_filter(FONDOS))]); }
     if ($es('PUT', 'config', 'apariencia')) {
         exigir_config(); $d = cuerpo(); $cambio = [];
@@ -167,9 +190,10 @@ try {
     }
 
     // ---------------------------------------------------------------- usuarios
-    if ($es('GET', 'usuarios')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuarios' => filas('SELECT usuario, nombre, rol, organizacion, activo, ultimo_ingreso, creado FROM nucleo_usuario ORDER BY usuario'), 'roles' => ROLES]); }
+    if ($es('GET', 'usuarios')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuarios' => filas('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado FROM nucleo_usuario ORDER BY usuario'), 'roles' => ROLES]); }
     if ($es('POST', 'usuarios')) { exigir('usuarios.admin'); responder(201, ['ok' => true, 'usuario' => guardar_usuario(cuerpo(), true)]); }
     if ($es('PUT', 'usuarios', '*')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuario' => guardar_usuario(['usuario' => $p[1]] + cuerpo(), false)]); }
+    if ($es('POST', 'usuarios', '*', 'clave-temporal')) responder(200, ['ok' => true] + clave_temporal($p[1]));
     if ($es('POST', 'usuarios', '*', 'token')) {
         exigir('usuarios.admin');
         $x = fila('SELECT * FROM nucleo_usuario WHERE usuario = ? AND activo = 1', [$p[1]]) ?? throw new Fallo(404, 'Usuario inexistente o inactivo');
@@ -216,6 +240,27 @@ try {
     }
     if ($es('POST', 'colmena', 'hub', 'registrar')) { exigir('colmena.admin'); responder(200, ['ok' => true, 'hub' => hub_registrar()]); }
     if ($es('POST', 'colmena', 'hub', 'buzon')) { exigir('colmena.usar'); responder(200, ['ok' => true] + hub_buzon()); }
+
+    // ---------------------------------------------------------------- catálogos: listas desplegables (1.6.0)
+    if ($es('GET', 'catalogos')) {
+        exigir('catalogos.ver');
+        if (($v = trim((string) ($_GET['valores'] ?? ''))) !== '') {       // varias listas de una vez (formularios)
+            $o = [];
+            foreach (array_slice(array_unique(explode(',', $v)), 0, 20) as $k) { $o[$k] = ['def' => array_intersect_key(catalogo($k), array_flip(['clave', 'nombre', 'padre', 'permite_otro', 'con_sigla'])), 'valores' => catalogo_valores($k)]; }
+            responder(200, ['ok' => true, 'listas' => $o, 'puede_agregar' => puede('catalogos.agregar'), 'puede_admin' => puede('catalogos.admin')]);
+        }
+        responder(200, ['ok' => true, 'catalogos' => catalogos_lista(), 'puede_admin' => puede('catalogos.admin')]);
+    }
+    if ($es('GET', 'catalogos', '*')) {
+        exigir('catalogos.ver'); $todos = !empty($_GET['todos']);
+        if ($todos) exigir('catalogos.admin');
+        responder(200, ['ok' => true, 'catalogo' => catalogo($p[1]), 'valores' => catalogo_valores($p[1], $todos, isset($_GET['padre']) ? (string) $_GET['padre'] : null)]);
+    }
+    if ($es('POST', 'catalogos', '*')) {
+        $adm = puede('catalogos.admin'); if (!$adm) exigir('catalogos.agregar');
+        responder(201, ['ok' => true, 'valor' => catalogo_agregar($p[1], cuerpo(), $adm)]);
+    }
+    if ($es('PUT', 'catalogos', '*', '*')) { exigir('catalogos.admin'); responder(200, ['ok' => true, 'valor' => catalogo_cambiar($p[1], $p[2], cuerpo())]); }
 
     // ---------------------------------------------------------------- rutas de los módulos
     if (($p[0] ?? '') === 'm' && isset($p[1])) {

@@ -20,7 +20,7 @@ const CAPACIDADES_NUCLEO = [
 function rol_pim(string $rol): string { return $rol === 'AD' ? 'GM' : $rol; }
 
 function capacidades(): array {
-    $c = CAPACIDADES_NUCLEO;
+    $c = CAPACIDADES_NUCLEO + CAPACIDADES_CATALOGOS;
     foreach (activos() as $m) foreach ((array) $m['capacidades'] as $cap => $roles) $c[$cap] = array_values(array_unique(array_merge($c[$cap] ?? [], (array) $roles)));
     return $c;
 }
@@ -39,8 +39,12 @@ function exigir(string $cap): array {
 
 // ---------------------------------------------------------------- sesión
 function clave_sesion(): string { return hash_hmac('sha256', 'nucleo-sesion', (string) (\nodo_cfg()['session_secret'] ?? '')); }
+/** Huella corta de la contraseña: si la contraseña cambia (o se recupera), las sesiones anteriores dejan de valer (1.6.0). */
+function huella_clave(?string $hash): ?string { return $hash ? substr(hash('sha256', $hash), 0, 12) : null; }
 function emitir_token(array $u, int $segundos): string {
-    $p = b64u(json_encode(['u' => $u['usuario'], 'r' => $u['rol'], 'exp' => time() + $segundos, 'n' => bin2hex(random_bytes(6))]));
+    $d = ['u' => $u['usuario'], 'r' => $u['rol'], 'exp' => time() + $segundos, 'n' => bin2hex(random_bytes(6))];
+    if (!empty($u['clave_hash'])) $d['k'] = huella_clave($u['clave_hash']);
+    $p = b64u(json_encode($d));
     return $p . '.' . b64u(hash_hmac('sha256', $p, clave_sesion(), true));
 }
 function leer_token(string $t): ?array {
@@ -48,8 +52,10 @@ function leer_token(string $t): ?array {
     if (!hash_equals(b64u(hash_hmac('sha256', $m[1], clave_sesion(), true)), $m[2])) return null;
     $p = json_decode(b64u_dec($m[1]), true);
     if (!is_array($p) || ($p['exp'] ?? 0) < time()) return null;
-    $u = fila('SELECT usuario, nombre, rol, organizacion FROM nucleo_usuario WHERE usuario = ? AND activo = 1', [$p['u'] ?? '']);
-    return ($u && $u['rol'] === $p['r']) ? $u : null;     // si le cambiaron el rol, la sesión vieja ya no vale
+    $u = fila('SELECT usuario, nombre, rol, organizacion, cambiar_clave, clave_hash FROM nucleo_usuario WHERE usuario = ? AND activo = 1', [$p['u'] ?? '']);
+    if (!$u || $u['rol'] !== $p['r']) return null;         // si le cambiaron el rol, la sesión vieja ya no vale
+    if (isset($p['k']) && !hash_equals((string) huella_clave($u['clave_hash']), (string) $p['k'])) return null;   // cambió la contraseña
+    unset($u['clave_hash']); return $u;
 }
 /** Identifica al que llama: lanzador (tick), token Bearer de integración o cookie de sesión. */
 function autenticar(): ?array {
@@ -72,13 +78,19 @@ function ingresar(string $usuario, string $clave): array {
         usleep(random_int(200000, 400000));
         throw new Fallo(401, 'Usuario o contraseña incorrectos');
     }
+    // 1.6.0: clave temporal del administrador → vence a las 72 h y obliga a cambiarla al entrar
+    if ((int) ($u['cambiar_clave'] ?? 0) && $u['clave_vence'] && strtotime((string) $u['clave_vence']) < time())
+        throw new Fallo(401, 'La contraseña temporal venció: pedile otra al administrador', 'clave-temporal-vencida');
     q('UPDATE nucleo_usuario SET intentos = 0, bloqueado_hasta = NULL, ultimo_ingreso = NOW() WHERE usuario = ?', [$usuario]);
     if (password_needs_rehash($u['clave_hash'], PASSWORD_ARGON2ID)) q('UPDATE nucleo_usuario SET clave_hash = ? WHERE usuario = ?', [password_hash($clave, PASSWORD_ARGON2ID), $usuario]);
-    $seguro = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off';
-    setcookie('nucleo_s', emitir_token($u, 8 * 3600), ['expires' => time() + 8 * 3600, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $seguro]);
+    fijar_sesion($u);
     $GLOBALS['nucleo_usuario'] = $u;
     asentar('usuario.ingreso', [], $usuario, $usuario);
-    return ['usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'rol' => $u['rol']];
+    return ['usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'rol' => $u['rol'], 'cambiar_clave' => (bool) (int) ($u['cambiar_clave'] ?? 0)];
+}
+function fijar_sesion(array $u): void {
+    $seguro = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off';
+    setcookie('nucleo_s', emitir_token($u, 8 * 3600), ['expires' => time() + 8 * 3600, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => $seguro]);
 }
 function salir(): void { setcookie('nucleo_s', '', ['expires' => 1, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']); }
 
@@ -95,17 +107,24 @@ function guardar_usuario(array $d, bool $nuevo): array {
     if ($nuevo) {
         if (fila('SELECT 1 FROM nucleo_usuario WHERE usuario = ?', [$u])) throw new Fallo(409, "Ya existe el usuario $u");
         validar_clave((string) ($d['clave'] ?? ''));
-        q('INSERT INTO nucleo_usuario (usuario, nombre, rol, organizacion, clave_hash) VALUES (?,?,?,?,?)',
-          [$u, mb_substr(trim((string) ($d['nombre'] ?? $u)), 0, 120), $rol, ($d['organizacion'] ?? '') ?: null, password_hash((string) $d['clave'], PASSWORD_ARGON2ID)]);
+        q('INSERT INTO nucleo_usuario (usuario, nombre, rol, organizacion, clave_hash, email, cambiar_clave) VALUES (?,?,?,?,?,?,?)',
+          [$u, mb_substr(trim((string) ($d['nombre'] ?? $u)), 0, 120), $rol, ($d['organizacion'] ?? '') ?: null, password_hash((string) $d['clave'], PASSWORD_ARGON2ID),
+           email_valido($d['email'] ?? null), !empty($d['cambiar_clave']) ? 1 : 0]);
         asentar('usuario.alta', ['rol' => $rol], $u);
     } else {
         $act = fila('SELECT * FROM nucleo_usuario WHERE usuario = ?', [$u]) ?? throw new Fallo(404, "No existe $u");
         $set = []; $a = [];
         foreach (['nombre', 'rol', 'organizacion'] as $k) if (array_key_exists($k, $d)) { $set[] = "$k = ?"; $a[] = $d[$k] === '' ? null : $d[$k]; }
+        if (array_key_exists('email', $d)) { $set[] = 'email = ?'; $a[] = email_valido($d['email']); }
         if (array_key_exists('activo', $d)) { $set[] = 'activo = ?'; $a[] = $d['activo'] ? 1 : 0; }
-        if (!empty($d['clave'])) { validar_clave((string) $d['clave']); $set[] = 'clave_hash = ?'; $a[] = password_hash((string) $d['clave'], PASSWORD_ARGON2ID); $set[] = 'intentos = 0, bloqueado_hasta = NULL'; }
+        if (!empty($d['clave'])) { validar_clave((string) $d['clave']); $set[] = 'clave_hash = ?'; $a[] = password_hash((string) $d['clave'], PASSWORD_ARGON2ID); $set[] = 'intentos = 0, bloqueado_hasta = NULL, cambiar_clave = 0, clave_vence = NULL'; }
         if ($set) { $a[] = $u; q('UPDATE nucleo_usuario SET ' . implode(', ', $set) . ' WHERE usuario = ?', $a); }
         asentar('usuario.cambio', array_diff_key($d, ['clave' => 1]) + (!empty($d['clave']) ? ['clave' => 'cambiada'] : []), $u);
     }
-    return fila('SELECT usuario, nombre, rol, organizacion, activo, ultimo_ingreso, creado FROM nucleo_usuario WHERE usuario = ?', [$u]);
+    return fila('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado FROM nucleo_usuario WHERE usuario = ?', [$u]);
+}
+function email_valido(mixed $e): ?string {
+    $e = trim((string) ($e ?? '')); if ($e === '') return null;
+    if (mb_strlen($e) > 160 || !filter_var($e, FILTER_VALIDATE_EMAIL)) throw new Fallo(422, 'El correo electrónico no es válido');
+    return mb_strtolower($e);
 }

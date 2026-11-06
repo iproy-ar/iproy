@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Nucleo;
 
-const VERSION = '1.5.1';
+const VERSION = '1.6.0';
 const ABI = 1;                    // versión del ABI de módulos: modulo.json declara "abi": 1
 const PROTOCOLO = 'colmena/1';
 const ROLES = ['AD' => 'Administrador del nodo', 'GM' => 'Gestor de mantenimiento', 'EJ' => 'Ejecutor (técnico o empresa)',
@@ -183,6 +183,6 @@ function proxy_salida(): string {
 function cargar(): void {
     static $ok = false;
     if ($ok) return;
-    foreach (['diario', 'identidad', 'modulos', 'bus', 'tareas', 'usuarios', 'pimcli', 'colmena', 'proc', 'apariencia'] as $l) require_once __DIR__ . "/$l.php";
+    foreach (['diario', 'identidad', 'modulos', 'bus', 'tareas', 'usuarios', 'pimcli', 'colmena', 'proc', 'apariencia', 'catalogos', 'recuperacion'] as $l) require_once __DIR__ . "/$l.php";
     $ok = true;
 }

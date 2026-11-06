@@ -35,7 +35,8 @@ Como hace el kernel Linux desde que es CNA, una vulnerabilidad se da por cerrada
 
 - **Sin secretos en el código.** Contraseñas, claves y tokens se generan en `data/` al instalar, con permisos 600. `incubar.php verificar` busca claves privadas, contraseñas escritas y datos institucionales.
 - **Contraseñas** con Argon2id y bloqueo de 5 minutos tras 5 intentos fallidos.
-- **Sesión** en una cookie firmada (HMAC-SHA256), con los atributos HttpOnly y SameSite=Strict. Para escribir hace falta además el encabezado `X-Nucleo`, como protección contra CSRF.
+- **Sesión** en una cookie firmada (HMAC-SHA256), con los atributos HttpOnly y SameSite=Strict. Para escribir hace falta además el encabezado `X-Nucleo`, como protección contra CSRF. Desde la 1.6.0 la cookie lleva una huella de la contraseña: al cambiarla se cierran las demás sesiones.
+- **Recuperación de la contraseña sin Internet (1.6.0).** Códigos de un solo uso que genera el propio usuario (se guardan como HMAC, nunca en claro), clave temporal del administrador con vencimiento y cambio obligatorio, y enlace por correo solo si el nodo tiene SMTP. Las respuestas no revelan si un usuario existe y los intentos están limitados. La contraseña del servidor SMTP queda en `data/` y la API nunca la devuelve.
 - **Diario** de solo agregado, encadenado con SHA-256 y firmado con ed25519. Se verifica con `nucleo verificar`.
 - **Colmena.** Los sobres van firmados (ed25519) y sellados (X25519, `crypto_box_seal`). Cada sobre se procesa una sola vez y tiene una vida máxima de 8 días. La huella se compara fuera de banda antes de aceptar un vínculo.
 - **Hub.** No puede leer ni falsificar los sobres. Además verifica la firma de cada pedido con un nonce de un solo uso y una ventana de ±5 minutos, limita la cantidad de pedidos y fija la clave de cada nodo en el primer uso (TOFU).

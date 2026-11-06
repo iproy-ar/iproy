@@ -40,10 +40,10 @@ const PROTEGIDO = [                                  // nunca se renombran (est�
     'Proyecto iProy y colaboradores',
 ];
 const PLANTILLAS = [
-    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, preventivos, alarmas ISA-18.2, telemetría, MQTT, Modbus y equipos médicos por IHE MEM-DMC.',
-                                'modulos' => ['pim', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus', 'mem']],
-    'mantenimiento-basico'  => ['descripcion' => 'Órdenes, solicitudes, inventario y preventivos (sin integración industrial).',
-                                'modulos' => ['pim', 'preventivos']],
+    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, stock del pañol, preventivos, alarmas ISA-18.2, telemetría, MQTT, Modbus y equipos médicos por IHE MEM-DMC.',
+                                'modulos' => ['pim', 'stock', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus', 'mem']],
+    'mantenimiento-basico'  => ['descripcion' => 'Órdenes, solicitudes, inventario, stock del pañol y preventivos (sin integración industrial).',
+                                'modulos' => ['pim', 'stock', 'preventivos']],
     'monitoreo-industrial'  => ['descripcion' => 'Telemetría, alarmas ISA-18.2, MQTT y Modbus sobre el inventario PIM (tipo SCADA liviano).',
                                 'modulos' => ['pim', 'telemetria', 'alarmas', 'mqtt', 'modbus']],
     'minima'                => ['descripcion' => 'Solo el núcleo y el Servidor PIM: base para construir módulos propios.',
