@@ -301,8 +301,10 @@ $TRABAJO = {
            "copy /y `"%~dp0uninstall-$prod.ps1`" `"%TEMP%\uninstall-$prod.ps1`" >nul`r`n" +
            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%TEMP%\uninstall-$prod.ps1`" %*`r`n"
       [IO.File]::WriteAllText($bat, $b, [Text.Encoding]::ASCII)
+      $escr = [Environment]::GetFolderPath('Desktop'); if (-not $escr) { $escr = Join-Path $HOME 'Desktop' }
+      $progs = [Environment]::GetFolderPath('Programs'); if (-not $progs) { $progs = Join-Path $HOME 'Programs' }
       $man = @{ producto = $prod; version = $S.version_instalador; instalado = (Get-Date -Format 'yyyy-MM-dd HH:mm'); carpeta = $raiz; carpeta_producto = $baseProd; lanzador = $lanz
-                accesos = @((Join-Path ([Environment]::GetFolderPath('Desktop')) "$prod.lnk"), (Join-Path ([Environment]::GetFolderPath('Programs')) $prod)); firewall_regla = $fw
+                accesos = @((Join-Path $escr "$prod.lnk"), (Join-Path $progs $prod)); firewall_regla = $fw
                 cache = $CACHE; componentes = @($i.componentes); archivos_junto_a_la_carpeta = $archivosBase; no_se_deshace = @('Visual C++ 2015-2022', 'sincronización de hora')
                 uso = "uninstall-$prod.bat   (opciones: -Si -SinDatos -DestinoRespaldo D -Cache -ConservarFirewall)" }
       [IO.File]::WriteAllText((Join-Path $raiz "uninstall-$prod.json"), ($man | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))

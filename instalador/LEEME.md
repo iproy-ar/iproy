@@ -65,4 +65,4 @@ En Linux se usa `pkexec` (la ventana de contraseña del sistema). Sin entorno gr
 - `pruebas/pim.sh` y `pruebas/mem.sh` dieron 70/70 y 28/28 sobre ese nodo;
 - (1.6.0) el instalador de un solo archivo armó un producto incubado («PruebaDes») y su `uninstall-PruebaDes.sh` lo desinstaló: nodo detenido, `data/` guardada y verificada, accesos quitados, carpetas borradas.
 
-En Windows se probó la interfaz completa en modo simulado, incluido el pedido de permiso. **La primera corrida real en una PC con Windows está pendiente.**
+En Windows (1.6.0) se probó el instalador de un solo archivo con PowerShell 7 en modo simulado: los 13 pasos, los dos pedidos de permiso (Visual C++ y firewall), el informe y la generación de `uninstall-PruebaWin.bat/.ps1/.json`; y ese desinstalador se ejecutó de verdad sobre lo simulado (cancelar, guardar `data\` en ZIP verificado, quitar accesos, dejar la regla del firewall a elección, borrar carpetas, registro). **No cubre** UAC, firewall real, `.lnk` ni los binarios: eso solo se prueba en un Windows real.

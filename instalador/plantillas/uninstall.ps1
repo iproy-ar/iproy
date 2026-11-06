@@ -19,7 +19,8 @@ $ErrorActionPreference = 'Continue'
 $PROD = '@@PROD@@'; $RAIZ = '@@RAIZ@@'; $LANZ = '@@LANZ@@'; $BASE_PROD = '@@BASE_PROD@@'; $CARPETA_CACHE = '@@CACHE@@'
 $FW_NOMBRE = '@@FW_NOMBRE@@'; $INSTALADO = '@@FECHA@@'; $VERSION = '@@VERSION@@'
 $ARCHIVOS_BASE = @(@@ARCHIVOS_BASE@@)
-if (-not $DestinoRespaldo) { $DestinoRespaldo = [Environment]::GetFolderPath('MyDocuments') }
+$DOCS = [Environment]::GetFolderPath('MyDocuments'); if (-not $DOCS) { $DOCS = $HOME }
+if (-not $DestinoRespaldo) { $DestinoRespaldo = $DOCS }
 $REG = New-Object System.Collections.ArrayList
 function Ok([string]$t) { Write-Host "  OK  $t" -ForegroundColor Green; [void]$REG.Add("OK  $t") }
 function Av([string]$t) { Write-Host "  !!  $t" -ForegroundColor Yellow; [void]$REG.Add("AV  $t") }
@@ -37,7 +38,7 @@ function Lanzador([string[]]$argumentos) {
 Write-Host ''
 Write-Host "Desinstalador de $PROD (instalado el $INSTALADO con iProy $VERSION)" -ForegroundColor Cyan
 Write-Host "  Carpeta:   $RAIZ"
-if (Test-Path (Join-Path $RAIZ 'data')) { try { $mb = [math]::Round((Get-ChildItem (Join-Path $RAIZ 'data') -Recurse -File | Measure-Object Length -Sum).Sum / 1MB); Write-Host "  Datos:     $mb MB en data\ (base de datos, claves, configuración)" } catch { } }
+if (Test-Path (Join-Path $RAIZ 'data')) { try { $mb = [math]::Round((Get-ChildItem (Join-Path $RAIZ 'data') -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 1); Write-Host "  Datos:     $mb MB en data\ (base de datos, claves, configuración)" } catch { } }
 Write-Host "  Accesos:   escritorio y menú Inicio ($PROD)"
 if ($FW_NOMBRE) { Write-Host '  Firewall:  el instalador creó una regla; se ofrece quitarla' }
 Write-Host "  Caché:     $CARPETA_CACHE $(if ($Cache) { '(se borra)' } else { '(se conserva: sirve para reinstalar sin volver a bajar; -Cache para borrarla)' })"
@@ -66,14 +67,15 @@ else {
     [IO.Compression.ZipFile]::CreateFromDirectory($datos, $zip, [IO.Compression.CompressionLevel]::Optimal, $true)
     $z = [IO.Compression.ZipFile]::OpenRead($zip); $n = $z.Entries.Count; $z.Dispose()
     $h = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower(); [IO.File]::WriteAllText("$zip.sha256", "$h  $(Split-Path -Leaf $zip)`r`n")
-    Ok "Datos guardados en $zip ($n archivos, $([math]::Round((Get-Item $zip).Length / 1MB)) MB) · SHA-256 en $zip.sha256"
+    Ok "Datos guardados en $zip ($n archivos, $([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB) · SHA-256 en $zip.sha256"
     Write-Host "     Para volver a usarlos: instalá $PROD de nuevo, detenelo, reemplazá su carpeta data\ por la de esta copia e inicialo."
   } catch { Er "No se pudo guardar la copia de los datos: no sigo (nada se borró). $($_.Exception.Message)"; Read-Host 'Enter para cerrar' | Out-Null; exit 1 }
 }
 
 Write-Host '3) Accesos directos'
 Lanzador @('acceso-directo', '--quitar') | Out-Null
-$esc = [Environment]::GetFolderPath('Desktop'); $menu = Join-Path ([Environment]::GetFolderPath('Programs')) $PROD
+$esc = [Environment]::GetFolderPath('Desktop'); if (-not $esc) { $esc = Join-Path $HOME 'Desktop' }
+$progs = [Environment]::GetFolderPath('Programs'); if (-not $progs) { $progs = Join-Path $HOME 'Programs' }; $menu = Join-Path $progs $PROD
 Remove-Item (Join-Path $esc "$PROD.lnk") -ErrorAction SilentlyContinue; if (Test-Path $menu) { Remove-Item $menu -Recurse -Force -ErrorAction SilentlyContinue }
 Ok 'Accesos directos quitados (escritorio y menú Inicio)'
 
@@ -93,7 +95,7 @@ else {
 Write-Host '5) Borrar'
 $borrado = $false
 if (Test-Path $RAIZ) {
-  if ($RAIZ -in @($HOME, 'C:\', [Environment]::GetFolderPath('MyDocuments')) -or $RAIZ.Length -lt 8) { Er "Ruta sospechosa, no se borra: $RAIZ" }
+  if ($RAIZ -in @($HOME, 'C:\', $DOCS) -or $RAIZ.Length -lt 8) { Er "Ruta sospechosa, no se borra: $RAIZ" }
   else {
     Set-Location $HOME
     for ($k = 1; $k -le 3; $k++) { Remove-Item $RAIZ -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Test-Path $RAIZ)) { break }; Start-Sleep -Seconds 2 }
@@ -106,7 +108,7 @@ if ($borrado -and $BASE_PROD -and (Test-Path $BASE_PROD)) {
 }
 if ($Cache) { if (Test-Path $CARPETA_CACHE) { Remove-Item $CARPETA_CACHE -Recurse -Force -ErrorAction SilentlyContinue; Ok "Caché del instalador borrada ($CARPETA_CACHE)" } else { Av 'No había caché para borrar' } }
 
-$archivoReg = Join-Path ([Environment]::GetFolderPath('MyDocuments')) ("desinstalacion_{0}_{1}.log" -f $PROD, (Get-Date -Format 'yyyy-MM-dd_HHmm'))
+$archivoReg = Join-Path $DOCS ("desinstalacion_{0}_{1}.log" -f $PROD, (Get-Date -Format 'yyyy-MM-dd_HHmm'))
 $txt = @("Desinstalación de $PROD · $(Get-Date -Format 'yyyy-MM-dd HH:mm') · instalado el $INSTALADO (iProy $VERSION) en $RAIZ") + @($REG) + @('No se deshacen: Visual C++ 2015-2022 ni la sincronización de hora, porque los usan otros programas.')
 [IO.File]::WriteAllLines($archivoReg, $txt, (New-Object Text.UTF8Encoding $false))
 Write-Host "`nListo. Registro: $archivoReg"
