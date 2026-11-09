@@ -104,7 +104,7 @@ function capability(): array {
                 $rec('Location', ['pim-establecimiento', 'pim-local'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/local'), $sp('name', 'string', 'Nombre (:exact, :contains)'), $sp('status', 'token', 'active | inactive | suspended'),
                      $sp('partof', 'reference', 'Location contenedora (el establecimiento es la raíz)'), $sp('organization', 'reference', 'Organization responsable'),
-                     $sp('type', 'token', 'facility (establecimiento) o el tipo del local: Edificio, Ala, Nivel, Local, Cama, Área')],
+                     $sp('type', 'token', 'facility (establecimiento, código IHE mCSD); el tipo del local va como texto: type:text=Edificio | Ala | Nivel | Local | Cama | Área')],
                     'PIM-INV y IHE ITI-90/91: establecimiento (mCSD FacilityLocation) y locales (mCSD Location) con grupo de uso médico y ambiente controlado.'),
                 $rec('Device', ['pim-pma', 'pim-sistema', 'pim-activo'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/activo · sid/eui64 · sid/anmat-pm'), $sp('device-name', 'string', 'Nombre'), $sp('location', 'reference', 'Location'),

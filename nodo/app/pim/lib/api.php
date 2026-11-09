@@ -156,7 +156,7 @@ function buscar(string $tipo): never {
         }
         $col = PARAMS[$tipo][$nombre] ?? null;
         if ($col === null) continue;                                           // parámetro no soportado: se ignora (lenient)
-        if ($mod !== null && !in_array($mod, ['exact', 'contains'], true)) throw new Fallo(400, 'not-supported', "Modificador no soportado: $k");
+        if ($mod !== null && !in_array($mod, ['exact', 'contains'], true) && !($mod === 'text' && $col === 'loc_tipo')) throw new Fallo(400, 'not-supported', "Modificador no soportado: $k");
         $usados[] = [$k, $v];
         $c = [];
         foreach (explode(',', $v) as $uno) {
@@ -175,8 +175,10 @@ function buscar(string $tipo): never {
                 $c[] = 'parte_de IS NULL';                                          // hijos directos del establecimiento
             } elseif (isset(REFERENCIAS[$col])) {
                 $c[] = "$col = ?"; $a[] = ref_id($uno, REFERENCIAS[$col], $nombre);
-            } elseif ($col === 'loc_tipo') {                                      // type: facility → solo el establecimiento; texto → tipo físico
-                [, $val] = token($uno); $tf = array_search(mb_strtolower($val), array_map('mb_strtolower', TIPO_FISICO_ES), true);
+            } elseif ($col === 'loc_tipo') {                                      // type: facility → solo el establecimiento; los locales llevan el tipo como texto
+                // 1.6.2: la forma FHIR es type:text=Local; el texto sin modificador se sigue aceptando si no trae system (un token con system busca un código)
+                [$sys, $val] = token($uno);
+                $tf = ($mod === 'text' || $sys === null) ? array_search(mb_strtolower($val), array_map('mb_strtolower', TIPO_FISICO_ES), true) : false;
                 $c[] = $tf !== false ? 'tipo_fisico = ?' : '1 = 0'; if ($tf !== false) $a[] = $tf;
             } elseif ($col === 'alcance') {
                 $x = strtoupper($uno); $cods = array_keys(SISTEMA_ALCANCE, $x, true);
@@ -241,13 +243,18 @@ function incluir_establecimiento(array $ps): bool {
             '_count', '_offset', '_summary', '_total', '_sort', '_format' => true,
             '_id' => in_array(estab_id(), explode(',', $v), true),
             'identifier' => in_array($o['codigo'], array_map(fn($x) => token($x)[1], explode(',', $v)), true),
-            'type' => in_array('facility', array_map(fn($x) => token($x)[1], explode(',', $v)), true),
+            'type' => $m !== 'text' && array_filter(explode(',', $v), 'IproyPim\\es_tipo_establecimiento'),
             'status' => in_array('active', explode(',', $v), true),
             'organization' => ref_id($v, 'Organization', 'organization') === org_organismo_id(),
             'name' => $m === 'exact' ? $v === $o['nombre'] : str_contains(normalizar($o['nombre']), normalizar($v)),
             default => false };
     }
     return $ok;
+}
+/** ¿El token de Location?type nombra al establecimiento? facility (IHE mCSD) u HOSP (v3-RoleCode), con su system o sin system. */
+function es_tipo_establecimiento(string $x): bool {
+    [$sys, $cod] = token($x);
+    return ($cod === 'facility' && in_array($sys, [null, MCSD_TIPOS], true)) || ($cod === 'HOSP' && in_array($sys, [null, 'http://terminology.hl7.org/CodeSystem/v3-RoleCode'], true));
 }
 /** DeviceMetric?source=Device/x · type=<código> · identifier=<activo>/<punto> · _id */
 function buscar_puntos(array $ps): never {
@@ -681,14 +688,17 @@ function historial(string $tipo, ?string $id): never {
     // primero y, si hay más que `_count`, un `link next` con `_offset`: antes se devolvían los más nuevos y los viejos se perdían.
     $offset = max(0, (int) ($_GET['_offset'] ?? 0));
     $qt = pdo()->prepare('SELECT COUNT(*) FROM pim_version WHERE ' . implode(' AND ', $w)); $qt->execute($a); $total = (int) $qt->fetchColumn();
-    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . " ORDER BY ts ASC, version ASC LIMIT $count OFFSET $offset"); $q->execute($a);
+    // 1.6.2: desempate estable (ts, id, versión): dos cambios en el mismo milisegundo salen siempre en el mismo orden y ninguno se repite ni se pierde al paginar.
+    // `_sort=-_lastUpdated` da el orden de FHIR R4 (el más nuevo primero); por defecto sigue el ascendente que necesita PIM-8.
+    $desc = ($_GET['_sort'] ?? '') === '-_lastUpdated';
+    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . ' ORDER BY ' . ($desc ? 'ts DESC, id DESC, version DESC' : 'ts ASC, id ASC, version ASC') . " LIMIT $count OFFSET $offset"); $q->execute($a);
     $e = [];
     foreach ($q->fetchAll() as $v) $e[] = ['fullUrl' => base() . "/$tipo/{$v['id']}", 'resource' => json_decode($v['contenido'], true),
         'request' => ['method' => $v['accion'] === 'create' ? 'POST' : 'PUT', 'url' => "$tipo/{$v['id']}"],
         'response' => ['status' => $v['accion'] === 'create' ? '201 Created' : '200 OK', 'lastModified' => iso($v['ts'])]];
     $GLOBALS['iproy_pim_audit']['n'] = count($e);
     $propia = base() . "/$tipo" . ($id !== null ? "/$id" : '') . '/_history';
-    $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count], fn($x) => $x !== null && $x !== '');
+    $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count, '_sort' => $desc ? '-_lastUpdated' : null], fn($x) => $x !== null && $x !== '');
     $link = [['relation' => 'self', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset])]];
     if ($offset + count($e) < $total) $link[] = ['relation' => 'next', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset + $count])];
     responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link] + ($e ? ['entry' => $e] : []));
