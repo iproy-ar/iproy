@@ -406,7 +406,7 @@ function alta_solicitud(array $f, array $cli): array {
     $motivoPrio = null; $sug = null; $fund = null;
     if ($f['activo_id'] && ($a = fila('pim_activo', $f['activo_id'])) && ($i = iru($a, $f['estado_declarado']))) {
         // la sugerencia del IRU se guarda siempre (1.4.0): así se mide si el auditor la acepta, la cambia o la rechaza
-        $sug = BANDA_PRIORIDAD[$i['banda']];
+        $sug = banda_prioridad()[$i['banda']];
         $fund = mb_substr('IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ' · banda ' . $i['banda_base'] . ($i['ajuste'] ? ' → ' . $i['banda'] . ' (' . $i['ajuste'] . ')' : ''), 0, 160);
         if ($prio === null) { $prio = $sug; $motivoPrio = 'Prioridad por IRU: banda ' . $i['banda'] . ' (' . $i['total'] . ')'; }
     }

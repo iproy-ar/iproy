@@ -31,7 +31,16 @@ const TRANSICIONES = [
 ];
 const CON_MOTIVO = ['en-espera', 'rechazada', 'anulada', 'en-revision'];
 const PRIORIDADES = ['routine', 'urgent', 'asap', 'stat'];
-const BANDA_PRIORIDAD = ['A' => 'stat', 'B' => 'asap', 'C' => 'urgent', 'D' => 'routine'];
+/** Banda del IRU → request-priority. Única fuente: el ConceptMap normativo pim-banda-a-prioridad de la guía (conf/pim-guia), no una tabla propia (1.6.2). */
+function banda_prioridad(): array {
+    static $m = null;
+    if ($m !== null) return $m;
+    $cm = json_decode((string) @file_get_contents(raiz() . '/conf/pim-guia/ConceptMap-pim-banda-a-prioridad.json'), true);
+    $m = [];
+    foreach ((array) ($cm['group'][0]['element'] ?? []) as $e) $m[substr((string) $e['code'], 6)] = (string) ($e['target'][0]['code'] ?? '');   // «banda-A» → A
+    if (array_keys($m) !== ['A', 'B', 'C', 'D'] || array_diff($m, PRIORIDADES)) throw new Fallo(503, 'exception', 'Falta el ConceptMap pim-banda-a-prioridad en conf/pim-guia, o no cubre las bandas A a D (herramientas/guia-al-nodo.sh)');
+    return $m;
+}
 const TIPOS_MANT = ['correctivo-inmediato', 'correctivo-diferido', 'preventivo-sistematico', 'preventivo-condicional', 'predictivo', 'mejora', 'ensayo-reglamentario', 'verificacion-tecnica-pma'];
 const SISTEMAS = ['GAS-O2' => 'Oxígeno medicinal', 'GAS-AIRE' => 'Aire medicinal', 'GAS-VAC' => 'Vacío medicinal', 'GAS-N2O' => 'Óxido nitroso',
     'GAS-CO2' => 'Dióxido de carbono', 'GAS-AGSS' => 'Evacuación de gases anestésicos', 'ELE-EMER' => 'Energía de emergencia', 'ELE-UPS' => 'Sistemas de alimentación ininterrumpida',
@@ -180,7 +189,7 @@ function iru(array $r, ?string $estadoDeclarado = null): ?array {
     if ($estadoDeclarado === 'fuera-de-servicio' && in_array($r['redundancia'] ?? null, [null, 'N'], true)) { $i = max(0, $i - 1); $ajuste = 'sube: fuera de servicio sin contingencia'; }
     elseif (in_array($r['redundancia'] ?? null, ['N+1', '2N'], true)) { $i = min(3, $i + 1); $ajuste = 'baja: redundancia ' . $r['redundancia']; }
     return ['F' => (int) $r['iru_f'], 'R' => $R, 'M' => (int) $r['iru_m'], 'A' => $A, 'total' => $total, 'banda_base' => $base, 'banda' => $bandas[$i], 'ajuste' => $ajuste,
-            'prioridad' => BANDA_PRIORIDAD[$bandas[$i]]];
+            'prioridad' => banda_prioridad()[$bandas[$i]]];
 }
 
 function alcance(array $r): ?string {
