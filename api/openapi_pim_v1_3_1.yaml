@@ -18,8 +18,9 @@ info:
     **Autorización**: SMART Backend Services. El cliente firma un JWT (RS384 o ES384) con su clave privada,
     lo canjea en `POST /pim/auth/token` y usa el `access_token` (5 minutos) como `Authorization: Bearer`.
     Cada cliente tiene un **rol PIM** (GM gestor · EJ ejecutor · SO solicitante · FT telemetría · CI consulta · RE registro estatal).
+    Un cliente registrado sin rol opera con el de menor privilegio (CI, solo consulta).
 
-    **Concurrencia**: toda modificación exige `If-Match: W/"<versión>"` (412 si cambió, 428 si falta).
+    **Concurrencia**: toda modificación (`PUT` y `$transicion`) exige `If-Match: W/"<versión>"` (412 si cambió, 428 si falta).
     **Nunca hay borrado físico**: se anula o inactiva y queda la traza en `_history` y `Provenance`.
   license: { name: CC BY-SA 4.0, identifier: CC-BY-SA-4.0 }
 servers:
@@ -140,14 +141,15 @@ paths:
       summary: Búsqueda
       description: |
         Parámetros por recurso — Organization (IHE ITI-90): identifier, name, type (facility | prov | dept | bus), partof, active ·
-        Location (IHE ITI-90): identifier, name, status, partof, organization, type (facility = el establecimiento; o Edificio, Ala, Nivel, Local, Cama, Área) ·
+        Location (IHE ITI-90): identifier, name, status, partof, organization, type (facility = el establecimiento; el tipo del local va como texto: type:text=Edificio | Ala | Nivel | Local | Cama | Área) ·
         Device: identifier (sid/activo, sid/eui64 o sid/anmat-pm con «system|valor»), device-name, location, type, status, parent, manufacturer, categoria-alcance (A|B|C|D) ·
         DeviceMetric: identifier (<activo>/<punto>), type, source · ServiceRequest: identifier, status, priority, subject, authored ·
         Task: identifier, status, business-status, owner, priority, location, focus, based-on, code, authored-on, modified, _lastUpdated, decision-prioridad (aceptada | cambiada | rechazada) ·
         Observation: device (DeviceMetric o Device), code (pim-punto o MDC), date, interpretation · RiskAssessment: subject, banda · Group: member · Provenance: target (obligatorio).
         Comunes: _id, _count (≤ 200), _offset, _sort (_lastUpdated, -_lastUpdated, date), _summary=count, _total=none.
         Modificadores de texto: :exact, :contains. Fechas con prefijos eq, ge, gt, le, lt. Varios valores separados por coma = O.
-        El rol EJ solo ve las Task de su organización.
+        El rol EJ solo ve las Task de su organización y las ServiceRequest que las originaron.
+        Un Bundle sin resultados no trae `entry` (en FHIR un arreglo vacío no es válido).
       parameters:
         - { name: _count, in: query, schema: { type: integer, maximum: 200 } }
         - { name: _offset, in: query, schema: { type: integer } }
@@ -182,7 +184,12 @@ paths:
     get:
       tags: [PIM-FED]
       summary: Historial del tipo
-      parameters: [ { name: _since, in: query, schema: { type: string, format: date-time } } ]
+      description: Orden cronológico ascendente y estable (fecha, id, versión), paginado con _count y _offset (link next). `_sort=-_lastUpdated` da el orden de FHIR R4 (lo más nuevo primero).
+      parameters:
+        - { name: _since, in: query, schema: { type: string, format: date-time } }
+        - { name: _count, in: query, schema: { type: integer, maximum: 200 } }
+        - { name: _offset, in: query, schema: { type: integer } }
+        - { name: _sort, in: query, schema: { const: "-_lastUpdated" } }
       responses: { "200": { $ref: "#/components/responses/Bundle" } }
   /{tipo}/{id}:
     parameters: [ { $ref: "#/components/parameters/tipo" }, { $ref: "#/components/parameters/id" } ]
@@ -224,7 +231,9 @@ paths:
         finalizada → conformada | en-ejecucion (GM). Terminales: conformada, rechazada, anulada.
         Motivo obligatorio para en-espera, rechazada, anulada y en-revision. Asignar exige responsable.
         Una orden correctiva se finaliza con modoFalla (ISO 14224). decisionPrioridad (aceptada | cambiada | rechazada) registra qué hizo el Gestor con la prioridad sugerida por el IRU; cambiada y rechazada exigen motivoPrioridad (extensión pim-decision-prioridad, 1.3.0). Conformar, rechazar o anular cierra la ServiceRequest.
-      parameters: [ { name: If-Match, in: header, required: false, schema: { type: string } } ]
+        «(GM)» y «(EJ)» indican quién hace normalmente cada transición: el Gestor (GM) puede hacer también las del Ejecutor, en su nombre; el EJ solo las suyas y solo en las órdenes de su organización.
+        `If-Match` es obligatorio, igual que en PUT: 428 si falta y 412 si la versión no es la vigente.
+      parameters: [ { $ref: "#/components/parameters/ifMatch" } ]
       requestBody:
         required: true
         content:
@@ -240,8 +249,9 @@ paths:
         "200": { $ref: "#/components/responses/Recurso" }
         "403": { description: El rol no puede hacer esa transición }
         "409": { description: Orden reflejada del sistema de origen (solo lectura) }
-        "412": { description: Versión desactualizada }
+        "412": { description: La versión cambió (releer) }
         "422": { description: Transición no permitida o falta un dato obligatorio }
+        "428": { description: Falta If-Match }
 components:
   securitySchemes:
     smart:
@@ -336,6 +346,14 @@ x-pim-cambios:
     - "SearchParameter publicados: decision-prioridad (Task), banda (RiskAssessment), categoria-alcance (Device)"
     - "$transicion: estado opcional; parámetros prioridad, nota, decisionPrioridad y motivoPrioridad en la OperationDefinition"
     - "DeviceMetric: solo lectura por la API (se quita de PUT)"
+  ajustes_sin_renumerar:
+    implementado_en: "iProy 1.6.2 (09-11-2026)"
+    pendiente: "publicar estos ajustes con un número de contrato nuevo (el archivo y sus referencias conservan 1.3.1)"
+    cambios:
+      - "$transicion: If-Match pasa a obligatorio (428 si falta, 412 si la versión cambió), como ya decía la regla general de concurrencia"
+      - "Un cliente sin rol opera como CI; el rol EJ ve solo las ServiceRequest de sus órdenes; el GM puede hacer las transiciones del EJ (documentado)"
+      - "ServiceRequest.note es opcional (perfil pim-solicitud); Device se clasifica por cualquiera de sus meta.profile"
+      - "Un Bundle sin resultados no trae entry; _history con desempate estable y _sort=-_lastUpdated; Location?type:text"
 x-pim-cambios-1-3-0:
   version: 1.3.0
   fecha: "2026-11-03"

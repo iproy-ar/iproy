@@ -18,7 +18,7 @@
 | Buscar PMA, sistemas, activos | `GET /pim/r4/Device?categoria-alcance=A` | cualquiera autorizado | — |
 | Datos del REFES | `GET /pim/r4/Device/$refes?_format=csv` | GM, RE, CI | — |
 | Nueva solicitud | `POST /pim/r4/ServiceRequest` | GM, SO | — |
-| Cambiar el estado de una orden | `PUT /pim/r4/Task/{id}` con `If-Match` o `POST Task/{id}/$transicion` | GM, EJ | patrón XDW |
+| Cambiar el estado de una orden | `PUT /pim/r4/Task/{id}` o `POST Task/{id}/$transicion`, los dos con `If-Match` (428 si falta, 412 si la versión cambió) | GM, EJ | patrón XDW |
 | Enviar una medición | `POST /pim/r4/Observation` | FT | — |
 | Estado de equipos médicos | PCD-15 por MLLP (puerto 2575 del módulo mem) o `POST /api/m/mem/pcd15` | — | MEM-DMC (DMIC) |
 | Guía | `GET /pim/r4/{CodeSystem|ValueSet|StructureDefinition|CapabilityStatement|OperationDefinition}/{id}` | público | — |
