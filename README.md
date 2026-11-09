@@ -113,6 +113,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 |---|---|---|
 | `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, alarmas, libsodium, manifiestos, HL7 v2 de PCD-15 y **contrato servidor ↔ guía código por código** | 47/47 | — |
 | `pruebas/pim.sh`: guía y conformidad IHE, directorio mCSD (ITI-90/91), PMA con REFES y EUI-64, `Device/$refes`, DeviceMetric + Observation, solicitud → orden | 51/51 | 51/51 |
+| `pruebas/negativas.sh` (1.6.2): lo que el servidor tiene que rechazar, con tokens SMART de cada rol (`If-Match` 428 y 412, cliente sin rol, lo que el Ejecutor no ve, transiciones inválidas, Bundle vacío) | 36/36 | |
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
