@@ -194,8 +194,8 @@
         "reference": {
           "reference": "RiskAssessment/ejemplo-riesgo"
         },
-        "name": "Ejemplo — IRU de la red de oxígeno",
-        "description": "Datos ficticios.",
+        "name": "Ejemplo — IRU de la red de oxígeno (redundancia N+1)",
+        "description": "Datos ficticios. IRU = 8 + 5 + 4 + 1 = 18: banda base A (stat). La red tiene redundancia N+1, así que la banda vigente baja a B y la prioridad sugerida es asap.",
         "exampleCanonical": "https://iproy.com.ar/fhir/StructureDefinition/pim-riesgo"
       },
       {
@@ -299,7 +299,7 @@
           "reference": "OperationDefinition/Task-transicion"
         },
         "name": "Operación $transicion de una orden",
-        "description": "Cambia el estado de una orden según la definición de flujo PIM-OT (quién puede hacer cada transición, motivo obligatorio cuando corresponde).",
+        "description": "Cambia el estado de una orden según la definición de flujo PIM-OT (quién puede hacer cada transición, motivo obligatorio cuando corresponde). Como toda modificación, exige la cabecera If-Match con la versión de la orden (el versionId que el cliente leyó): 428 si falta y 412 si no es la vigente. El Gestor (GM) puede hacer también las transiciones del Ejecutor (EJ), en su nombre; el EJ solo opera las órdenes de su organización.",
         "exampleBoolean": false
       },
       {

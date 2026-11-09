@@ -35,10 +35,10 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | PIM-2 | Actualizar inventario | GM (otro nodo, consola) → GM | `POST`/`PUT Device`, `Location`, `Organization` con `If-Match` | — |
 | PIM-3 | Registrar solicitud | SO → GM | `POST ServiceRequest` (devuelve la orden en `pim-orden-generada`) | — |
 | PIM-4 | Consultar órdenes | SO, EJ, CI → GM | `GET Task?business-status=…&owner=…` | — |
-| PIM-5 | Actualizar orden | EJ, GM → GM | `PUT Task` con `If-Match` o `POST Task/{id}/$transicion` | Patrón de tareas de XDW |
+| PIM-5 | Actualizar orden | EJ, GM → GM | `PUT Task` o `POST Task/{id}/$transicion`, los dos con `If-Match` | Patrón de tareas de XDW |
 | PIM-6 | Enviar mediciones | FT → GM | `POST Observation` o `Bundle` batch; opción MQTT | — |
 | PIM-7 | Consultar riesgo | CI → GM | `GET RiskAssessment?subject=Group/{activo}-g` | — |
-| PIM-8 | Sincronizar cambios | GM → GM | `GET [tipo]/_history?_since=…&_count=…&_offset=…` (orden cronológico, `link next`) y `Provenance?target=…` | Semántica de ITI-91, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task |
+| PIM-8 | Sincronizar cambios | GM → GM | `GET [tipo]/_history?_since=…&_count=…&_offset=…` (orden cronológico ascendente y estable, `link next`; `_sort=-_lastUpdated` da el orden de FHIR R4, lo más nuevo primero) y `Provenance?target=…` | Semántica de ITI-91, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task |
 | PIM-9 | Informar al registro estatal | RE → GM | `GET Device/$refes` | — |
 | PIM-10 | Informar ensayo | EJ → GM | `POST DiagnosticReport` (`pim-informe-ensayo`) | — |
 | PIM-11 | Exportar indicadores | CI → GM | `MeasureReport` o `$export` | — |
@@ -80,7 +80,13 @@ Cada actor tiene su CapabilityStatement en esta guía: `pim-gm`, `pim-so`, `pim-
 | rechazada | rejected | FAILED | — |
 | anulada | cancelled | — | — |
 
-El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revision. La vuelta `finalizada → en-ejecucion` (no conforme) es una extensión del PIM: XDW no sale de COMPLETED; en FHIR el `Task.status` vuelve de `completed` a `in-progress` y queda la versión y la Provenance de la reapertura. Cada transición genera una versión nueva del Task y su Provenance encadenado (equivale al historial de eventos de tarea de XDW). El PIM es un superconjunto de XDW: agrega aceptación, rechazo, espera y anulación, que el mantenimiento entre organismos necesita.
+Son **11 estados**; tres son terminales (conformada, rechazada y anulada). El motivo es obligatorio para pasar a en-espera, rechazada, anulada y en-revision. La vuelta `finalizada → en-ejecucion` (no conforme) es una extensión del PIM: XDW no sale de COMPLETED; en FHIR el `Task.status` vuelve de `completed` a `in-progress` y queda la versión y la Provenance de la reapertura. Cada transición genera una versión nueva del Task y su Provenance encadenado (equivale al historial de eventos de tarea de XDW). El PIM es un superconjunto de XDW: agrega aceptación, rechazo, espera y anulación, que el mantenimiento entre organismos necesita.
+
+**Quién puede.** «(GM)» y «(EJ)» indican el actor que normalmente hace la transición. El **Gestor (GM) puede hacer también las transiciones del Ejecutor**, en su nombre: es lo que pasa cuando el trabajo lo hace personal propio de la institución que no usa el sistema, o cuando una sola persona cumple los dos papeles. Queda igual la versión y la Provenance con el cliente que hizo el cambio. El **Ejecutor (EJ)** solo hace las transiciones marcadas «(EJ)», y solo en las órdenes de su organización; tampoco ve las órdenes de otras organizaciones ni las solicitudes que las originaron.
+
+**Concurrencia.** `PUT Task` y `$transicion` exigen la cabecera `If-Match: W/"<versionId>"` con la versión que el cliente leyó. Sin la cabecera el Gestor responde **428** *Precondition Required*; si la versión ya no es la vigente responde **412** *Precondition Failed* y el cliente tiene que releer la orden. Así el Gestor y el Ejecutor no se pisan los cambios.
+
+**Actor sin rol.** Un cliente registrado sin rol PIM, o con un rol que no existe, opera con el de menor privilegio (CI, solo consulta). Nunca se lo trata como Gestor.
 
 #### Traducción de IHE PCD-15 a FHIR (PIM-EQM)
 
@@ -120,6 +126,17 @@ La respuesta es un ACK de HL7 v2 (MSA-1 = AA, AE o AR) en el mismo canal MLLP. U
 | D · < 10 | `routine` |
 
 **Ajustes** (dan la banda vigente, `pim-iru.bandaAjustada`): sube un nivel si el activo está **fuera de servicio sin contingencia** (lo declara la solicitud, `pim-estado-declarado`); baja un nivel si tiene **redundancia N+1 o 2N**. El mapa banda → prioridad es el ConceptMap `pim-banda-a-prioridad` y es normativo: dos implementaciones distintas tienen que sugerir la misma prioridad para el mismo activo. El RiskAssessment (PIM-7) publica los cuatro componentes, el total, la banda base y, si corresponde, la ajustada con su motivo.
+
+**Ejemplo con redundancia N+1** (instancia `ejemplo-riesgo` de esta guía). Una red de oxígeno medicinal con F = 8, R = 5 (categoría 1 de NFPA 99), M = 4 y A = +1:
+
+| Paso | Resultado |
+|---|---|
+| IRU = 8 + 5 + 4 + 1 | **18** |
+| Banda base (IRU ≥ 18) | **A** → `stat` |
+| Ajuste: la red tiene redundancia N+1 | baja un nivel |
+| Banda vigente (`pim-iru.bandaAjustada`) | **B** → prioridad sugerida `asap` |
+
+Sin la redundancia, la misma red quedaría en la banda A y la sugerencia sería `stat`. El ajuste que sube un nivel (fuera de servicio sin contingencia) solo vale cuando la redundancia es N o no está cargada: con N+1 o 2N hay contingencia y la banda baja un nivel.
 
 #### Decisión humana sobre la prioridad (PIM-RSG)
 

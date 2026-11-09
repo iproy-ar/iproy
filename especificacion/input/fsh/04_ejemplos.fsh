@@ -115,7 +115,7 @@ Usage: #example
 * status = #requested
 * businessStatus = PimEstadoOrden#solicitada
 * intent = #order
-* priority = #stat
+* priority = #asap
 * focus = Reference(ejemplo-red-oxigeno)
 * location = Reference(ejemplo-quirofano)
 * authoredOn = "2026-10-29T14:30:05-03:00"
@@ -169,18 +169,22 @@ Usage: #example
 
 Instance: ejemplo-riesgo
 InstanceOf: PimRiesgo
-Title: "Ejemplo — IRU de la red de oxígeno"
-Description: "Datos ficticios."
+Title: "Ejemplo — IRU de la red de oxígeno (redundancia N+1)"
+Description: "Datos ficticios. IRU = 8 + 5 + 4 + 1 = 18: banda base A (stat). La red tiene redundancia N+1, así que la banda vigente baja a B y la prioridad sugerida es asap."
 Usage: #example
 * status = #final
 * subject = Reference(ejemplo-grupo)
 * method = PimMetodoRiesgo#iru
 * basis = Reference(ejemplo-red-oxigeno)
-* prediction.qualitativeRisk = PimValores#banda-A
-* prediction.rationale = "IRU = F 9 + R 5 + M 4 + A 0 = 18"
-* extension[iru].extension[F].valueInteger = 9
+* prediction.qualitativeRisk = PimValores#banda-B
+* prediction.rationale = "IRU = F 8 + R 5 + M 4 + A 1 = 18 · baja: redundancia N+1"
+* mitigation = "baja: redundancia N+1"
+* extension[iru].extension[F].valueInteger = 8
 * extension[iru].extension[R].valueInteger = 5
 * extension[iru].extension[M].valueInteger = 4
-* extension[iru].extension[A].valueInteger = 0
+* extension[iru].extension[A].valueInteger = 1
 * extension[iru].extension[total].valueInteger = 18
 * extension[iru].extension[banda].valueCoding = PimValores#banda-A
+* extension[iru].extension[bandaAjustada].valueCoding = PimValores#banda-B
+* extension[iru].extension[ajuste].valueString = "baja: redundancia N+1"
+* extension[iru].extension[prioridad].valueCode = #asap
