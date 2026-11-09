@@ -83,7 +83,7 @@ function leer(string $tipo, string $id, ?string $vid = null): never {
     if (!es_id($id)) throw new Fallo(400, 'invalid', 'ID con formato inválido');
     if ($vid !== null) {                                                       // vread
         $q = pdo()->prepare('SELECT contenido FROM pim_version WHERE recurso = ? AND id = ? AND version = ?'); $q->execute([$tipo, $id, (int) $vid]);
-        $c = $q->fetchColumn(); if (!$c) throw new Fallo(404, 'not-found', "$tipo/$id/_history/$vid no existe");
+        $c = $q->fetchColumn(); if (!$c || !ej_ve($cli, $tipo, $id)) throw new Fallo(404, 'not-found', "$tipo/$id/_history/$vid no existe");
         $GLOBALS['iproy_pim_audit']['n'] = 1;
         responder(200, json_decode($c, true));
     }
@@ -100,10 +100,14 @@ function leer(string $tipo, string $id, ?string $vid = null): never {
     $GLOBALS['iproy_pim_audit']['n'] = 1;
     responder(200, $res, MIME, cab_version($res));
 }
-/** El Ejecutor solo lee órdenes de su organización. */
+/** El Ejecutor solo lee las órdenes de su organización y, desde la 1.6.2, las solicitudes que las originaron. */
 function restringir_ej(array $cli, string $tipo, array $res): void {
-    if ($cli['rol'] !== 'EJ' || $tipo !== 'Task') return;
-    if (($res['owner']['reference'] ?? '') !== 'Organization/' . org_de_cliente($cli)) throw new Fallo(404, 'not-found', "Task/{$res['id']} no existe");
+    if (!ej_ve($cli, $tipo, (string) $res['id'])) throw new Fallo(404, 'not-found', "$tipo/{$res['id']} no existe");
+}
+function ej_ve(array $cli, string $tipo, string $id): bool {
+    if ($cli['rol'] !== 'EJ' || !in_array($tipo, ['Task', 'ServiceRequest'], true)) return true;
+    $q = pdo()->prepare('SELECT 1 FROM pim_orden WHERE ' . ($tipo === 'Task' ? 'id' : 'solicitud_id') . ' = ? AND responsable_id = ? LIMIT 1'); $q->execute([$id, org_de_cliente($cli)]);
+    return (bool) $q->fetchColumn();
 }
 
 // ================================================================== búsqueda
@@ -197,6 +201,7 @@ function buscar(string $tipo): never {
         if ($c) $w[] = '(' . implode(' OR ', $c) . ')';
     }
     if ($tipo === 'Task' && ($o = org_de_cliente($cli))) { $w[] = 'responsable_id = ?'; $a[] = $o; }
+    if ($tipo === 'ServiceRequest' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT solicitud_id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
     $tabla = RECURSOS[$tipo]['tabla'];
     $where = $w ? ' WHERE ' . implode(' AND ', $w) : '';
     $q = pdo()->prepare("SELECT COUNT(*) FROM $tabla$where"); $q->execute($a);
@@ -320,7 +325,7 @@ function buscar_especial(string $tipo, array $ps, array $cli): never {
     if ($tipo === 'Provenance') {
         if (empty($f['target'])) throw new Fallo(400, 'required', 'Provenance exige el parámetro target=<Tipo>/<id>');
         $t = tipo_ref($f['target']) ?? 'Task'; $id = ref_id($f['target'], array_keys(RECURSOS), 'target');
-        if ($t === 'Task' && $cli['rol'] === 'EJ') { $r = fila('pim_orden', $id); if (!$r || $r['responsable_id'] !== org_de_cliente($cli)) throw new Fallo(404, 'not-found', 'No existe'); }
+        if (!ej_ve($cli, $t, $id)) throw new Fallo(404, 'not-found', 'No existe');
         $q = pdo()->prepare('SELECT recurso, id, version, accion, cliente, ts, motivo, huella FROM pim_version WHERE recurso = ? AND id = ? ORDER BY version'); $q->execute([$t, $id]);
         $lista = array_map(fn($v) => quitar_nulos(prov_fhir($v)), $q->fetchAll());
     } else {
@@ -670,6 +675,7 @@ function historial(string $tipo, ?string $id): never {
     if (!empty($_GET['_since'])) { $f = fecha_param('ge' . preg_replace('/^(ge|gt)/', '', (string) $_GET['_since'])); $w[] = 'ts >= ?'; $a[] = $f[1]; }
     $count = max(1, min((int) cfg()['max_count'], (int) ($_GET['_count'] ?? cfg()['count_def'])));
     if ($tipo === 'Task' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
+    if ($tipo === 'ServiceRequest' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT solicitud_id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
     // 1.5.1 (L-405): orden ASCENDENTE y paginación real. Con `_since` el que sincroniza (PIM-8 / ITI-91) recibe los cambios más viejos
     // primero y, si hay más que `_count`, un `link next` con `_offset`: antes se devolvían los más nuevos y los viejos se perdían.
     $offset = max(0, (int) ($_GET['_offset'] ?? 0));
