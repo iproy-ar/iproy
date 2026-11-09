@@ -52,7 +52,8 @@ final class PimCliente {
         $v = $recurso['meta']['versionId'] ?? throw new InvalidArgumentException('Falta meta.versionId: leé el recurso antes de modificarlo');
         return $this->http('PUT', $recurso['resourceType'] . '/' . $recurso['id'], $recurso, ['If-Match: W/"' . $v . '"'])[0];
     }
-    /** Cambio de estado de una orden. $extra: motivo, responsable (Organization/…), prioridad, tipoMantenimiento, modoFalla, nota. */
+    /** Cambio de estado de una orden. $extra: motivo, responsable (Organization/…), prioridad, tipoMantenimiento, modoFalla, nota.
+     *  El servidor exige If-Match (428 si falta, 412 si otro la cambió antes): pasá en $version el meta.versionId que leíste; si no, se lee la orden. */
     public function transicion(string $taskId, string $estado, array $extra = [], ?string $version = null): array {
         $p = [['name' => 'estado', 'valueCode' => $estado]];
         foreach ($extra as $k => $v) {
@@ -60,7 +61,8 @@ final class PimCliente {
             $p[] = $k === 'responsable' ? ['name' => $k, 'valueReference' => ['reference' => $v]]
                  : (in_array($k, ['prioridad', 'tipoMantenimiento', 'modoFalla'], true) ? ['name' => $k, 'valueCode' => $v] : ['name' => $k, 'valueString' => $v]);
         }
-        return $this->http('POST', "Task/$taskId/\$transicion", ['resourceType' => 'Parameters', 'parameter' => $p], $version ? ['If-Match: W/"' . $version . '"'] : [])[0];
+        $version ??= $this->leer('Task', $taskId)['meta']['versionId'] ?? throw new RuntimeException("No se pudo leer la versión de Task/$taskId");
+        return $this->http('POST', "Task/$taskId/\$transicion", ['resourceType' => 'Parameters', 'parameter' => $p], ['If-Match: W/"' . $version . '"'])[0];
     }
     /** PIM-SOL atajo: crea la solicitud (y el servidor crea la orden). Devuelve [ServiceRequest, 'Task/<id>']. */
     public function solicitar(string $sujeto, string $categoria, string $descripcion, ?string $estadoDeclarado = null, ?string $prioridad = null, ?string $solicitante = null): array {

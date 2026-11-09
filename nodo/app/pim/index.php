@@ -14,7 +14,7 @@
  *   GET    /pim/r4/{Tipo}/{id}  ·  …/_history/{v}         lectura y lectura de versión
  *   POST   /pim/r4/{Tipo}                                 alta (Organization, Location, Device, ServiceRequest, Observation)
  *   PUT    /pim/r4/{Tipo}/{id}   (If-Match obligatorio)   modificación
- *   POST   /pim/r4/Task/{id}/$transicion                  cambio de estado de la orden (Tabla 9-2)
+ *   POST   /pim/r4/Task/{id}/$transicion  (If-Match obligatorio)  cambio de estado de la orden (Tabla 9-2)
  *   GET    /pim/r4/{Tipo}/_history · /{Tipo}/{id}/_history   historial (PIM-FED)
  *   POST   /pim/r4   (Bundle batch)                       lote de Observation / ServiceRequest
  *   /pim  →  Consola PIM (/pim/consola/)

@@ -626,7 +626,8 @@ function decision_prioridad(array $r, array $p, array $set, array $cli, string $
             'decision_ts' => (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v')];
 }
 
-/** POST /Task/{id}/$transicion con Parameters (estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota). */
+/** POST /Task/{id}/$transicion con Parameters (estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota).
+ *  If-Match es obligatorio, igual que en PUT (1.6.2): 428 si falta, 412 si la versión no es la actual. */
 function op_transicion(string $id): never {
     $cli = exigir('Task', 'u');
     exigir_rol($cli, ['GM', 'EJ'], 'cambiar el estado de una orden');
@@ -638,12 +639,12 @@ function op_transicion(string $id): never {
         $v = $x['valueCode'] ?? $x['valueString'] ?? ($x['valueReference']['reference'] ?? null);
         if ($n === 'nota') $notas[] = (string) $v; elseif ($n !== '') $p[$n] = $v;
     }
-    $ver = if_match();
+    $ver = if_match() ?? throw new Fallo(428, 'required', 'PIM exige If-Match: W/"<versión>" para cambiar el estado de una orden (control de concurrencia)');
     $db = pdo(); $db->beginTransaction();
     try {
         $r = fila('pim_orden', $id, true) ?? throw new Fallo(404, 'not-found', "Task/$id no existe");
         solo_lectura_legado('Task', $r);
-        if ($ver !== null && (int) $r['version'] !== $ver) throw new Fallo(412, 'conflict', "La versión actual es {$r['version']}");
+        if ((int) $r['version'] !== $ver) throw new Fallo(412, 'conflict', "La versión actual es {$r['version']}: releé la orden antes de cambiarla");
         [$set, $motivo] = transicion_set($r, $p, $cli, $notas);
         if ($set) {
             aplicar_cambios('pim_orden', $id, $set);
