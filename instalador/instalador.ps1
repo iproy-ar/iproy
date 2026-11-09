@@ -6,7 +6,9 @@
 # con barra de avance, pedido de permiso de administrador (UAC) solo cuando hace falta e informe final.
 #
 # Aprendido de la primera instalación real en Windows (Paso 114, L-395 a L-397):
-#  - no hacen falta Git, PHP ni winget: el código se baja como ZIP y la incubadora corre con el PHP de FrankenPHP;
+#  - el código se baja como ZIP y la incubadora corre con el PHP de FrankenPHP: la instalación no depende de Git, PHP ni winget;
+#  - desde la 1.6.2 igual se instalan SIEMPRE Git y PHP 8.3 con winget (paso «herramientas»), para que la PC quede lista para
+#    actualizar, incubar y desarrollar; si winget falta o falla, se avisa cómo resolverlo y la instalación sigue;
 #  - se instala con TU usuario (el icono queda en tu escritorio); Administrador solo para firewall, hora o Visual C++;
 #  - cada descarga se verifica con SHA-256; la contraseña nunca se escribe en disco.
 #
@@ -97,7 +99,7 @@ $TRABAJO = {
   $URL_CODIGO = "https://github.com/iproy-ar/iproy/archive/refs/tags/$TAG.zip"
   $CACHE = $(if ($env:IPROY_INST_CACHE) { $env:IPROY_INST_CACHE } else { Join-Path $env:LOCALAPPDATA 'iproy-instalador' })
   $SIMULAR = [bool]$env:IPROY_INST_SIMULAR
-  $PESO = @{ carpeta = 2; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6; desinstalador = 1 }
+  $PESO = @{ carpeta = 2; herramientas = 8; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6; desinstalador = 1 }
   $PESO_TOTAL = 0; foreach ($v in $PESO.Values) { $PESO_TOTAL += $v }
   Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -227,6 +229,44 @@ $TRABAJO = {
       New-Item -ItemType Directory -Force -Path $base | Out-Null
       $t = Join-Path $base ('_prueba_' + [guid]::NewGuid().ToString('N').Substring(0, 6)); Set-Content $t 'x'; Remove-Item -Force $t
       return $base }
+    herramientas = {
+      # 1.6.2: Git y PHP 8.3 se instalan siempre con winget, sin suponer que ya están. La instalación de iProy no depende de ellos
+      # (usa el ZIP del código y el PHP de FrankenPHP), así que si winget falta o falla el paso queda en «aviso» y se sigue.
+      $paquetes = @(@{ id = 'Git.Git'; nombre = 'Git'; extra = @() }, @{ id = 'PHP.PHP.8.3'; nombre = 'PHP 8.3'; extra = @('--scope', 'machine') })
+      $ayuda = 'Para instalarlos a mano: winget install --id Git.Git -e --source winget  y  winget install --id PHP.PHP.8.3 -e --source winget --scope machine (docs/INSTALACION.md, sección B1)'
+      if ($SIMULAR) { foreach ($q in $paquetes) { Start-Sleep -Milliseconds 400; Log "(simulado) winget install --id $($q.id) -e --source winget $($q.extra -join ' ')" }; return 'Git y PHP 8.3 instalados con winget (simulado)' }
+      $wg = Get-Command winget.exe -ErrorAction SilentlyContinue
+      if (-not $wg) { Log "winget no está en esta PC. $ayuda"; return @('aviso', 'winget no está en esta PC: Git y PHP 8.3 quedaron sin instalar (ver el detalle técnico). iProy funciona igual.') }
+      $ya = @(-1978335189, -1978335135)   # 0x8A15002B sin actualización aplicable · 0x8A150061 el paquete ya está instalado
+      $hechos = @(); $fallas = @(); $n = 0
+      foreach ($q in $paquetes) {
+        $arg = @('install', '--id', $q.id, '-e', '--source', 'winget') + $q.extra + @('--accept-source-agreements', '--accept-package-agreements', '--silent')
+        Log ('$ winget ' + ($arg -join ' '))
+        Sub "$($q.nombre): instalando con winget (si Windows pide permiso, aceptalo)" ($n / $paquetes.Count) 'herramientas'
+        $tmp = Join-Path ([IO.Path]::GetTempPath()) ('iproy-winget-' + [guid]::NewGuid().ToString('N'))
+        $out = "$tmp.out"; $err = "$tmp.err"; $vacio = "$tmp.in"; [IO.File]::WriteAllText($vacio, '')
+        $rc = $null
+        try {
+          $p = Start-Process -FilePath $wg.Source -ArgumentList ($arg -join ' ') -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError $err -RedirectStandardInput $vacio
+          $null = $p.Handle; $t0 = Get-Date
+          while (-not $p.HasExited) {
+            Start-Sleep -Milliseconds 500
+            if (((Get-Date) - $t0).TotalMinutes -gt 20) { try { $p.Kill() } catch { }; throw 'pasaron 20 minutos sin terminar' }
+          }
+          $p.WaitForExit(); $rc = $p.ExitCode
+          foreach ($f in @($out, $err)) { if (Test-Path $f) { foreach ($l in (Get-Content $f -Encoding UTF8)) { $l = ("$l" -replace '[^\x20-\x7E -ɏ]', '').Trim(); if ($l.Length -gt 3) { Log "  $l" } } } }
+        } catch { Log "  $($q.nombre): $($_.Exception.Message)" }
+        finally { foreach ($f in @($out, $err, $vacio)) { Remove-Item -Force $f -ErrorAction SilentlyContinue } }
+        if ($rc -eq 0) { $hechos += "$($q.nombre) instalado"; [void]$i.componentes.Add(@{ nombre = $q.nombre; version = "winget $($q.id)"; sha256 = '' }) }
+        elseif ($ya -contains $rc) { $hechos += "$($q.nombre) ya estaba" }
+        else { $fallas += $q.nombre; Log ("  $($q.nombre): winget terminó con el código " + $(if ($null -eq $rc) { '(sin código)' } else { '0x{0:X8}' -f $rc })) }
+        $n++
+      }
+      if ($fallas.Count) {
+        Log "Si winget responde 0x8A15000F, su catálogo está dañado: winget source reset --force (como administrador). $ayuda"
+        return @('aviso', (($hechos + @("sin instalar: $($fallas -join ' y ') (ver el detalle técnico). iProy funciona igual.")) -join ' · '))
+      }
+      return (($hechos -join ' · ') + ' · abrí una terminal nueva para usarlos') }
     runtime = {
       $zip = Join-Path $CACHE 'frankenphp-windows-x86_64.zip'
       if ($SIMULAR) { Start-Sleep 1; Sub 'FrankenPHP: 60 de 60 MB' 1 'runtime' } else {
@@ -344,7 +384,7 @@ $TRABAJO = {
       $progs = [Environment]::GetFolderPath('Programs'); if (-not $progs) { $progs = Join-Path $HOME 'Programs' }
       $man = @{ producto = $prod; version = $S.version_instalador; instalado = (Get-Date -Format 'yyyy-MM-dd HH:mm'); carpeta = $raiz; carpeta_producto = $baseProd; lanzador = $lanz
                 accesos = @((Join-Path $escr "$prod.lnk"), (Join-Path $progs $prod)); firewall_regla = $fw
-                cache = $CACHE; componentes = @($i.componentes); archivos_junto_a_la_carpeta = $archivosBase; no_se_deshace = @('Visual C++ 2015-2022', 'sincronización de hora')
+                cache = $CACHE; componentes = @($i.componentes); archivos_junto_a_la_carpeta = $archivosBase; no_se_deshace = @('Git y PHP 8.3 (winget)', 'Visual C++ 2015-2022', 'sincronización de hora')
                 uso = "uninstall-$prod.bat   (opciones: -Si -SinDatos -DestinoRespaldo D -Cache -ConservarFirewall)" }
       [IO.File]::WriteAllText((Join-Path $raiz "uninstall-$prod.json"), ($man | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
       $i.desinstalador = $bat; $i.cmd_uninstall = "uninstall-$prod.bat"
@@ -447,7 +487,7 @@ function Atender($p) {
       if (-not (PuertoLibre ([int]$o.puerto))) { return Responder $st 422 (Json @{ error = "El puerto $($o.puerto) está ocupado: elegí otro." }) }
       if (-not $S.sistema) { $S.sistema = Sistema }
       $S.fase = 'instalando'; $S.plantilla_uninstall = PlantillaUninstall
-      foreach ($par in @(@('carpeta', 'Preparar la carpeta'), @('runtime', 'Bajar el servidor web (FrankenPHP)'), @('codigo', 'Bajar el código de iProy'), @('producto', 'Armar el producto'),
+      foreach ($par in @(@('carpeta', 'Preparar la carpeta'), @('herramientas', 'Instalar Git y PHP 8.3 (winget)'), @('runtime', 'Bajar el servidor web (FrankenPHP)'), @('codigo', 'Bajar el código de iProy'), @('producto', 'Armar el producto'),
                          @('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), @('librerias', 'Revisar Windows y Visual C++'), @('init', 'Crear el nodo'), @('red', 'Abrir el acceso desde la red'),
                          @('start', 'Arrancar el sistema'), @('usuario', 'Crear el usuario administrador'), @('hora', 'Revisar la hora de la PC'), @('verificar', 'Comprobar que responde'),
                          @('desinstalador', 'Dejar el desinstalador'))) {

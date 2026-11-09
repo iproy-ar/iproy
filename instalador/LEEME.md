@@ -29,7 +29,7 @@ Cada versión publica `SHA256SUMS.txt` para comprobar la descarga.
 
 | Problema de la primera instalación en Windows | Qué hace el instalador |
 |---|---|
-| Git o PHP no instalados; winget con el error `0x8a15000f` | No los necesita: baja el código como ZIP y corre la incubadora con el PHP de FrankenPHP |
+| Git o PHP no instalados; winget con el error `0x8a15000f` | Desde la 1.6.2 los instala siempre con winget (`Git.Git` y `PHP.PHP.8.3`), sin suponer que ya están. La instalación no depende de ellos (baja el código como ZIP y corre la incubadora con el PHP de FrankenPHP): si winget falta o falla, avisa cómo resolverlo y sigue |
 | A PHP le faltaba `mbstring` | FrankenPHP trae `mbstring` y `gd` |
 | Instalar como Administrador deja el icono en otro escritorio | Instala con tu usuario y avisa si la sesión es de administrador. Pide permiso solo para lo que lo necesita |
 | PowerShell en otra carpeta; `bash` que abre WSL | No hay que escribir comandos |
