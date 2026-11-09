@@ -39,7 +39,7 @@ Usage: #definition
 * imports[0] = $mCSDDir
 * imports[1] = $mCSDDirUpd
 * rest[0].mode = #server
-* rest[0].documentation = "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor). Toda modificación exige If-Match. Nunca hay borrado físico. Auditoría interna por cliente y operación; la publicación como AuditEvent (IHE BALP) está planificada."
+* rest[0].documentation = "SMART Backend Services (client_credentials + private_key_jwt). Cada cliente tiene un rol PIM (actor); un cliente registrado sin rol opera con el de menor privilegio (CI, solo consulta). Toda modificación exige If-Match, tanto PUT como la operación $transicion: 428 si falta y 412 si la versión no es la vigente. Nunca hay borrado físico. Auditoría interna por cliente y operación; la publicación como AuditEvent (IHE BALP) está planificada."
 * rest[0].security.service = http://terminology.hl7.org/CodeSystem/restful-security-service#SMART-on-FHIR
 * rest[0].resource[0] insert Recurso(Organization, pim-organismo, SHALL)
 * rest[0].resource[0].supportedProfile[1] = "https://iproy.com.ar/fhir/StructureDefinition/pim-empresa"
@@ -138,7 +138,7 @@ Usage: #definition
 * rest[0].resource[10].interaction[0] insert Interaccion(create, MAY)
 * rest[0].resource[10].interaction[1] insert Interaccion(search-type, MAY)
 * rest[0].interaction[0].code = #history-system
-* rest[0].interaction[0].documentation = "PIM-8 Sincronizar cambios: _history con _since, paginado con _count y _offset (link next), en orden cronológico ascendente, para los recursos versionados: Organization, Location, Device, ServiceRequest y Task (semántica de IHE ITI-91). Observation, DeviceMetric, RiskAssessment y Group no se versionan: las mediciones viajan por PIM-6 y los derivados se recalculan en cada nodo."
+* rest[0].interaction[0].documentation = "PIM-8 Sincronizar cambios: _history con _since, paginado con _count y _offset (link next), en orden cronológico ascendente y estable (fecha, id y versión), para los recursos versionados: Organization, Location, Device, ServiceRequest y Task (semántica de IHE ITI-91). El ascendente es un desvío declarado respecto de FHIR R4, que ordena el historial con lo más nuevo primero: ese orden se pide con _sort=-_lastUpdated. Observation, DeviceMetric, RiskAssessment y Group no se versionan: las mediciones viajan por PIM-6 y los derivados se recalculan en cada nodo."
 
 Instance: pim-so
 InstanceOf: CapabilityStatement
@@ -204,7 +204,7 @@ Usage: #definition
 Instance: Task-transicion
 InstanceOf: OperationDefinition
 Title: "Operación $transicion de una orden"
-Description: "Cambia el estado de una orden según la definición de flujo PIM-OT (quién puede hacer cada transición, motivo obligatorio cuando corresponde)."
+Description: "Cambia el estado de una orden según la definición de flujo PIM-OT (quién puede hacer cada transición, motivo obligatorio cuando corresponde). Como toda modificación, exige la cabecera If-Match con la versión de la orden (el versionId que el cliente leyó): 428 si falta y 412 si no es la vigente. El Gestor (GM) puede hacer también las transiciones del Ejecutor (EJ), en su nombre; el EJ solo opera las órdenes de su organización."
 Usage: #definition
 * url = "https://iproy.com.ar/fhir/OperationDefinition/Task-transicion"
 * name = "TaskTransicion"

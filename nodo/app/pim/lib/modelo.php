@@ -31,7 +31,16 @@ const TRANSICIONES = [
 ];
 const CON_MOTIVO = ['en-espera', 'rechazada', 'anulada', 'en-revision'];
 const PRIORIDADES = ['routine', 'urgent', 'asap', 'stat'];
-const BANDA_PRIORIDAD = ['A' => 'stat', 'B' => 'asap', 'C' => 'urgent', 'D' => 'routine'];
+/** Banda del IRU → request-priority. Única fuente: el ConceptMap normativo pim-banda-a-prioridad de la guía (conf/pim-guia), no una tabla propia (1.6.2). */
+function banda_prioridad(): array {
+    static $m = null;
+    if ($m !== null) return $m;
+    $cm = json_decode((string) @file_get_contents(raiz() . '/conf/pim-guia/ConceptMap-pim-banda-a-prioridad.json'), true);
+    $m = [];
+    foreach ((array) ($cm['group'][0]['element'] ?? []) as $e) $m[substr((string) $e['code'], 6)] = (string) ($e['target'][0]['code'] ?? '');   // «banda-A» → A
+    if (array_keys($m) !== ['A', 'B', 'C', 'D'] || array_diff($m, PRIORIDADES)) throw new Fallo(503, 'exception', 'Falta el ConceptMap pim-banda-a-prioridad en conf/pim-guia, o no cubre las bandas A a D (herramientas/guia-al-nodo.sh)');
+    return $m;
+}
 const TIPOS_MANT = ['correctivo-inmediato', 'correctivo-diferido', 'preventivo-sistematico', 'preventivo-condicional', 'predictivo', 'mejora', 'ensayo-reglamentario', 'verificacion-tecnica-pma'];
 const SISTEMAS = ['GAS-O2' => 'Oxígeno medicinal', 'GAS-AIRE' => 'Aire medicinal', 'GAS-VAC' => 'Vacío medicinal', 'GAS-N2O' => 'Óxido nitroso',
     'GAS-CO2' => 'Dióxido de carbono', 'GAS-AGSS' => 'Evacuación de gases anestésicos', 'ELE-EMER' => 'Energía de emergencia', 'ELE-UPS' => 'Sistemas de alimentación ininterrumpida',
@@ -180,7 +189,7 @@ function iru(array $r, ?string $estadoDeclarado = null): ?array {
     if ($estadoDeclarado === 'fuera-de-servicio' && in_array($r['redundancia'] ?? null, [null, 'N'], true)) { $i = max(0, $i - 1); $ajuste = 'sube: fuera de servicio sin contingencia'; }
     elseif (in_array($r['redundancia'] ?? null, ['N+1', '2N'], true)) { $i = min(3, $i + 1); $ajuste = 'baja: redundancia ' . $r['redundancia']; }
     return ['F' => (int) $r['iru_f'], 'R' => $R, 'M' => (int) $r['iru_m'], 'A' => $A, 'total' => $total, 'banda_base' => $base, 'banda' => $bandas[$i], 'ajuste' => $ajuste,
-            'prioridad' => BANDA_PRIORIDAD[$bandas[$i]]];
+            'prioridad' => banda_prioridad()[$bandas[$i]]];
 }
 
 function alcance(array $r): ?string {
@@ -228,8 +237,10 @@ function dev_fhir(array $r): array {
 function dev_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'Device') throw new Fallo(422, 'invalid', 'Se esperaba Device');
     sin_pacientes($j);
-    $perfil = (string) ($j['meta']['profile'][0] ?? sd('pim-activo'));
-    $clase = str_ends_with($perfil, 'pim-sistema') ? 'sistema' : (str_ends_with($perfil, 'pim-pma') ? 'equipo-medico' : 'activo');
+    // la clase sale de TODOS los perfiles declarados (1.6.2), no solo del primero; se ignora la versión del canónico («…|0.9.4»)
+    $perfiles = array_map(fn($p) => explode('|', (string) $p)[0], (array) ($j['meta']['profile'] ?? [])) ?: [sd('pim-activo')];
+    $tiene = fn(string $n) => (bool) array_filter($perfiles, fn($p) => str_ends_with($p, $n));
+    $clase = $tiene('pim-sistema') ? 'sistema' : ($tiene('pim-pma') ? 'equipo-medico' : 'activo');
     $cod = null; $anmat = null; $eui = null;
     foreach ((array) ($j['identifier'] ?? []) as $i) {
         $sys = (string) ($i['system'] ?? ''); $val = trim((string) ($i['value'] ?? ''));
@@ -360,14 +371,14 @@ function sr_desde(array $j): array {
     if ($activo && !$local) { $q = pdo()->prepare('SELECT local_id FROM pim_activo WHERE id = ?'); $q->execute([$activo]); $local = $q->fetchColumn() ?: null; }
     $cat = $j['code']['coding'][0]['code'] ?? null; $catTxt = $j['code']['text'] ?? ($j['code']['coding'][0]['display'] ?? null);
     if (!$cat && !$catTxt) throw new Fallo(422, 'required', 'code (categoría del pedido) es obligatorio', 'ServiceRequest.code');
+    // note es opcional, como en el perfil pim-solicitud (1.6.2): sin nota, la categoría (code) describe el pedido
     $desc = trim(implode("\n", array_map(fn($n) => (string) ($n['text'] ?? ''), (array) ($j['note'] ?? []))));
-    if ($desc === '') throw new Fallo(422, 'required', 'note[0].text (descripción del problema) es obligatorio', 'ServiceRequest.note');
     $ed = null;
     foreach ((array) ($j['extension'] ?? []) as $e) if (($e['url'] ?? '') === sd('pim-estado-declarado')) {
         $ed = (string) ($e['valueCoding']['code'] ?? ($e['valueCode'] ?? '')); if (!in_array($ed, ESTADO_DECLARADO, true)) throw new Fallo(422, 'code-invalid', 'Estado declarado: ' . implode(' | ', ESTADO_DECLARADO));
     }
     return ['prioridad' => $pr, 'categoria_codigo' => $cat ? mb_substr((string) $cat, 0, 40) : null, 'categoria_texto' => $catTxt ? mb_substr((string) $catTxt, 0, 160) : null,
-            'descripcion' => mb_substr($desc, 0, 5000), 'local_id' => $local, 'activo_id' => $activo, 'estado_declarado' => $ed,
+            'descripcion' => $desc !== '' ? mb_substr($desc, 0, 5000) : null, 'local_id' => $local, 'activo_id' => $activo, 'estado_declarado' => $ed,
             'solicitante' => isset($j['requester']['display']) ? mb_substr((string) $j['requester']['display'], 0, 160) : null,
             'observacion_id' => obs_motivo($j)];
 }

@@ -83,7 +83,7 @@ function leer(string $tipo, string $id, ?string $vid = null): never {
     if (!es_id($id)) throw new Fallo(400, 'invalid', 'ID con formato inválido');
     if ($vid !== null) {                                                       // vread
         $q = pdo()->prepare('SELECT contenido FROM pim_version WHERE recurso = ? AND id = ? AND version = ?'); $q->execute([$tipo, $id, (int) $vid]);
-        $c = $q->fetchColumn(); if (!$c) throw new Fallo(404, 'not-found', "$tipo/$id/_history/$vid no existe");
+        $c = $q->fetchColumn(); if (!$c || !ej_ve($cli, $tipo, $id)) throw new Fallo(404, 'not-found', "$tipo/$id/_history/$vid no existe");
         $GLOBALS['iproy_pim_audit']['n'] = 1;
         responder(200, json_decode($c, true));
     }
@@ -100,10 +100,14 @@ function leer(string $tipo, string $id, ?string $vid = null): never {
     $GLOBALS['iproy_pim_audit']['n'] = 1;
     responder(200, $res, MIME, cab_version($res));
 }
-/** El Ejecutor solo lee órdenes de su organización. */
+/** El Ejecutor solo lee las órdenes de su organización y, desde la 1.6.2, las solicitudes que las originaron. */
 function restringir_ej(array $cli, string $tipo, array $res): void {
-    if ($cli['rol'] !== 'EJ' || $tipo !== 'Task') return;
-    if (($res['owner']['reference'] ?? '') !== 'Organization/' . org_de_cliente($cli)) throw new Fallo(404, 'not-found', "Task/{$res['id']} no existe");
+    if (!ej_ve($cli, $tipo, (string) $res['id'])) throw new Fallo(404, 'not-found', "$tipo/{$res['id']} no existe");
+}
+function ej_ve(array $cli, string $tipo, string $id): bool {
+    if ($cli['rol'] !== 'EJ' || !in_array($tipo, ['Task', 'ServiceRequest'], true)) return true;
+    $q = pdo()->prepare('SELECT 1 FROM pim_orden WHERE ' . ($tipo === 'Task' ? 'id' : 'solicitud_id') . ' = ? AND responsable_id = ? LIMIT 1'); $q->execute([$id, org_de_cliente($cli)]);
+    return (bool) $q->fetchColumn();
 }
 
 // ================================================================== búsqueda
@@ -152,7 +156,7 @@ function buscar(string $tipo): never {
         }
         $col = PARAMS[$tipo][$nombre] ?? null;
         if ($col === null) continue;                                           // parámetro no soportado: se ignora (lenient)
-        if ($mod !== null && !in_array($mod, ['exact', 'contains'], true)) throw new Fallo(400, 'not-supported', "Modificador no soportado: $k");
+        if ($mod !== null && !in_array($mod, ['exact', 'contains'], true) && !($mod === 'text' && $col === 'loc_tipo')) throw new Fallo(400, 'not-supported', "Modificador no soportado: $k");
         $usados[] = [$k, $v];
         $c = [];
         foreach (explode(',', $v) as $uno) {
@@ -171,8 +175,10 @@ function buscar(string $tipo): never {
                 $c[] = 'parte_de IS NULL';                                          // hijos directos del establecimiento
             } elseif (isset(REFERENCIAS[$col])) {
                 $c[] = "$col = ?"; $a[] = ref_id($uno, REFERENCIAS[$col], $nombre);
-            } elseif ($col === 'loc_tipo') {                                      // type: facility → solo el establecimiento; texto → tipo físico
-                [, $val] = token($uno); $tf = array_search(mb_strtolower($val), array_map('mb_strtolower', TIPO_FISICO_ES), true);
+            } elseif ($col === 'loc_tipo') {                                      // type: facility → solo el establecimiento; los locales llevan el tipo como texto
+                // 1.6.2: la forma FHIR es type:text=Local; el texto sin modificador se sigue aceptando si no trae system (un token con system busca un código)
+                [$sys, $val] = token($uno);
+                $tf = ($mod === 'text' || $sys === null) ? array_search(mb_strtolower($val), array_map('mb_strtolower', TIPO_FISICO_ES), true) : false;
                 $c[] = $tf !== false ? 'tipo_fisico = ?' : '1 = 0'; if ($tf !== false) $a[] = $tf;
             } elseif ($col === 'alcance') {
                 $x = strtoupper($uno); $cods = array_keys(SISTEMA_ALCANCE, $x, true);
@@ -197,6 +203,7 @@ function buscar(string $tipo): never {
         if ($c) $w[] = '(' . implode(' OR ', $c) . ')';
     }
     if ($tipo === 'Task' && ($o = org_de_cliente($cli))) { $w[] = 'responsable_id = ?'; $a[] = $o; }
+    if ($tipo === 'ServiceRequest' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT solicitud_id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
     $tabla = RECURSOS[$tipo]['tabla'];
     $where = $w ? ' WHERE ' . implode(' AND ', $w) : '';
     $q = pdo()->prepare("SELECT COUNT(*) FROM $tabla$where"); $q->execute($a);
@@ -223,7 +230,8 @@ function bundle_busqueda(string $tipo, array $lista, int $total, array $usados, 
     $b = ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'meta' => ['lastUpdated' => date('c')], 'type' => 'searchset'];
     if (!$sinTotal || $soloTotal) $b['total'] = $total;
     $b['link'] = $links;
-    if (!$soloTotal) $b['entry'] = array_map(fn($r) => ['fullUrl' => base() . '/' . $r['resourceType'] . '/' . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']], $lista);
+    // en FHIR un arreglo vacío no es válido: sin resultados, «entry» se omite (1.6.2)
+    if (!$soloTotal && $lista) $b['entry'] = array_map(fn($r) => ['fullUrl' => base() . '/' . $r['resourceType'] . '/' . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']], $lista);
     responder(200, $b);
 }
 /** ¿La búsqueda de Location alcanza al establecimiento (pim-establecimiento, mCSD FacilityLocation)? Sí si no filtra o si filtra por él. */
@@ -235,13 +243,18 @@ function incluir_establecimiento(array $ps): bool {
             '_count', '_offset', '_summary', '_total', '_sort', '_format' => true,
             '_id' => in_array(estab_id(), explode(',', $v), true),
             'identifier' => in_array($o['codigo'], array_map(fn($x) => token($x)[1], explode(',', $v)), true),
-            'type' => in_array('facility', array_map(fn($x) => token($x)[1], explode(',', $v)), true),
+            'type' => $m !== 'text' && array_filter(explode(',', $v), 'IproyPim\\es_tipo_establecimiento'),
             'status' => in_array('active', explode(',', $v), true),
             'organization' => ref_id($v, 'Organization', 'organization') === org_organismo_id(),
             'name' => $m === 'exact' ? $v === $o['nombre'] : str_contains(normalizar($o['nombre']), normalizar($v)),
             default => false };
     }
     return $ok;
+}
+/** ¿El token de Location?type nombra al establecimiento? facility (IHE mCSD) u HOSP (v3-RoleCode), con su system o sin system. */
+function es_tipo_establecimiento(string $x): bool {
+    [$sys, $cod] = token($x);
+    return ($cod === 'facility' && in_array($sys, [null, MCSD_TIPOS], true)) || ($cod === 'HOSP' && in_array($sys, [null, 'http://terminology.hl7.org/CodeSystem/v3-RoleCode'], true));
 }
 /** DeviceMetric?source=Device/x · type=<código> · identifier=<activo>/<punto> · _id */
 function buscar_puntos(array $ps): never {
@@ -320,7 +333,7 @@ function buscar_especial(string $tipo, array $ps, array $cli): never {
     if ($tipo === 'Provenance') {
         if (empty($f['target'])) throw new Fallo(400, 'required', 'Provenance exige el parámetro target=<Tipo>/<id>');
         $t = tipo_ref($f['target']) ?? 'Task'; $id = ref_id($f['target'], array_keys(RECURSOS), 'target');
-        if ($t === 'Task' && $cli['rol'] === 'EJ') { $r = fila('pim_orden', $id); if (!$r || $r['responsable_id'] !== org_de_cliente($cli)) throw new Fallo(404, 'not-found', 'No existe'); }
+        if (!ej_ve($cli, $t, $id)) throw new Fallo(404, 'not-found', 'No existe');
         $q = pdo()->prepare('SELECT recurso, id, version, accion, cliente, ts, motivo, huella FROM pim_version WHERE recurso = ? AND id = ? ORDER BY version'); $q->execute([$t, $id]);
         $lista = array_map(fn($v) => quitar_nulos(prov_fhir($v)), $q->fetchAll());
     } else {
@@ -393,7 +406,7 @@ function alta_solicitud(array $f, array $cli): array {
     $motivoPrio = null; $sug = null; $fund = null;
     if ($f['activo_id'] && ($a = fila('pim_activo', $f['activo_id'])) && ($i = iru($a, $f['estado_declarado']))) {
         // la sugerencia del IRU se guarda siempre (1.4.0): así se mide si el auditor la acepta, la cambia o la rechaza
-        $sug = BANDA_PRIORIDAD[$i['banda']];
+        $sug = banda_prioridad()[$i['banda']];
         $fund = mb_substr('IRU = F ' . $i['F'] . ' + R ' . $i['R'] . ' + M ' . $i['M'] . ' + A ' . $i['A'] . ' = ' . $i['total'] . ' · banda ' . $i['banda_base'] . ($i['ajuste'] ? ' → ' . $i['banda'] . ' (' . $i['ajuste'] . ')' : ''), 0, 160);
         if ($prio === null) { $prio = $sug; $motivoPrio = 'Prioridad por IRU: banda ' . $i['banda'] . ' (' . $i['total'] . ')'; }
     }
@@ -477,7 +490,7 @@ function lote(): never {
         }
     }
     $GLOBALS['iproy_pim_audit']['n'] = count($out);
-    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'batch-response', 'entry' => $out]);
+    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'batch-response'] + ($out ? ['entry' => $out] : []));
 }
 
 // ================================================================== modificación (PUT con If-Match)
@@ -626,7 +639,8 @@ function decision_prioridad(array $r, array $p, array $set, array $cli, string $
             'decision_ts' => (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v')];
 }
 
-/** POST /Task/{id}/$transicion con Parameters (estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota). */
+/** POST /Task/{id}/$transicion con Parameters (estado, motivo, responsable, prioridad, tipoMantenimiento, modoFalla, nota).
+ *  If-Match es obligatorio, igual que en PUT (1.6.2): 428 si falta, 412 si la versión no es la actual. */
 function op_transicion(string $id): never {
     $cli = exigir('Task', 'u');
     exigir_rol($cli, ['GM', 'EJ'], 'cambiar el estado de una orden');
@@ -638,12 +652,12 @@ function op_transicion(string $id): never {
         $v = $x['valueCode'] ?? $x['valueString'] ?? ($x['valueReference']['reference'] ?? null);
         if ($n === 'nota') $notas[] = (string) $v; elseif ($n !== '') $p[$n] = $v;
     }
-    $ver = if_match();
+    $ver = if_match() ?? throw new Fallo(428, 'required', 'PIM exige If-Match: W/"<versión>" para cambiar el estado de una orden (control de concurrencia)');
     $db = pdo(); $db->beginTransaction();
     try {
         $r = fila('pim_orden', $id, true) ?? throw new Fallo(404, 'not-found', "Task/$id no existe");
         solo_lectura_legado('Task', $r);
-        if ($ver !== null && (int) $r['version'] !== $ver) throw new Fallo(412, 'conflict', "La versión actual es {$r['version']}");
+        if ((int) $r['version'] !== $ver) throw new Fallo(412, 'conflict', "La versión actual es {$r['version']}: releé la orden antes de cambiarla");
         [$set, $motivo] = transicion_set($r, $p, $cli, $notas);
         if ($set) {
             aplicar_cambios('pim_orden', $id, $set);
@@ -669,19 +683,23 @@ function historial(string $tipo, ?string $id): never {
     if (!empty($_GET['_since'])) { $f = fecha_param('ge' . preg_replace('/^(ge|gt)/', '', (string) $_GET['_since'])); $w[] = 'ts >= ?'; $a[] = $f[1]; }
     $count = max(1, min((int) cfg()['max_count'], (int) ($_GET['_count'] ?? cfg()['count_def'])));
     if ($tipo === 'Task' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
+    if ($tipo === 'ServiceRequest' && ($o = org_de_cliente($cli))) { $w[] = 'id IN (SELECT solicitud_id FROM pim_orden WHERE responsable_id = ?)'; $a[] = $o; }
     // 1.5.1 (L-405): orden ASCENDENTE y paginación real. Con `_since` el que sincroniza (PIM-8 / ITI-91) recibe los cambios más viejos
     // primero y, si hay más que `_count`, un `link next` con `_offset`: antes se devolvían los más nuevos y los viejos se perdían.
     $offset = max(0, (int) ($_GET['_offset'] ?? 0));
     $qt = pdo()->prepare('SELECT COUNT(*) FROM pim_version WHERE ' . implode(' AND ', $w)); $qt->execute($a); $total = (int) $qt->fetchColumn();
-    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . " ORDER BY ts ASC, version ASC LIMIT $count OFFSET $offset"); $q->execute($a);
+    // 1.6.2: desempate estable (ts, id, versión): dos cambios en el mismo milisegundo salen siempre en el mismo orden y ninguno se repite ni se pierde al paginar.
+    // `_sort=-_lastUpdated` da el orden de FHIR R4 (el más nuevo primero); por defecto sigue el ascendente que necesita PIM-8.
+    $desc = ($_GET['_sort'] ?? '') === '-_lastUpdated';
+    $q = pdo()->prepare('SELECT * FROM pim_version WHERE ' . implode(' AND ', $w) . ' ORDER BY ' . ($desc ? 'ts DESC, id DESC, version DESC' : 'ts ASC, id ASC, version ASC') . " LIMIT $count OFFSET $offset"); $q->execute($a);
     $e = [];
     foreach ($q->fetchAll() as $v) $e[] = ['fullUrl' => base() . "/$tipo/{$v['id']}", 'resource' => json_decode($v['contenido'], true),
         'request' => ['method' => $v['accion'] === 'create' ? 'POST' : 'PUT', 'url' => "$tipo/{$v['id']}"],
         'response' => ['status' => $v['accion'] === 'create' ? '201 Created' : '200 OK', 'lastModified' => iso($v['ts'])]];
     $GLOBALS['iproy_pim_audit']['n'] = count($e);
     $propia = base() . "/$tipo" . ($id !== null ? "/$id" : '') . '/_history';
-    $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count], fn($x) => $x !== null && $x !== '');
+    $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count, '_sort' => $desc ? '-_lastUpdated' : null], fn($x) => $x !== null && $x !== '');
     $link = [['relation' => 'self', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset])]];
     if ($offset + count($e) < $total) $link[] = ['relation' => 'next', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset + $count])];
-    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link, 'entry' => $e]);
+    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link] + ($e ? ['entry' => $e] : []));
 }

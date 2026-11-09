@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS pim_activo (
   modelo            VARCHAR(120)     NULL,
   serie             VARCHAR(120)     NULL,
   estado            VARCHAR(20)  NOT NULL DEFAULT 'active' COMMENT 'active | inactive | entered-in-error',
-  iru_f             TINYINT          NULL COMMENT 'Índice de Riesgo Unificado: función 2–10',
+  iru_f             TINYINT          NULL COMMENT 'Índice de Riesgo Unificado: función 1–10',
   iru_r             TINYINT          NULL COMMENT 'riesgo 1–5',
   iru_m             TINYINT          NULL COMMENT 'mantenimiento 1–5',
   iru_a             TINYINT          NULL COMMENT 'historial −2…+2',

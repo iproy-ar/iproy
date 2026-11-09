@@ -32,7 +32,9 @@ function generar(array $p, string $disparo): array {
             if ($org) $par = array_merge([['name' => 'estado', 'valueCode' => 'asignada'], ['name' => 'responsable', 'valueReference' => ['reference' => "Organization/$org"]]], $par);
         }
         if (count($par) === 1) $par = array_merge([['name' => 'estado', 'valueCode' => 'en-revision'], ['name' => 'motivo', 'valueString' => 'Preventivo programado: falta asignar responsable']], $par);
-        $t = pim('POST', "Task/$task/\$transicion", ['resourceType' => 'Parameters', 'parameter' => $par], ['rol' => 'GM']);
+        // $transicion exige If-Match (1.6.2): se lee la versión vigente de la orden recién creada
+        $ver = pim('GET', "Task/$task", null, ['rol' => 'GM'])['cuerpo']['meta']['versionId'] ?? '1';
+        $t = pim('POST', "Task/$task/\$transicion", ['resourceType' => 'Parameters', 'parameter' => $par], ['rol' => 'GM', 'if_match' => 'W/"' . $ver . '"']);
         if ($t['http'] >= 400) asentar('preventivo.transicion_fallida', ['task' => $task, 'error' => $t['cuerpo']['issue'][0]['diagnostics'] ?? $t['http']], (string) $p['id']);
     }
     q('INSERT INTO prev_generada (plan_id, programada, disparo, sr_id, task_id) VALUES (?,?,?,?,?)', [$p['id'], $p['proxima'], $disparo, $sr, $task]);

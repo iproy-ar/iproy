@@ -48,8 +48,9 @@ export class PimCliente {
     if (!v) throw new Error('Falta meta.versionId: leé el recurso antes de modificarlo');
     return this.#http('PUT', `${recurso.resourceType}/${recurso.id}`, recurso, { 'If-Match': `W/"${v}"` }).then((r) => r.cuerpo);
   }
-  /** extra: { motivo, responsable: 'Organization/…', prioridad, tipoMantenimiento, modoFalla, nota } */
-  transicion(taskId, estado, extra = {}, version = null) {
+  /** extra: { motivo, responsable: 'Organization/…', prioridad, tipoMantenimiento, modoFalla, nota }
+   *  El servidor exige If-Match (428 si falta, 412 si otro la cambió antes): pasá en version el meta.versionId que leíste; si no, se lee la orden. */
+  async transicion(taskId, estado, extra = {}, version = null) {
     const p = [{ name: 'estado', valueCode: estado }];
     for (const [k, v] of Object.entries(extra)) {
       if (v == null || v === '') continue;
@@ -57,7 +58,8 @@ export class PimCliente {
       else if (['prioridad', 'tipoMantenimiento', 'modoFalla'].includes(k)) p.push({ name: k, valueCode: v });
       else p.push({ name: k, valueString: v });
     }
-    return this.#http('POST', `Task/${taskId}/$transicion`, { resourceType: 'Parameters', parameter: p }, version ? { 'If-Match': `W/"${version}"` } : {}).then((r) => r.cuerpo);
+    if (version == null) version = (await this.leer('Task', taskId)).meta.versionId;
+    return this.#http('POST', `Task/${taskId}/$transicion`, { resourceType: 'Parameters', parameter: p }, { 'If-Match': `W/"${version}"` }).then((r) => r.cuerpo);
   }
   /** Devuelve { solicitud, orden: 'Task/<id>' } */
   async solicitar({ sujeto, categoria, descripcion, estadoDeclarado, prioridad, solicitante }) {

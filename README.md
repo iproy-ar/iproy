@@ -17,7 +17,7 @@
 |---|---|---|
 | **Estándar PIM** | **0.9.4** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
 | **API PIM** | **1.3.1** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.4. |
-| **Software iProy** | **1.6.1** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Software iProy** | **1.6.2** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -105,7 +105,7 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.6.1 · 06-11-2026)
+## Estado (v1.6.2 · 09-11-2026)
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
@@ -113,6 +113,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 |---|---|---|
 | `pruebas/unitarias.php`: bus, JSON canónico, Modbus, MQTT, alarmas, libsodium, manifiestos, HL7 v2 de PCD-15 y **contrato servidor ↔ guía código por código** | 47/47 | — |
 | `pruebas/pim.sh`: guía y conformidad IHE, directorio mCSD (ITI-90/91), PMA con REFES y EUI-64, `Device/$refes`, DeviceMetric + Observation, solicitud → orden | 51/51 | 51/51 |
+| `pruebas/negativas.sh` (1.6.2): lo que el servidor tiene que rechazar, con tokens SMART de cada rol (`If-Match` 428 y 412, cliente sin rol, lo que el Ejecutor no ve, transiciones inválidas, Bundle vacío) | 36/36 | |
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |

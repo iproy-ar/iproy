@@ -91,6 +91,12 @@ prueba('estados de la orden = pim-estado-orden', array_keys(IproyPim\ESTADOS_ORD
 prueba('tipos de mantenimiento = pim-tipo-mantenimiento', IproyPim\TIPOS_MANT == $cods('pim-tipo-mantenimiento'));
 prueba('sistemas = pim-sistema', !array_diff(array_keys(IproyPim\SISTEMAS), $cods('pim-sistema')) && !array_diff($cods('pim-sistema'), array_keys(IproyPim\SISTEMAS)));
 prueba('categoría de alcance de cada sistema (A–D)', !array_diff($cods('pim-sistema'), array_keys(IproyPim\SISTEMA_ALCANCE)) && !array_diff(IproyPim\SISTEMA_ALCANCE, ['A', 'B', 'C', 'D']));
+prueba('la orden tiene 11 estados, cada uno con sus transiciones, y 3 terminales', count(IproyPim\ESTADOS_ORDEN) === 11 && array_keys(IproyPim\TRANSICIONES) === array_keys(IproyPim\ESTADOS_ORDEN) && count(array_filter(IproyPim\TRANSICIONES, fn($t) => !$t)) === 3);
+$cm = json_decode((string) @file_get_contents("$G/ConceptMap-pim-banda-a-prioridad.json"), true); $mapa = [];
+foreach ((array) ($cm['group'][0]['element'] ?? []) as $e) $mapa[substr($e['code'], 6)] = $e['target'][0]['code'];
+prueba('banda del IRU → prioridad = ConceptMap pim-banda-a-prioridad (A a D)', count($mapa) === 4 && IproyPim\banda_prioridad() === $mapa);
+$i = IproyPim\iru(['iru_f' => 8, 'iru_r' => 5, 'iru_m' => 4, 'iru_a' => 1, 'categoria_riesgo' => 1, 'redundancia' => 'N+1']);
+prueba('IRU 8 + 5 + 4 + 1 = 18: banda base A; con redundancia N+1 baja a B y sugiere la prioridad de B', $i['total'] === 18 && $i['banda_base'] === 'A' && $i['banda'] === 'B' && $i['prioridad'] === $mapa['B'] && $mapa['A'] === 'stat' && $mapa['B'] === 'asap');
 prueba('grupos de local = pim-grupo-local', IproyPim\GRUPOS_LOCAL == $cods('pim-grupo-local'));
 prueba('estado declarado, presión y pertenencia ⊂ pim-valores', !array_diff(array_merge(IproyPim\ESTADO_DECLARADO, array_values(IproyPim\PRESION), IproyPim\PERTENENCIA), $cods('pim-valores')));
 $fuente = implode("\n", array_map('file_get_contents', array_merge(glob("$N/app/pim/lib/*.php"), ["$N/modulos/mem/lib.php"])));

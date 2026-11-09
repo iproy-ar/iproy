@@ -12,6 +12,7 @@ A() { curl -s -m 90 -X "$1" -H "X-$P-Tick: $TOK" -H 'Content-Type: application/j
 G() { curl -s -m 30 "http://127.0.0.1:$PORT/pim/$1"; }
 OK=0; MAL=0; ver() { if [[ "$2" == *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
 no()  { if [[ "$2" != *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
+VT() { printf 'W/"%s"' "$(A GET "Task/$1" | grep -o '"versionId":"[0-9]*"' | head -1 | grep -o '[0-9]*')"; }   # If-Match de una orden: $transicion lo exige (1.6.2)
 id_de() { grep -o "\"resourceType\":\"$1\",\"id\":\"[^\"]*\"" | head -1 | grep -o '[0-9A-Z]\{26\}'; }
 NS=https://iproy.com.ar/fhir; S=$RANDOM; DESDE=$(date -d '-1 min' +%Y-%m-%dT%H:%M:%S-03:00)
 
@@ -95,9 +96,9 @@ R=$(A POST ServiceRequest "{\"resourceType\":\"ServiceRequest\",\"status\":\"act
 ver "estado declarado como Coding de pim-valores" "$R" '"code":"degradado"'
 ver "reasonReference en la solicitud" "$R" "\"reasonReference\":[{\"reference\":\"Observation/$OB\"}]"
 T2=$(printf '%s' "$R" | grep -o '"reference":"Task/[^"]*"' | grep -o '[0-9A-Z]\{26\}')
-R=$(A POST "Task/$T2/\$transicion" "{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"estado\",\"valueCode\":\"asignada\"},{\"name\":\"responsable\",\"valueReference\":{\"reference\":\"Organization/$EMP\"}}]}")
+R=$(A POST "Task/$T2/\$transicion" "{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"estado\",\"valueCode\":\"asignada\"},{\"name\":\"responsable\",\"valueReference\":{\"reference\":\"Organization/$EMP\"}}]}" "$(VT $T2)")
 ver "transición solicitada → asignada (PIM-OT)" "$R" '"code":"asignada"'
-ver "transición no permitida → 422" "$(A POST "Task/$T2/\$transicion" '{"resourceType":"Parameters","parameter":[{"name":"estado","valueCode":"conformada"}]}')" 'Transición no permitida'
+ver "transición no permitida → 422" "$(A POST "Task/$T2/\$transicion" '{"resourceType":"Parameters","parameter":[{"name":"estado","valueCode":"conformada"}]}' "$(VT $T2)")" 'Transición no permitida'
 ver "Provenance encadenado" "$(A GET "Provenance?target=Task/$T2")" 'application/x-pim-huella'
 ver "RiskAssessment con banda en pim-valores" "$(A GET "RiskAssessment?subject=Device/$O2")" '"code":"banda-A"'
 
@@ -108,16 +109,16 @@ T3=$(sol 1); R=$(A GET "Task/$T3")
 ver "la orden guarda la prioridad sugerida (banda A → stat)" "$R" '"url":"sugerida","valueCode":"stat"'
 ver "fundamento visible (IRU = F + R + M + A)" "$R" 'IRU = F 9 + R 5 + M 4 + A 0 = 18'
 ver "decisión pendiente al nacer" "$R" '"code":"pendiente"'
-ver "cambiar la prioridad sin motivo → 422" "$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"}')")" 'exige el motivo'
-R=$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"},{"name":"motivoPrioridad","valueString":"Hay red de respaldo en servicio"}')")
+ver "cambiar la prioridad sin motivo → 422" "$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"}')" "$(VT $T3)")" 'exige el motivo'
+R=$(A POST "Task/$T3/\$transicion" "$(par '{"name":"prioridad","valueCode":"routine"},{"name":"motivoPrioridad","valueString":"Hay red de respaldo en servicio"}')" "$(VT $T3)")
 ver "cambio con motivo → decisión «cambiada»" "$R" '"code":"cambiada"'
 ver "el motivo queda registrado" "$R" 'Hay red de respaldo en servicio'
 ver "búsqueda Task?decision-prioridad=cambiada" "$(A GET "Task?decision-prioridad=cambiada&_count=50")" "\"id\":\"$T3\""
-T4=$(sol 2); R=$(A POST "Task/$T4/\$transicion" "{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"estado\",\"valueCode\":\"asignada\"},{\"name\":\"responsable\",\"valueReference\":{\"reference\":\"Organization/$EMP\"}}]}")
+T4=$(sol 2); R=$(A POST "Task/$T4/\$transicion" "{\"resourceType\":\"Parameters\",\"parameter\":[{\"name\":\"estado\",\"valueCode\":\"asignada\"},{\"name\":\"responsable\",\"valueReference\":{\"reference\":\"Organization/$EMP\"}}]}" "$(VT $T4)")
 ver "asignar sin decidir → decisión implícita «aceptada»" "$R" '"code":"aceptada"'
 T5=$(sol 3)
-ver "rechazar la sugerencia sin motivo → 422" "$(A POST "Task/$T5/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"rechazada"}')")" 'exige el motivo'
-ver "decisión sobre una orden sin IRU → 422" "$(A POST "Task/$T2/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"aceptada"}')")" 'no tiene prioridad sugerida'
+ver "rechazar la sugerencia sin motivo → 422" "$(A POST "Task/$T5/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"rechazada"}')" "$(VT $T5)")" 'exige el motivo'
+ver "decisión sobre una orden sin IRU → 422" "$(A POST "Task/$T2/\$transicion" "$(par '{"name":"decisionPrioridad","valueCode":"aceptada"}')" "$(VT $T2)")" 'no tiene prioridad sugerida'
 
 echo "8) PIM-8: _history paginado en orden cronológico (1.5.1) · IRU normativo (0.9.4)"
 R=$(A GET "Task/_history?_count=2")

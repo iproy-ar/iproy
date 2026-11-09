@@ -152,7 +152,7 @@ function importar(): array {
                         'local_id' => $loc_de($r['servicio_solicitante'], false),
                         'responsable_id' => trim((string) $r['empresa']) !== '' ? ulid_legado('empresa', trim((string) $r['empresa'])) : null,
                         'estado_negocio' => $en = (ESTADO_LEGADO[(string) $r['estado']] ?? 'solicitada'), 'estado' => ESTADOS_ORDEN[$en],
-                        'prioridad' => BANDA_PRIORIDAD[(string) $r['prioridad']] ?? 'routine', 'tipo_mantenimiento' => $tipoM,
+                        'prioridad' => banda_prioridad()[(string) $r['prioridad']] ?? 'routine', 'tipo_mantenimiento' => $tipoM,
                         'categoria_codigo' => $cat ? mb_substr((string) $cat['codigo'], 0, 40) : null, 'categoria_texto' => $tt !== '' ? mb_substr($tt, 0, 160) : null,
                         'descripcion' => $r['detalle'], 'inicio' => fecha_db($r['fecha_atencion'] ?? $r['fecha_proc']), 'fin' => fecha_db($r['fecha_fin']),
                         'autoria' => fecha_db($r['marca_temporal']) ?? date('Y-m-d H:i:s')], 'IproyPim\task_fhir'));

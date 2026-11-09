@@ -5,6 +5,7 @@
  *  data/pim/clientes/*.json y la clave de tokens de data/php/pim.php)
  * v1.0: alcances de escritura SMART v2 (c = crear, u = actualizar) y ROL PIM del cliente (Tabla 9-1):
  *   GM Gestor de Mantenimiento · EJ Ejecutor (empresa/área, ve y opera SUS órdenes) · SO Solicitante · FT Fuente de telemetría · CI Consumidor de indicadores
+ *   · RE Registro estatal. Sin rol en el registro del cliente → CI (mínimo privilegio; hasta la 1.6.1 era GM).
  *
  * Flujo (sistema a sistema, sin personas):
  *  1. El organismo externo se registra UNA vez: entrega su clave PÚBLICA (JWKS) y se le asignan alcances.
@@ -17,6 +18,9 @@
 declare(strict_types=1);
 
 namespace IproyPim;
+
+/** Roles PIM (actores, Tabla 9-1). Un cliente registrado sin rol, o con uno que no está acá, opera como CI (solo consulta). */
+const ROLES = ['GM', 'EJ', 'SO', 'FT', 'CI', 'RE'];
 
 function b64u_dec(string $s): string|false { return base64_decode(strtr($s, '-_', '+/') . str_repeat('=', (4 - strlen($s) % 4) % 4), true); }
 function b64u_enc(string $s): string { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
@@ -187,7 +191,8 @@ function exigir(string $tipo, string $op): array {
     if (!$cli) responder(401, oo('login', 'Cliente dado de baja'), MIME, ['WWW-Authenticate' => 'Bearer error="invalid_token"']);
     foreach (explode(' ', (string) ($pl['scope'] ?? '')) as $sc) {
         if (alcance_cubre($sc, "system/$tipo.$op")) {
-            $cli['id'] = (string) $pl['sub']; $cli['rol'] = strtoupper((string) ($cli['rol'] ?? 'GM'));
+            $cli['id'] = (string) $pl['sub']; $cli['rol'] = strtoupper((string) ($cli['rol'] ?? ''));
+            if (!in_array($cli['rol'], ROLES, true)) $cli['rol'] = 'CI';     // sin rol o con un rol desconocido: el de menor privilegio (solo consulta), nunca GM (1.6.2)
             if ($cli['rol'] === 'RE' && ($tipo !== 'Device' || !in_array($op, ['r', 's'], true)))      // Registro Estatal: solo PMA (PIM-REG)
                 responder(403, oo('forbidden', 'El rol RE (registro estatal) solo lee Device y usa Device/$refes'));
             return $cli;

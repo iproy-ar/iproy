@@ -24,7 +24,7 @@ function artefactos_bundle(string $tipo): array {
         $r = json_decode((string) file_get_contents($f), true);
         if (is_array($r)) $e[] = ['fullUrl' => base() . "/$tipo/" . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']];
     }
-    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e), 'entry' => $e];
+    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e)] + ($e ? ['entry' => $e] : []);
 }
 function codesystem(string $id): ?array { return artefacto('CodeSystem', $id); }
 function codesystems_bundle(): array { return artefactos_bundle('CodeSystem'); }
@@ -94,8 +94,6 @@ function capability(): array {
             'security' => [
                 'cors' => false,
                 'service' => [['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/restful-security-service', 'code' => 'SMART-on-FHIR']]]],
-                'extension' => [['url' => 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
-                    'extension' => [['url' => 'token', 'valueUri' => url_token()]]]],
                 'description' => 'TLS obligatorio fuera del propio equipo. Auditoría de cada acceso.',
             ],
             'resource' => [
@@ -106,7 +104,7 @@ function capability(): array {
                 $rec('Location', ['pim-establecimiento', 'pim-local'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/local'), $sp('name', 'string', 'Nombre (:exact, :contains)'), $sp('status', 'token', 'active | inactive | suspended'),
                      $sp('partof', 'reference', 'Location contenedora (el establecimiento es la raíz)'), $sp('organization', 'reference', 'Organization responsable'),
-                     $sp('type', 'token', 'facility (establecimiento) o el tipo del local: Edificio, Ala, Nivel, Local, Cama, Área')],
+                     $sp('type', 'token', 'facility (establecimiento, código IHE mCSD); el tipo del local va como texto: type:text=Edificio | Ala | Nivel | Local | Cama | Área')],
                     'PIM-INV y IHE ITI-90/91: establecimiento (mCSD FacilityLocation) y locales (mCSD Location) con grupo de uso médico y ambiente controlado.'),
                 $rec('Device', ['pim-pma', 'pim-sistema', 'pim-activo'], ['read', 'vread', 'search-type', 'create', 'update', 'history-instance', 'history-type'],
                     [$sp('identifier', 'token', 'sid/activo · sid/eui64 · sid/anmat-pm'), $sp('device-name', 'string', 'Nombre'), $sp('location', 'reference', 'Location'),

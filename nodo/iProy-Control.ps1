@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.6.1 · 06-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
+#  iProy-Control · iProy Portable «Colmena» · v1.6.2 · 09-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080] [-PuertoDb 3407]   (sin -PuertoDb: el primero libre desde 3407)
@@ -30,7 +30,7 @@ param(
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.6.1'
+$VER = '1.6.2'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
