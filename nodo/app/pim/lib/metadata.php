@@ -24,7 +24,7 @@ function artefactos_bundle(string $tipo): array {
         $r = json_decode((string) file_get_contents($f), true);
         if (is_array($r)) $e[] = ['fullUrl' => base() . "/$tipo/" . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']];
     }
-    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e), 'entry' => $e];
+    return ['resourceType' => 'Bundle', 'type' => 'searchset', 'total' => count($e)] + ($e ? ['entry' => $e] : []);
 }
 function codesystem(string $id): ?array { return artefacto('CodeSystem', $id); }
 function codesystems_bundle(): array { return artefactos_bundle('CodeSystem'); }
@@ -94,8 +94,6 @@ function capability(): array {
             'security' => [
                 'cors' => false,
                 'service' => [['coding' => [['system' => 'http://terminology.hl7.org/CodeSystem/restful-security-service', 'code' => 'SMART-on-FHIR']]]],
-                'extension' => [['url' => 'http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris',
-                    'extension' => [['url' => 'token', 'valueUri' => url_token()]]]],
                 'description' => 'TLS obligatorio fuera del propio equipo. Auditoría de cada acceso.',
             ],
             'resource' => [

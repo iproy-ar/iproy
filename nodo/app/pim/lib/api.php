@@ -228,7 +228,8 @@ function bundle_busqueda(string $tipo, array $lista, int $total, array $usados, 
     $b = ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'meta' => ['lastUpdated' => date('c')], 'type' => 'searchset'];
     if (!$sinTotal || $soloTotal) $b['total'] = $total;
     $b['link'] = $links;
-    if (!$soloTotal) $b['entry'] = array_map(fn($r) => ['fullUrl' => base() . '/' . $r['resourceType'] . '/' . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']], $lista);
+    // en FHIR un arreglo vacío no es válido: sin resultados, «entry» se omite (1.6.2)
+    if (!$soloTotal && $lista) $b['entry'] = array_map(fn($r) => ['fullUrl' => base() . '/' . $r['resourceType'] . '/' . $r['id'], 'resource' => $r, 'search' => ['mode' => 'match']], $lista);
     responder(200, $b);
 }
 /** ¿La búsqueda de Location alcanza al establecimiento (pim-establecimiento, mCSD FacilityLocation)? Sí si no filtra o si filtra por él. */
@@ -482,7 +483,7 @@ function lote(): never {
         }
     }
     $GLOBALS['iproy_pim_audit']['n'] = count($out);
-    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'batch-response', 'entry' => $out]);
+    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'batch-response'] + ($out ? ['entry' => $out] : []));
 }
 
 // ================================================================== modificación (PUT con If-Match)
@@ -690,5 +691,5 @@ function historial(string $tipo, ?string $id): never {
     $qs = array_filter(['_since' => $_GET['_since'] ?? null, '_count' => $count], fn($x) => $x !== null && $x !== '');
     $link = [['relation' => 'self', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset])]];
     if ($offset + count($e) < $total) $link[] = ['relation' => 'next', 'url' => $propia . '?' . http_build_query($qs + ['_offset' => $offset + $count])];
-    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link, 'entry' => $e]);
+    responder(200, ['resourceType' => 'Bundle', 'id' => bin2hex(random_bytes(8)), 'type' => 'history', 'total' => $total, 'link' => $link] + ($e ? ['entry' => $e] : []));
 }
