@@ -1,6 +1,22 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Cambios
 
+## 1.6.2 · 09-11-2026 — Conformidad con el estándar: lo que dice la guía, lo que dice el contrato y lo que hace el servidor
+
+Resultado de una auditoría de conformidad del Servidor PIM contra la guía 0.9.4 y el contrato OpenAPI. Se corrige el servidor donde no cumplía y se escribe en la guía y en el contrato lo que el servidor ya hacía sin estar documentado. Ningún cambio toca la base de datos.
+
+- **`$transicion` exige `If-Match`.** La guía ya decía «toda modificación exige If-Match», pero la operación lo aceptaba sin la cabecera: el Gestor y el Ejecutor podían pisarse la orden. Ahora responde **428** si falta y **412** si la versión no es la vigente, igual que `PUT`. Se adaptaron todos los que la llaman: el módulo de preventivos lee la versión de la orden que acaba de crear; los SDK de PHP y de JavaScript la leen solos si no se les pasa; la aplicación y la Consola ya la enviaban. **Quien integre por su cuenta tiene que enviar la cabecera.**
+- **Un cliente sin rol ya no es Gestor.** Un registro de `data/pim/clientes/` sin `rol` (o con un rol que no existe) se trataba como GM, el rol con más permisos. Ahora opera como CI: consulta y nada más. `pim cliente alta` siempre exigió el rol, así que solo afecta a registros escritos a mano.
+- **El Ejecutor ve solo lo suyo, también en las solicitudes.** Ya veía únicamente las órdenes de su organización; ahora tampoco lee, busca ni recorre el historial o la Provenance de las `ServiceRequest` de órdenes ajenas, ni lee versiones anteriores (`_history/{v}`) de órdenes que no son suyas.
+- **El Gestor puede hacer las transiciones del Ejecutor: queda escrito.** El servidor siempre lo permitió (es lo que usa una institución donde una sola persona cumple los dos papeles); faltaba en la guía y en el contrato. No cambia el comportamiento.
+- **El servidor acepta lo que el perfil acepta.** `ServiceRequest.note` es opcional, como en `pim-solicitud` (antes devolvía 422). Un `Device` se clasifica mirando todos sus `meta.profile`, no solo el primero.
+- **FHIR al pie de la letra.** Un `Bundle` sin resultados ya no trae `"entry": []` (búsquedas, historial, artefactos de la guía y respuesta de lote). El CapabilityStatement deja de publicar la extensión `oauth-uris`, que estaba incompleta: el descubrimiento es `.well-known/smart-configuration`. `Location?type` respeta el `system` del token y admite `type:text=Local` (el texto sin modificador se sigue aceptando).
+- **Historial con orden estable.** `_history` desempata por fecha, id y versión: dos cambios en el mismo milisegundo salen siempre en el mismo orden y no se repiten ni se pierden al paginar. Sigue ascendente por defecto, como necesita PIM-8, y queda declarado como desvío de FHIR R4; `_sort=-_lastUpdated` da el orden de R4 (lo más nuevo primero).
+- **Una sola fuente para banda → prioridad.** El servidor ya no tiene una tabla propia: lee el ConceptMap `pim-banda-a-prioridad` de la guía, y una prueba unitaria lo compara.
+- **Guía (PIM 0.9.4, sin cambio de número):** el marco técnico explica quién puede hacer cada transición, la concurrencia (428 y 412) y el cliente sin rol; dice que la orden tiene **11 estados**; suma un ejemplo de IRU con redundancia N+1 (8 + 5 + 4 + 1 = 18 → banda A → `stat`; con N+1 baja a la banda B → `asap`). Los ejemplos `ejemplo-riesgo` y `ejemplo-orden` contradecían esa regla y se corrigieron. El comentario de la columna `iru_f` decía «2–10»: es 1–10, como en la guía y en el código.
+- **Contrato OpenAPI:** `If-Match` obligatorio en `$transicion`, con las respuestas 428 y 412; parámetros de `_history`. El archivo y su número siguen siendo 1.3.1: renumerarlo queda pendiente (lista en `x-pim-cambios.ajustes_sin_renumerar`).
+- Pruebas: nueva `pruebas/negativas.sh` (36), que entra con tokens SMART de cada rol y comprueba lo que el servidor tiene que rechazar; contra la 1.6.1 fallan 23. `pim.sh` envía `If-Match` en sus transiciones y sigue en 70; unitarias 51 (tres nuevas: 11 estados, ConceptMap, IRU con N+1); `mem.sh` 28, `nucleo16.sh` 45, `colmena.sh` 20, `industrial.sh` 16 (sin los simuladores).
+
 ## 1.6.1 · 06-11-2026 — El instalador de Windows, probado de verdad (no simulado)
 
 Primera instalación real de punta a punta del instalador gráfico de Windows: dentro de Wine 11 (con OviWine Soft 0.2.1 y PowerShell 7.4) y, en paralelo, el de Linux en EndeavourOS. Aparecieron cinco fallas que la prueba simulada de la 1.6.0 no podía ver; las cinco afectan también a un Windows real o a una PC con otra base de datos.

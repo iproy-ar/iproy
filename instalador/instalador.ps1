@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
-$VERSION = '1.6.1'
+$VERSION = '1.6.2'
 $UI_B64 = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
 $UNINSTALL_B64 = '__UNINSTALL_PS1_B64__'   # ídem: plantilla del desinstalador (plantillas\uninstall.ps1)
 $AQUI = Split-Path -Parent $MyInvocation.MyCommand.Path

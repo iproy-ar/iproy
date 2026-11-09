@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.6.1 · 06-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
+#  iProy-Control · iProy Portable «Colmena» · v1.6.2 · 09-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -50,7 +50,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.6.1"
+VER="1.6.2"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 

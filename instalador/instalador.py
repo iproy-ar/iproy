@@ -18,7 +18,7 @@ import threading, time, urllib.request, webbrowser, zipfile
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-VERSION = '1.6.1'
+VERSION = '1.6.2'
 TAG = 'v' + VERSION
 URL_CODIGO = f'https://github.com/iproy-ar/iproy/archive/refs/tags/{TAG}.zip'
 FRANKEN = {'url': 'https://github.com/php/frankenphp/releases/download/v1.13.3/frankenphp-linux-x86_64',
