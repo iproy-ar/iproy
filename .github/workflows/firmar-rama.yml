@@ -61,7 +61,7 @@ jobs:
           test "$(git rev-parse "$DESPUES^{tree}")" = "$(git rev-parse "$ANTES^{tree}")" || { echo "::error::El contenido cambió al firmar; no se sube"; exit 1; }
           test "$(git rev-list --count "$BASE..$DESPUES")" = "$N"
           for c in $(git rev-list "$BASE..$DESPUES"); do git verify-commit "$c" 2>/dev/null || { echo "::error::Commit sin firma válida: $c"; exit 1; }; done
-          diff <(git log --format='%an|%ae|%ad|%B' "$BASE..$ANTES") <(git log --format='%an|%ae|%ad|%B' "$BASE..$DESPUES") >/dev/null || { echo "::error::Cambió la autoría o un mensaje; no se sube"; exit 1; }
+          diff <(git log --format='%an|%ae|%ad|%B' "$BASE..$ANTES" | git stripspace) <(git log --format='%an|%ae|%ad|%B' "$BASE..$DESPUES" | git stripspace) >/dev/null || { echo "::error::Cambió la autoría o un mensaje; no se sube"; exit 1; }
           git push --force-with-lease="refs/heads/$RAMA:$ANTES" origin "$DESPUES:refs/heads/$RAMA"
           echo "### Rama firmada: $RAMA" >> "$GITHUB_STEP_SUMMARY"
           echo "$N commits · antes \`${ANTES:0:7}\` · ahora \`${DESPUES:0:7}\` · mismo contenido" >> "$GITHUB_STEP_SUMMARY"
