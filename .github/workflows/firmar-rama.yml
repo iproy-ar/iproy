@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
+#
+# Firma los commits de una rama con la clave de firma del mantenedor, para que GitHub los muestre como «Verified».
+# La clave está en el secreto FIRMA_SSH del entorno «firma», que exige la aprobación del mantenedor en cada uso.
+# Solo cambia la firma (y el committer): el contenido de la rama tiene que quedar idéntico o no se sube nada.
+# Límites: no firma main ni etiquetas; no puede subir ramas que cambien archivos de .github/workflows;
+# lo que sube no dispara otras verificaciones, así que conviene firmar cuando el pull request ya pasó las pruebas.
+name: Firmar rama
+on:
+  workflow_dispatch:
+    inputs:
+      rama:
+        description: Rama a firmar (no puede ser main)
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: firmar-${{ inputs.rama }}
+  cancel-in-progress: false
+jobs:
+  firmar:
+    runs-on: ubuntu-latest
+    environment: firma
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - name: Firmar y subir
+        env:
+          RAMA: ${{ inputs.rama }}
+          FIRMA_SSH: ${{ secrets.FIRMA_SSH }}
+        run: |
+          set -euo pipefail
+          git check-ref-format --branch "$RAMA" >/dev/null
+          case "$RAMA" in main|HEAD|-*|*..*) echo "::error::Rama no permitida: $RAMA"; exit 1;; esac
+          test -n "$FIRMA_SSH" || { echo "::error::Falta el secreto FIRMA_SSH en el entorno «firma»"; exit 1; }
+          git fetch --quiet origin "refs/heads/$RAMA:refs/remotes/origin/$RAMA"
+          ANTES="$(git rev-parse "origin/$RAMA")"
+          BASE="$(git merge-base origin/main "$ANTES")"
+          N="$(git rev-list --count "$BASE..$ANTES")"
+          test "$N" -gt 0 || { echo "::error::La rama no tiene commits propios respecto de main"; exit 1; }
+          if git rev-list --merges "$BASE..$ANTES" | grep -q .; then echo "::error::La rama tiene commits de fusión; no se firma"; exit 1; fi
+          if git diff --name-only "$BASE" "$ANTES" | grep -q '^\.github/workflows/'; then echo "::error::La rama cambia flujos de trabajo; firmala desde tu PC"; exit 1; fi
+
+          D="$(mktemp -d)"; trap 'rm -rf "$D"' EXIT
+          ( umask 077; printf '%s\n' "$FIRMA_SSH" > "$D/clave" )
+          ssh-keygen -y -f "$D/clave" > "$D/clave.pub"
+          echo "Clave de firma: $(ssh-keygen -lf "$D/clave.pub" | cut -d' ' -f2)"
+          git config user.name "Ovidio Francisco Arias"
+          git config user.email "admin@iproy.com.ar"
+          git config gpg.format ssh
+          git config user.signingkey "$D/clave.pub"
+          echo "admin@iproy.com.ar $(cat "$D/clave.pub")" > "$D/firmantes"
+          git config gpg.ssh.allowedSignersFile "$D/firmantes"
+
+          git checkout --quiet --detach "$ANTES"
+          GIT_SSH_COMMAND=false git rebase --quiet --committer-date-is-author-date \
+            --exec 'git -c core.editor=true commit --quiet --amend --no-edit --allow-empty -S' "$BASE"
+          DESPUES="$(git rev-parse HEAD)"
+          test "$(git rev-parse "$DESPUES^{tree}")" = "$(git rev-parse "$ANTES^{tree}")" || { echo "::error::El contenido cambió al firmar; no se sube"; exit 1; }
+          test "$(git rev-list --count "$BASE..$DESPUES")" = "$N"
+          for c in $(git rev-list "$BASE..$DESPUES"); do git verify-commit "$c" 2>/dev/null || { echo "::error::Commit sin firma válida: $c"; exit 1; }; done
+          diff <(git log --format='%an|%ae|%ad|%B' "$BASE..$ANTES") <(git log --format='%an|%ae|%ad|%B' "$BASE..$DESPUES") >/dev/null || { echo "::error::Cambió la autoría o un mensaje; no se sube"; exit 1; }
+          git push --force-with-lease="refs/heads/$RAMA:$ANTES" origin "$DESPUES:refs/heads/$RAMA"
+          echo "### Rama firmada: $RAMA" >> "$GITHUB_STEP_SUMMARY"
+          echo "$N commits · antes \`${ANTES:0:7}\` · ahora \`${DESPUES:0:7}\` · mismo contenido" >> "$GITHUB_STEP_SUMMARY"
