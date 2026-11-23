@@ -10,3 +10,4 @@ hub/datos/*.sqlite*
 *.part
 .DS_Store
 instalador/dist/
+__pycache__/

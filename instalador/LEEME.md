@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
 # Instalador gráfico de iProy (Linux y Windows)
 
-<sub>🎓 [Tutorial de instalación en la web de capacitación →](https://iproy.com.ar/pim/instalar)</sub>
+<sub>🎓 [Tutorial de instalación en la web de capacitación →](https://iproy.com.ar/pim/instalar) · 📘 [Manual de usuario de iProy →](https://iproy.com.ar/aprende-iproy)</sub>
 
 El instalador se abre en el navegador y deja un nodo funcionando, con su usuario administrador. El recorrido tiene 4 pantallas:
 
@@ -25,6 +25,26 @@ El instalador deja en la carpeta del producto un **desinstalador** armado con lo
 
 Cada versión publica `SHA256SUMS.txt` para comprobar la descarga.
 
+## Actualizar un producto ya instalado, sin perder los datos
+
+`actualizar-linux.sh`, con el ZIP del código al lado (`iProy-*-codigo-*.zip`): `bash actualizar-linux.sh [carpeta-del-producto]`, sin sudo.
+
+1. Busca el producto instalado en la carpeta personal (o usa la carpeta indicada) y pide confirmación.
+2. Respalda la base y detiene el producto.
+3. Cambia el código con `incubar.php actualizar` (suma el módulo `migracion`; otros con `SUMAR=migracion,reportes`).
+4. Lo vuelve a iniciar: las migraciones de la base se aplican solas.
+
+El código anterior queda al lado del producto (`<carpeta>.codigo-anterior-<fecha>`) y el respaldo de la base en `data/backups/`. [pendiente] La versión para Windows.
+
+## Instalar una versión que todavía no está publicada (pruebas)
+
+El instalador baja el código de la etiqueta `v1.7.0` de GitHub. Para instalar otra copia (por ejemplo, la rama en verificación), se le indica un ZIP o una carpeta con el código, sin cambiar nada más:
+
+- Linux: `IPROY_INST_CODIGO=/ruta/al/codigo.zip bash instalar-iproy-linux.sh`
+- Windows: `set IPROY_INST_CODIGO=C:\ruta\al\codigo.zip` y después `Instalar-iProy.bat` (o un `.bat` que haga las dos cosas).
+
+El ZIP se arma con `git archive --format=zip --prefix=iproy/ -o codigo.zip HEAD`. El informe de instalación deja anotado de dónde salió el código y su SHA-256.
+
 ## Qué resuelve, según lo aprendido en las instalaciones reales
 
 | Problema de la primera instalación en Windows | Qué hace el instalador |
@@ -34,6 +54,8 @@ Cada versión publica `SHA256SUMS.txt` para comprobar la descarga.
 | Instalar como Administrador deja el icono en otro escritorio | Instala con tu usuario y avisa si la sesión es de administrador. Pide permiso solo para lo que lo necesita |
 | PowerShell en otra carpeta; `bash` que abre WSL | No hay que escribir comandos |
 | Contraseña que no se ve mientras se escribe | Se escribe dos veces en la pantalla, con un indicador de fortaleza y la confirmación de que coinciden |
+
+**Pronósticos con Google TimesFM (opcional).** Una casilla en la configuración. Instala, dentro de la carpeta del nodo (`python\`), un Python propio (Windows: el «embebible» 3.12.10 de python.org, verificado con SHA-256, sin registro ni PATH; Linux: un entorno virtual), PyTorch para CPU y TimesFM fijados a una versión, baja el modelo `google/timesfm-2.5-200m-pytorch` (925 MB, una vez) en partes de 300 MB, cada una verificada con SHA-256 y con reanudación si se corta la red; al final las une y verifica el archivo entero y programa la corrida semanal (lunes 03:17) con tu usuario. Cada paso se reintenta hasta 3 veces si falla la red. No toca otros Python que haya en la PC. A mano: `herramientas/pronosticos/instalar.py --nodo DIR` (Linux) o `instalar.ps1 -Nodo DIR` (Windows). El desinstalador quita la programación.
 
 **Pasos que piden permiso, y solo si hacen falta:**
 - firewall, en modo red;

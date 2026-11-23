@@ -1,0 +1,16 @@
+{
+  "id": "requerimientos",
+  "nombre": "Requerimientos por servicio",
+  "version": "1.3.0",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Los pedidos como los hace un servicio del hospital: «Req. Mantenimiento» (servicio, sistema de la instalación y detalle), «Req. Ing. Clinica» (equipo médico o instalación, uno u otro) y «Ver Sábanas» (las órdenes por empresa, con tarjetas por estado, filtros y cambios en la misma fila). Todo se guarda por la API PIM: la solicitud es un ServiceRequest sobre un Location o un Device y la orden es su Task. El código a la vista distingue instalación (clase de sistema PIM, Anexo B) de equipo médico (código del activo). El módulo solo guarda a qué servicio pertenece cada usuario.",
+  "requiere": ["pim"],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": { "requerimientos.transversal": ["GM"], "requerimientos.configurar": [] },
+  "ui": { "script": "ui.js", "orden": 12 },
+  "config_defecto": { "por_pagina": 50, "max_ordenes": 1000 }
+}

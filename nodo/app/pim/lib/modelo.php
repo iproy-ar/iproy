@@ -74,6 +74,15 @@ function dm_ref(?string $activo, ?string $punto): ?array { return $activo && $pu
 function org_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Organization/' . $id, 'display' => $disp]) : null; }
 function loc_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Location/' . $id, 'display' => $disp]) : null; }
 function dev_ref(?string $id, ?string $disp = null): ?array { return $id ? quitar_nulos(['reference' => 'Device/' . $id, 'display' => $disp]) : null; }
+/** Referencia al activo con su código (Reference.identifier): la orden y la solicitud muestran siempre el código VIGENTE del activo,
+ *  aunque se haya corregido después; así se buscan y se cuentan por él (1.7.0). */
+function dev_ref_cod(?string $id): ?array {
+    if (!$id) return null;
+    $a = fila_activo_min($id);
+    return quitar_nulos(['reference' => 'Device/' . $id, 'identifier' => $a ? ['system' => sid('activo'), 'value' => $a['codigo']] : null, 'display' => $a['nombre'] ?? null]);
+}
+/** Por qué un activo no está en servicio (Device.statusReason, binding extensible: código local del nodo + texto). */
+const MOTIVOS_ESTADO = ['obsoleto' => 'Obsoleto o dado de baja', 'fuera-de-circulacion' => 'Fuera de circulación', 'cargado-por-error' => 'Cargado por error'];
 
 /** Recorre todo el recurso y rechaza cualquier referencia a Patient (PIM, Tabla 10-1). */
 function sin_pacientes(array $r): void {
@@ -86,7 +95,8 @@ function nombre_de(string $tabla, ?string $id): ?string {
     if (!$id) return null;
     static $cache = [];
     $k = "$tabla|$id";
-    if (!array_key_exists($k, $cache)) { $q = pdo()->prepare("SELECT nombre FROM $tabla WHERE id = ?"); $q->execute([$id]); $cache[$k] = $q->fetchColumn() ?: null; }
+    if (!array_key_exists($k, $cache)) { $q = pdo()->prepare("SELECT nombre FROM $tabla WHERE id = ?"); $q->execute([$id]); $cache[$k] = $q->fetchColumn() ?: null;
+        if ($tabla === 'pim_organizacion' && $cache[$k] !== null && organismo_sin_nombre($cache[$k])) $cache[$k] = cfg()['organismo']['nombre']; }
     return $cache[$k];
 }
 function existe(string $tabla, string $id): bool { $q = pdo()->prepare("SELECT 1 FROM $tabla WHERE id = ?"); $q->execute([$id]); return (bool) $q->fetchColumn(); }
@@ -100,7 +110,8 @@ function org_fhir(array $r): array {
         'identifier' => $ids, 'active' => (bool) $r['activo'],
         'type' => array_values(array_filter([$r['tipo'] === 'organismo' ? ['coding' => [coding(MCSD_TIPOS, 'facility', 'Facility')]] : null,
             ['coding' => [coding('http://terminology.hl7.org/CodeSystem/organization-type', $t[0], $t[1])]]])),
-        'name' => $r['nombre'], 'partOf' => org_ref($r['parte_de'])]);
+        // 1.7.0: un organismo instalado sin nombre muestra el del nodo (o el que se escriba en Inventario › Establecimiento)
+        'name' => $r['tipo'] === 'organismo' && organismo_sin_nombre($r['nombre']) ? cfg()['organismo']['nombre'] : $r['nombre'], 'partOf' => org_ref($r['parte_de'])]);
 }
 function org_desde(array $j): array {
     if (($j['resourceType'] ?? '') !== 'Organization') throw new Fallo(422, 'invalid', 'Se esperaba Organization');
@@ -226,9 +237,13 @@ function dev_fhir(array $r): array {
     $tipo = null;
     if ($r['tipo_codigo']) $tipo = quitar_nulos(['coding' => [coding($r['clase'] === 'equipo-medico' ? cs_local('clase-equipo') : cs('pim-sistema'), $r['tipo_codigo'], $r['clase'] === 'equipo-medico' ? null : (SISTEMAS[$r['tipo_codigo']] ?? null))], 'text' => $r['tipo_texto']]);
     elseif ($r['tipo_texto']) $tipo = ['text' => $r['tipo_texto']];
+    $razon = null;
+    if ($r['estado'] !== 'active' && (!empty($r['estado_tipo']) || !empty($r['estado_motivo'])))
+        $razon = [quitar_nulos(['coding' => !empty($r['estado_tipo']) ? [coding(cs_local('motivo-estado'), $r['estado_tipo'], MOTIVOS_ESTADO[$r['estado_tipo']] ?? null)] : null,
+            'text' => trim(($r['estado_motivo'] ?? '') . (!empty($r['estado_fecha']) ? ' (desde el ' . date('d/m/Y', strtotime((string) $r['estado_fecha'])) . ')' : '')) ?: null])];
     return quitar_nulos(['resourceType' => 'Device', 'id' => $r['id'], 'meta' => meta($r, $perfil), 'extension' => $ext ?: null,
         'identifier' => $ids,
-        'status' => $r['estado'], 'manufacturer' => $r['fabricante'], 'manufactureDate' => $r['fecha_fabricacion'] ?? null,
+        'status' => $r['estado'], 'statusReason' => $razon, 'manufacturer' => $r['fabricante'], 'manufactureDate' => $r['fecha_fabricacion'] ?? null,
         'serialNumber' => $r['serie'], 'modelNumber' => $r['modelo'],
         'deviceName' => [['name' => $r['nombre'], 'type' => 'user-friendly-name']], 'type' => $tipo,
         'owner' => org_ref($r['propietario_id'] ?: org_organismo_id()), 'location' => loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id'])),
@@ -253,7 +268,7 @@ function dev_desde(array $j): array {
     $tc = $j['type']['coding'][0]['code'] ?? null;
     if ($clase === 'sistema' && (!$tc || !isset(SISTEMAS[$tc]))) throw new Fallo(422, 'code-invalid', 'pim-sistema exige type con un código de ' . cs('pim-sistema') . ' (Anexo B)', 'Device.type');
     $fab = $j['manufactureDate'] ?? null; if ($fab !== null && !preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $fab)) throw new Fallo(422, 'invalid', 'manufactureDate: AAAA-MM-DD', 'Device.manufactureDate');
-    $f = ['clase' => $clase, 'codigo' => mb_substr($cod, 0, 60), 'nombre' => mb_substr($nombre, 0, 200), 'tipo_codigo' => $tc ? mb_substr((string) $tc, 0, 40) : null,
+    $f = ['clase' => $clase, 'codigo' => mb_substr(con_sigla((string) $cod), 0, 60), 'nombre' => mb_substr($nombre, 0, 200), 'tipo_codigo' => $tc ? mb_substr((string) $tc, 0, 40) : null,
           'tipo_texto' => isset($j['type']['text']) ? mb_substr((string) $j['type']['text'], 0, 160) : null,
           'estado' => in_array($j['status'] ?? 'active', ['active', 'inactive', 'entered-in-error'], true) ? ($j['status'] ?? 'active') : 'active',
           'fabricante' => $j['manufacturer'] ?? null, 'modelo' => $j['modelNumber'] ?? null, 'serie' => $j['serialNumber'] ?? null,
@@ -262,7 +277,13 @@ function dev_desde(array $j): array {
           'propietario_id' => isset($j['owner']['reference']) ? ref_id($j['owner']['reference'], 'Organization', 'Device.owner') : null,
           'categoria_riesgo' => null, 'redundancia' => null, 'iru_f' => null, 'iru_r' => null, 'iru_m' => null, 'iru_a' => null,
           'categoria_alcance' => null, 'anmat_pm' => $anmat, 'eui64' => $eui, 'fecha_fabricacion' => $fab ? substr((string) $fab, 0, 10) : null,
-          'puesta_en_marcha' => null, 'pertenencia' => null, 'clase_riesgo_pm' => null];
+          'puesta_en_marcha' => null, 'pertenencia' => null, 'clase_riesgo_pm' => null, 'estado_tipo' => null, 'estado_motivo' => null];
+    // motivo del estado (1.7.0): código local y texto; el «(desde el …)» que agrega la lectura no se guarda dos veces
+    foreach ((array) ($j['statusReason'] ?? []) as $sr) {
+        $t = (string) ($sr['coding'][0]['code'] ?? ''); if (isset(MOTIVOS_ESTADO[$t])) $f['estado_tipo'] = $t;
+        $x = trim(preg_replace('/\s*\(desde el \d{2}\/\d{2}\/\d{4}\)$/', '', (string) ($sr['text'] ?? ''))); if ($x !== '') $f['estado_motivo'] = mb_substr($x, 0, 300);
+    }
+    if ($f['estado'] === 'active') { $f['estado_tipo'] = null; $f['estado_motivo'] = null; }
     foreach ((array) ($j['meta']['tag'] ?? []) as $t) if (($t['code'] ?? '') === 'mem-dmc') $f['_origen'] = 'mem-dmc';
     foreach ((array) ($j['extension'] ?? []) as $e) {
         $u = $e['url'] ?? '';
@@ -339,7 +360,7 @@ function sr_fhir(array $r): array {
     if ($r['estado_declarado']) $ext[] = ['url' => sd('pim-estado-declarado'), 'valueCoding' => coding(cs('pim-valores'), $r['estado_declarado'])];
     $q = pdo()->prepare('SELECT id FROM pim_orden WHERE solicitud_id = ? ORDER BY autoria LIMIT 1'); $q->execute([$r['id']]);
     if ($o = $q->fetchColumn()) $ext[] = ['url' => sd('pim-orden-generada'), 'valueReference' => ['reference' => 'Task/' . $o]];
-    $subj = $r['activo_id'] ? dev_ref($r['activo_id'], nombre_de('pim_activo', $r['activo_id'])) : loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id']));
+    $subj = $r['activo_id'] ? dev_ref_cod($r['activo_id']) : loc_ref($r['local_id'], nombre_de('pim_local', $r['local_id']));
     return quitar_nulos(['resourceType' => 'ServiceRequest', 'id' => $r['id'], 'meta' => meta($r, 'pim-solicitud'), 'extension' => $ext ?: null,
         'identifier' => [['use' => 'official', 'system' => sid('solicitud'), 'value' => $r['numero']]],
         'status' => $r['estado'], 'intent' => 'order', 'priority' => $r['prioridad'],
@@ -423,7 +444,7 @@ function task_fhir(array $r): array {
         'code' => categoria($r),
         'description' => cfg()['exponer_detalle'] ? $r['descripcion'] : null,
         'reasonReference' => ($ob = obs_de_orden($r)) ? ['reference' => 'Observation/' . $ob] : null,
-        'focus' => dev_ref($r['activo_id'], nombre_de('pim_activo', $r['activo_id'])),
+        'focus' => dev_ref_cod($r['activo_id']),
         'executionPeriod' => quitar_nulos(['start' => iso($r['inicio']), 'end' => iso($r['fin'])]) ?: null,
         'authoredOn' => iso($r['autoria']), 'lastModified' => iso($r['actualizado']),
         'requester' => org_ref(org_organismo_id()), 'owner' => org_ref($r['responsable_id'], nombre_de('pim_organizacion', $r['responsable_id'])),

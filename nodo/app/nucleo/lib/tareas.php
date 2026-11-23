@@ -38,6 +38,7 @@ function tick_cuerpo(float $presupuesto): array {
     if (microtime(true) - $t0 < $presupuesto) $hecho['bus2'] = despachar(min(5.0, $presupuesto - (microtime(true) - $t0)));
     $ult = estado('nucleo_limpieza');
     if (($ult['ts'] ?? 0) < time() - 3600) { $hecho['limpieza'] = limpiar_eventos(); estado('nucleo_limpieza', ['ts' => time()]); }
+    if (microtime(true) - $t0 < $presupuesto - 6 && ($ra = act_revisar_diario())) $hecho['actualizacion'] = $ra;   // 1.7.0: ¿hay versión nueva en GitHub? (una vez por día)
     return $hecho;
 }
 function ejecutar_tarea(string $clave, string $id, array $m, array $t): string {

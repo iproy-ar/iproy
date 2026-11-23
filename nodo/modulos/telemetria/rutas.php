@@ -20,4 +20,12 @@ return [
         foreach ($l as $m) { $n = normalizar((array) $m + ['origen' => 'http']); $ids[] = publicar('telemetria/medicion', $n, 'http:' . ($c['usuario']['usuario'] ?? '?')); }
         return ['_http' => 202, 'aceptadas' => count($ids)];
     }],
+    // 1.1.0: historial en lote (lecturas viejas de otro sistema): {"activo", "punto", "unidad", "etiqueta"?, "pares": [[ts, valor], …]} o {"series": [ … ]}
+    ['POST', '/historial', 'telemetria.escribir', function (array $c) {
+        $l = isset($c['cuerpo']['series']) ? (array) $c['cuerpo']['series'] : [$c['cuerpo']]; $n = 0;
+        if (count($l) > 200) throw new Fallo(413, 'Máximo 200 series por pedido');
+        foreach ($l as $s) { $s = (array) $s; if (trim((string) ($s['activo'] ?? '')) === '' || empty($s['pares'])) throw new Fallo(422, 'Cada serie lleva activo, punto y pares');
+            publicar('telemetria/historial', $s + ['origen' => 'http'], 'http:' . ($c['usuario']['usuario'] ?? '?')); $n += count((array) $s['pares']); }
+        return ['_http' => 202, 'series' => count($l), 'lecturas' => $n];
+    }],
 ];

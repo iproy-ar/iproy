@@ -2,7 +2,7 @@
 version = 1
 
 [[annotations]]
-path = ["**/*.png", "**/*.ico", "**/*.jpg", "nodo/conf/*.json", "**/modulo.json", "nodo/producto.json", "VERSION", "MAINTAINERS"]
+path = ["**/*.png", "**/*.ico", "**/*.jpg", "nodo/conf/*.json", "**/modulo.json", "nodo/producto.json", "nodo/BUILD", ".gitattributes", "VERSION", "MAINTAINERS"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2023-2026 Proyecto iProy y colaboradores"
 SPDX-License-Identifier = "AGPL-3.0-or-later"

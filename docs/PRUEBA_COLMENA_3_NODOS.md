@@ -45,7 +45,7 @@ Cargar en cada nodo al menos un local y dos activos reales (Inventario → Ubica
 | 2.4 | A y B | `colmena ping <par>` | respuesta firmada en ambos sentidos |
 | 2.5 | A | `pim remoto https://<IP-de-B>:<puerto+363>/pim/r4 …` o desde la app: Colmena → B → Inventario | A lee el inventario de B (PIM-1) |
 | 2.6 | A | Desde la app, pedir un trabajo sobre un activo de B (rol SO) | En B aparece la solicitud y su orden; la Provenance dice que la originó A (PIM-3) |
-| 2.7 | B | Asignar y avanzar esa orden | A la ve cambiar de estado (PIM-4) |
+| 2.7 | B | Asignar y avanzar esa orden. Las transiciones que piden explicación (a «en revisión», rechazo, cancelación) exigen el **motivo**: sin él el servidor responde 422 | A la ve cambiar de estado (PIM-4) |
 
 ## 3. Internet: C por el hub
 
@@ -64,9 +64,10 @@ Cargar en cada nodo al menos un local y dos activos reales (Inventario → Ubica
 
 | Prueba | Cómo | Resultado esperado |
 |---|---|---|
-| Hub caído | Apagar el hub 10 minutos | A ↔ B siguen; los pedidos a C quedan en cola y se entregan al volver |
+| Hub caído | Apagar el hub 10 minutos y, mientras tanto, pedir un trabajo desde C en A | A ↔ B siguen por la intranet. El pedido de C no da error: queda «en-cola» (`colmena cola` lo muestra con el motivo). Al volver el hub sale solo en menos de 5 minutos, llega una sola vez y la orden aparece en A. Requiere iProy 1.6.3 o posterior |
+| Nodo apagado en la misma red | Sin hub configurado, apagar B y pedir desde A | El pedido queda «en-cola» en A y se entrega al encender B |
 | Reloj desfasado | Adelantar 10 minutos la hora de C | El hub rechaza sus pedidos; `status` avisa el desfase; al corregir la hora, todo sigue |
-| Vínculo revocado | En A: `colmena revocar <id-de-C>` | C recibe 403 desde el siguiente pedido |
+| Vínculo revocado | En A: `colmena revocar <id-de-C>` | C queda «revocado» al recibir el aviso (si no había camino, cuando vuelve). Un pedido de C que se cruce con el aviso recibe 403 `vinculo-no-activo`, no un silencio |
 | Huella distinta | Aceptar sin comparar | No hacerlo: anotar como riesgo humano del procedimiento |
 | Edición simultánea | A y B editan el mismo activo de B casi al mismo tiempo | El segundo recibe **412** (If-Match) y debe releer |
 | Sincronización ITI-91 | `GET Device/_history?_since=<ayer>&_count=5` desde A hacia B | páginas en orden cronológico con `link next` |

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-or-later
+﻿# SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
 #
 # Desinstalador de @@PROD@@ · generado por el instalador de iProy @@VERSION@@ el @@FECHA@@
@@ -78,6 +78,9 @@ $esc = [Environment]::GetFolderPath('Desktop'); if (-not $esc) { $esc = Join-Pat
 $progs = [Environment]::GetFolderPath('Programs'); if (-not $progs) { $progs = Join-Path $HOME 'Programs' }; $menu = Join-Path $progs $PROD
 Remove-Item (Join-Path $esc "$PROD.lnk") -ErrorAction SilentlyContinue; if (Test-Path $menu) { Remove-Item $menu -Recurse -Force -ErrorAction SilentlyContinue }
 Ok 'Accesos directos quitados (escritorio y menú Inicio)'
+# la corrida semanal de pronósticos (TimesFM) que haya programado el instalador para este nodo
+Get-ScheduledTask -TaskName 'iProy - Pronosticos TimesFM*' -ErrorAction SilentlyContinue | Where-Object { ($_.Actions | ForEach-Object { $_.Arguments }) -match [regex]::Escape($RAIZ) } |
+  ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue; Ok "Corrida semanal de pronósticos quitada ($($_.TaskName))" }
 
 Write-Host '4) Firewall'
 if (-not $FW_NOMBRE) { Ok 'Firewall: el instalador no creó reglas' }

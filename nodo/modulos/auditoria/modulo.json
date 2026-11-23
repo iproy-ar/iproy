@@ -1,0 +1,28 @@
+{
+  "id": "auditoria",
+  "nombre": "Auditoría de mantenimiento",
+  "version": "1.2.0",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "«Auditoría Mant» (instalaciones) y «Auditor Bio» (equipamiento médico): las órdenes en un panel, con tarjetas por estado, filtros por servicio, empresa, período y búsqueda, carga de a 50 y la ventana «Orden #» para decidir desde ahí: estado, empresa, tipo de mantenimiento, prioridad (con la sugerida por el IRU de PIM y la decisión registrada) y calificación. Lee la copia de consulta del módulo reportes y escribe por la API PIM. Cada panel ofrece solo las empresas o áreas de su área de auditoría (una empresa puede estar en las dos).",
+  "requiere": [
+    "pim",
+    "reportes"
+  ],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": {
+    "auditoria.configurar": [
+      "GM"
+    ]
+  },
+  "ui": {
+    "script": "ui.js",
+    "orden": 13
+  },
+  "config_defecto": {
+    "por_pagina": 50
+  }
+}

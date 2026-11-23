@@ -5,7 +5,11 @@
 	skip_install_trust
 	auto_https disable_redirects
 	storage file_system "{$IPROY_DATA}/caddy"
-	frankenphp
+	# Hilos de PHP: la malla (1.7.0) mantiene pedidos abiertos (espera larga) con los nodos que usan este como hub;
+	# max_threads auto deja que FrankenPHP sume hilos cuando hay pedidos esperando, sin fijar un número por equipo.
+	frankenphp {
+		max_threads auto
+	}
 	log {
 		output file "{$IPROY_DATA}/logs/caddy.log"
 		format console

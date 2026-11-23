@@ -24,10 +24,32 @@ function capacidades(): array {
     foreach (activos() as $m) foreach ((array) $m['capacidades'] as $cap => $roles) $c[$cap] = array_values(array_unique(array_merge($c[$cap] ?? [], (array) $roles)));
     return $c;
 }
+/** Permisos propios de un usuario (1.7.0): lo que se le suma y lo que se le quita respecto de su rol. Se leen de la base en cada pedido. */
+function permisos_propios(string $usuario): array {
+    if (!isset($GLOBALS['nucleo_cache']['perm'][$usuario])) {
+        try { $r = fila('SELECT cap_extra, cap_bloqueadas FROM nucleo_usuario WHERE usuario = ?', [$usuario]); } catch (\Throwable) { $r = null; }   // base todavía sin la migración 006
+        $l = fn($v) => array_values(array_filter(explode(',', (string) $v)));
+        $GLOBALS['nucleo_cache']['perm'][$usuario] = ['extra' => $l($r['cap_extra'] ?? ''), 'bloqueadas' => $l($r['cap_bloqueadas'] ?? '')];
+    }
+    return $GLOBALS['nucleo_cache']['perm'][$usuario];
+}
+/** Capacidades que se pueden dar «de más» a una persona: nunca las reservadas al administrador (sin roles) ni las pim.*, que el Servidor PIM decide por el rol. */
+function concedible(string $cap): bool { $r = capacidades()[$cap] ?? null; return $r !== null && $r !== [] && !str_starts_with($cap, 'pim.'); }
+function validar_caps(mixed $v, bool $extra): string {
+    $l = array_values(array_unique(array_filter(array_map('trim', is_array($v) ? $v : explode(',', (string) $v)))));
+    foreach ($l as $c) {
+        if (!isset(capacidades()[$c])) throw new Fallo(422, "No existe la capacidad «{$c}»");
+        if ($extra && !concedible($c)) throw new Fallo(422, "«{$c}» no se puede dar a una persona: depende del rol");
+    }
+    return implode(',', $l);
+}
 function puede(string $cap, ?array $u = null): bool {
     $u ??= $GLOBALS['nucleo_usuario'] ?? null;
     if (!$u) return false;
     if ($u['rol'] === 'AD') return true;
+    $p = permisos_propios((string) ($u['usuario'] ?? ''));
+    if (in_array($cap, $p['bloqueadas'], true)) return false;
+    if (in_array($cap, $p['extra'], true) && concedible($cap)) return true;
     return in_array($u['rol'], capacidades()[$cap] ?? [], true);
 }
 function exigir(string $cap): array {
@@ -141,11 +163,14 @@ function guardar_usuario(array $d, bool $nuevo): array {
         foreach (['nombre', 'rol', 'organizacion'] as $k) if (array_key_exists($k, $d)) { $set[] = "$k = ?"; $a[] = $d[$k] === '' ? null : $d[$k]; }
         if (array_key_exists('email', $d)) { $set[] = 'email = ?'; $a[] = email_valido($d['email']); }
         if (array_key_exists('activo', $d)) { $set[] = 'activo = ?'; $a[] = $d['activo'] ? 1 : 0; }
+        if (array_key_exists('cap_extra', $d)) { $set[] = 'cap_extra = ?'; $a[] = validar_caps($d['cap_extra'], true) ?: null; }
+        if (array_key_exists('cap_bloqueadas', $d)) { $set[] = 'cap_bloqueadas = ?'; $a[] = validar_caps($d['cap_bloqueadas'], false) ?: null; }
+        unset($GLOBALS['nucleo_cache']['perm'][$u]);
         if (!empty($d['clave'])) { validar_clave((string) $d['clave']); $set[] = 'clave_hash = ?'; $a[] = password_hash((string) $d['clave'], PASSWORD_ARGON2ID); $set[] = 'intentos = 0, bloqueado_hasta = NULL, cambiar_clave = 0, clave_vence = NULL'; }
         if ($set) { $a[] = $u; q('UPDATE nucleo_usuario SET ' . implode(', ', $set) . ' WHERE usuario = ?', $a); }
         asentar('usuario.cambio', array_diff_key($d, ['clave' => 1]) + (!empty($d['clave']) ? ['clave' => 'cambiada'] : []), $u);
     }
-    return fila('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado FROM nucleo_usuario WHERE usuario = ?', [$u]);
+    return fila('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado, cap_extra, cap_bloqueadas FROM nucleo_usuario WHERE usuario = ?', [$u]);
 }
 function email_valido(mixed $e): ?string {
     $e = trim((string) ($e ?? '')); if ($e === '') return null;

@@ -1,0 +1,23 @@
+{
+  "id": "notificaciones",
+  "nombre": "Avisos (correo, Telegram y webhook)",
+  "version": "1.0.0",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Avisa a las personas cuando pasa algo que importa: una alarma que se activa, una solicitud o una orden nueva, una orden que cambia de estado. El gestor arma reglas (qué evento, con qué condición, por qué canal y a quién) y el módulo encola cada aviso, lo envía y reintenta si el canal no responde. Canales: correo HTML por el SMTP del nodo, Telegram (bot propio) y webhook (JSON por HTTP, para WhatsApp u otro sistema). Sin Internet los avisos quedan en cola y salen al volver la conexión.",
+  "requiere": [],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": { "notificaciones.ver": ["GM", "CI"], "notificaciones.configurar": ["GM"] },
+  "suscribe": {
+    "alarmas/cambio": "eventos.php",
+    "pim/ServiceRequest/create": "eventos.php",
+    "pim/Task/create": "eventos.php",
+    "pim/Task/update": "eventos.php"
+  },
+  "tareas": [{ "id": "enviar", "cada": 30, "archivo": "tareas/enviar.php" }],
+  "ui": { "script": "ui.js", "orden": 45 },
+  "config_defecto": { "telegram_api": "https://api.telegram.org", "reintentos_min": [1, 5, 15, 60], "max_intentos": 5, "retener_dias": 90, "por_tick": 20 }
+}

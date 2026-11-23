@@ -30,6 +30,13 @@ function raiz(): string { return dirname(__DIR__, 3); }
 function datos(): string { return raiz() . '/data/pim'; }
 
 /** data/pim/config.json (se crea desde conf/pim-config.json en el primer start). */
+const SIGLA_RE = '/^[A-Za-z][A-Za-z0-9]{3}$/';
+/** Sigla del establecimiento ('' = sin sigla): cada entidad codifica a su modo; la sigla dice de quién es el recurso. */
+function sigla(): string { $s = (string) (cfg()['sigla'] ?? ''); return preg_match(SIGLA_RE, $s) ? $s : ''; }
+/** Código sin la sigla de este nodo (el código propio del establecimiento). */
+function sin_sigla(string $c): string { $s = sigla(); return $s !== '' && strncasecmp($c, $s . '-', 5) === 0 ? substr($c, 5) : $c; }
+/** Código con la sigla de este nodo delante, una sola vez. */
+function con_sigla(string $c): string { $s = sigla(); return $s === '' || $c === '' ? $c : $s . '-' . sin_sigla($c); }
 function cfg(): array {
     static $c = null;
     if ($c !== null) return $c;
@@ -37,6 +44,7 @@ function cfg(): array {
         'ns' => 'https://iproy.com.ar/fhir', 'ns_alias' => ['https://iproy.com.ar/pim'],   // PIM_CANONICAL (docs/dominio-canonico.md); /pim = alias de la v1.0
         'organismo' => ['codigo' => 'ORG', 'nombre' => 'Organismo (configurar en data/pim/config.json)', 'refes' => '', 'refes_system' => ''],
         'empresas_internas' => [],
+        'sigla' => '',   // 4 caracteres que identifican al establecimiento; se anteponen al código de equipos y sistemas (HEJa-GAS-001-TAN-1)
         'exponer_detalle' => false, 'token_ttl' => 300, 'max_count' => 200, 'count_def' => 50,
         'responsable_defecto' => '', 'regla_telemetria' => true, 'legado_solo_lectura' => true,
     ];
@@ -44,6 +52,12 @@ function cfg(): array {
     $u = is_file($f) ? json_decode((string) file_get_contents($f), true) : null;
     $c = is_array($u) ? array_replace($def, $u) : $def;
     $c['organismo'] = array_replace($def['organismo'], is_array($c['organismo']) ? $c['organismo'] : []);
+    // 1.7.0: mientras nadie le puso nombre, el establecimiento se llama como el nodo (el nombre que se eligió al instalar), no «Organismo (configurar…)»
+    if (organismo_sin_nombre($c['organismo']['nombre'])) {
+        $n = is_file(raiz() . '/data/node.json') ? (json_decode((string) file_get_contents(raiz() . '/data/node.json'), true)['nombre'] ?? '') : '';
+        $c['organismo']['nombre'] = trim((string) $n) !== '' ? mb_substr(trim((string) $n), 0, 120) : 'Establecimiento';
+        $c['organismo']['_sin_nombre'] = true;
+    }
     $c['ns'] = rtrim((string) $c['ns'], '/');
     $c['ns_alias'] = array_values(array_map(fn($x) => rtrim((string) $x, '/'), (array) $c['ns_alias']));
     if ($c['ns'] === 'https://iproy.com.ar/pim') {                  // nodos creados con la 1.0: el canónico es /fhir y /pim queda como alias
@@ -54,6 +68,8 @@ function cfg(): array {
     return $c;
 }
 
+/** ¿Es el texto de ejemplo de la configuración de fábrica? */
+function organismo_sin_nombre(?string $n): bool { $n = trim((string) $n); return $n === '' || str_starts_with($n, 'Organismo (configurar'); }
 function sid(string $t): string { return cfg()['ns'] . '/sid/' . $t; }
 function cs(string $n): string { return cfg()['ns'] . '/CodeSystem/' . $n; }
 function sd(string $n): string { return cfg()['ns'] . '/StructureDefinition/' . $n; }

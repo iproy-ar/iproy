@@ -102,7 +102,7 @@ function correo_cfg(?array $cambios = null): array {
 function correo_publico(): array { $c = correo_cfg(); return array_diff_key($c, ['clave' => 1]) + ['clave_cargada' => $c['clave'] !== '']; }
 
 /** Cliente SMTP mínimo (sin dependencias): SSL implícito (465), STARTTLS (587) o sin cifrar (solo intranet). */
-function enviar_correo(string $para, string $asunto, string $texto): void {
+function enviar_correo(string $para, string $asunto, string $texto, ?string $html = null, array $adjuntos = []): void {   // 1.7.0: $html opcional (multipart/alternative) · ola 3: $adjuntos [[nombre, tipo, datos, cid?]] (multipart/mixed; con cid, imagen dentro del HTML)
     $c = correo_cfg();
     if (!$c['activo']) throw new Fallo(409, 'El correo saliente no está configurado');
     $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true]]);
@@ -129,8 +129,28 @@ function enviar_correo(string $para, string $asunto, string $texto): void {
         $cmd('MAIL FROM:<' . $c['remitente'] . '>', [250]); $cmd('RCPT TO:<' . $para . '>', [250, 251]); $cmd('DATA', [354]);
         $enc = fn($t) => '=?UTF-8?B?' . base64_encode($t) . '?=';
         $msg = 'From: ' . ($c['nombre'] !== '' ? $enc((string) $c['nombre']) . ' ' : '') . '<' . $c['remitente'] . ">\r\nTo: <$para>\r\nSubject: " . $enc($asunto)
-             . "\r\nDate: " . date('r') . "\r\nMessage-ID: <" . bin2hex(random_bytes(12)) . '@' . $yo . ">\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-             . chunk_split(base64_encode($texto), 76, "\r\n");
+             . "\r\nDate: " . date('r') . "\r\nMessage-ID: <" . bin2hex(random_bytes(12)) . '@' . $yo . ">\r\nMIME-Version: 1.0\r\n";
+        $parte = fn(string $tipo, string $t) => "Content-Type: $tipo; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n" . chunk_split(base64_encode($t), 76, "\r\n");
+        if ($html === null) $cuerpo = $parte('text/plain', $texto);
+        else { $lim = 'ip' . bin2hex(random_bytes(10)); $cuerpo = "Content-Type: multipart/alternative; boundary=\"$lim\"\r\n\r\n--$lim\r\n" . $parte('text/plain', $texto) . "--$lim\r\n" . $parte('text/html', $html) . "--$lim--\r\n"; }
+        // ola 3c: un adjunto con 4.º elemento (Content-ID) va DENTRO del mensaje (imagen citada en el HTML como cid:…), en multipart/related
+        $dentro = array_values(array_filter($adjuntos, fn($x) => !empty($x[3]))); $adjuntos = array_values(array_filter($adjuntos, fn($x) => empty($x[3])));
+        if ($dentro && $html !== null) {
+            $lr = 'ir' . bin2hex(random_bytes(10)); $rel = "Content-Type: multipart/related; boundary=\"$lr\"\r\n\r\n--$lr\r\n" . $cuerpo;
+            foreach ($dentro as [$nom, $tipo, $datos, $cid])
+                $rel .= "--$lr\r\nContent-Type: $tipo\r\nContent-Transfer-Encoding: base64\r\nContent-ID: <" . preg_replace('/[^\w.@-]/', '', (string) $cid) . ">\r\nContent-Disposition: inline; filename=\"" . preg_replace('/[^\w.-]/', '_', (string) $nom) . "\"\r\n\r\n" . chunk_split(base64_encode((string) $datos), 76, "\r\n");
+            $cuerpo = $rel . "--$lr--\r\n";
+        }
+        if (!$adjuntos) $msg .= $cuerpo;
+        else {
+            $lm = 'im' . bin2hex(random_bytes(10)); $msg .= "Content-Type: multipart/mixed; boundary=\"$lm\"\r\n\r\n--$lm\r\n" . $cuerpo;
+            foreach ($adjuntos as [$nom, $tipo, $datos]) {
+                $nom = preg_replace('/[^\w.\- ]+/u', '_', (string) $nom);
+                $fn = preg_match('/^[\x20-\x7e]+$/', $nom) ? "filename=\"$nom\"" : "filename*=UTF-8''" . rawurlencode($nom);   // RFC 2231 si no es ASCII
+                $msg .= "--$lm\r\nContent-Type: $tipo\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; $fn\r\n\r\n" . chunk_split(base64_encode((string) $datos), 76, "\r\n");
+            }
+            $msg .= "--$lm--\r\n";
+        }
         fwrite($s, $msg . "\r\n.\r\n"); $cmd(null, [250]);
         fwrite($s, "QUIT\r\n");
     } finally { fclose($s); }

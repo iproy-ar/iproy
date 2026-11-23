@@ -19,7 +19,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
-$VERSION = '1.6.2'
+$VERSION = '1.7.0'   # la del código que baja de GitHub (tag v1.7.0); con IPROY_INST_CODIGO instala ese ZIP o carpeta
 $UI_B64 = '__UI_HTML_B64__'   # armar.sh pone acá la interfaz (base64) para distribuir un solo archivo
 $UNINSTALL_B64 = '__UNINSTALL_PS1_B64__'   # ídem: plantilla del desinstalador (plantillas\uninstall.ps1)
 $AQUI = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -99,7 +99,7 @@ $TRABAJO = {
   $URL_CODIGO = "https://github.com/iproy-ar/iproy/archive/refs/tags/$TAG.zip"
   $CACHE = $(if ($env:IPROY_INST_CACHE) { $env:IPROY_INST_CACHE } else { Join-Path $env:LOCALAPPDATA 'iproy-instalador' })
   $SIMULAR = [bool]$env:IPROY_INST_SIMULAR
-  $PESO = @{ carpeta = 2; herramientas = 8; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6; desinstalador = 1 }
+  $PESO = @{ carpeta = 2; herramientas = 8; runtime = 14; codigo = 6; producto = 6; mariadb = 30; librerias = 4; init = 10; red = 3; start = 12; usuario = 4; hora = 3; verificar = 6; pronosticos = 5; desinstalador = 1 }
   $PESO_TOTAL = 0; foreach ($v in $PESO.Values) { $PESO_TOTAL += $v }
   Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -363,6 +363,23 @@ $TRABAJO = {
       if ($SIMULAR) { return 'Responde (simulado)' }
       for ($k = 0; $k -lt 20; $k++) { try { $null = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 ($i.url + 'app/'); $i.url_ok = $true; return "Responde en $($i.url)" } catch { Start-Sleep 2 } }
       return @('error', "No responde en $($i.url)") }
+    pronosticos = {
+      # copia las herramientas de pronóstico al nodo y, si se eligió, instala Python 3.12 embebible + PyTorch (CPU) + TimesFM en <nodo>\python,
+      # baja el modelo, programa la corrida semanal y hace la primera (herramientas\pronosticos\instalar.ps1). No toca otros Python de la PC.
+      $origen = Join-Path $trab 'iproy\herramientas\pronosticos'; $destino = Join-Path $raiz 'herramientas\pronosticos'
+      if (-not (Test-Path (Join-Path $origen 'instalar.ps1'))) { return @('saltado', 'Esta versión del código no trae las herramientas de pronóstico') }
+      New-Item -ItemType Directory -Force -Path $destino | Out-Null; Copy-Item -Force -Recurse (Join-Path $origen '*') $destino
+      $luego = "powershell -ExecutionPolicy Bypass -File `"$destino\instalar.ps1`" -Nodo `"$raiz`""; $i.cmd_pronosticos = $luego
+      if (-not $O.timesfm) { return @('saltado', "No elegido. Para agregarlo después: $luego") }
+      if ($SIMULAR) { return 'Pronósticos instalados (simulado)' }
+      Sub 'Bajando Python, PyTorch, TimesFM y el modelo (≈ 1,2 GB): puede tardar varios minutos'
+      $r = Correr (Join-Path $destino 'instalar.ps1') @('-Nodo', $raiz) $raiz @{} ''
+      $l = @($r.salida -split "`r?`n" | Where-Object { $_ -like 'RESULTADO *' } | Select-Object -Last 1)
+      if ($r.codigo -ne 0 -or -not $l) { return @('aviso', "No se pudo instalar (ver el detalle técnico). El nodo funciona igual; se reintenta con: $luego") }
+      $res = ($l[0].Substring(10) | ConvertFrom-Json)
+      [void]$i.componentes.Add(@{ nombre = 'Pronósticos Google TimesFM (Python 3.12 embebible, PyTorch CPU)'; version = "timesfm $($res.timesfm) · torch $($res.torch)"; sha256 = '' })
+      $i.pronosticos = $res
+      return "$($res.carpeta) · $($res.programado) · primera corrida: $($res.primera_corrida)" }
     desinstalador = {
       # uninstall-<Producto>.bat + .ps1 (con todo lo registrado embebido) + .json en la carpeta del producto
       $baseProd = Join-Path $base $prod; $archivosBase = @()
@@ -482,7 +499,7 @@ function Atender($p) {
   switch ($ruta) {
     '/api/iniciar' {
       if ($S.fase -ne 'espera') { return Responder $st 409 '{"error":"La instalación ya empezó"}' }
-      $o = @{}; foreach ($k in 'tipo', 'vista', 'modo', 'nombre', 'sigla', 'color', 'plantilla', 'institucion', 'destino', 'puerto', 'usuario', 'clave') { $o[$k] = $c.$k }
+      $o = @{}; foreach ($k in 'tipo', 'vista', 'modo', 'nombre', 'sigla', 'color', 'plantilla', 'institucion', 'destino', 'puerto', 'usuario', 'clave', 'timesfm') { $o[$k] = $c.$k }
       $err = Validar $o; if ($err) { return Responder $st 422 (Json @{ error = $err }) }
       if (-not (PuertoLibre ([int]$o.puerto))) { return Responder $st 422 (Json @{ error = "El puerto $($o.puerto) está ocupado: elegí otro." }) }
       if (-not $S.sistema) { $S.sistema = Sistema }
@@ -490,7 +507,7 @@ function Atender($p) {
       foreach ($par in @(@('carpeta', 'Preparar la carpeta'), @('herramientas', 'Instalar Git y PHP 8.3 (winget)'), @('runtime', 'Bajar el servidor web (FrankenPHP)'), @('codigo', 'Bajar el código de iProy'), @('producto', 'Armar el producto'),
                          @('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), @('librerias', 'Revisar Windows y Visual C++'), @('init', 'Crear el nodo'), @('red', 'Abrir el acceso desde la red'),
                          @('start', 'Arrancar el sistema'), @('usuario', 'Crear el usuario administrador'), @('hora', 'Revisar la hora de la PC'), @('verificar', 'Comprobar que responde'),
-                         @('desinstalador', 'Dejar el desinstalador'))) {
+                         @('pronosticos', 'Pronósticos con Google TimesFM (opcional)'), @('desinstalador', 'Dejar el desinstalador'))) {
         [void]$S.pasos.Add([hashtable]::Synchronized(@{ id = $par[0]; titulo = $par[1]; estado = 'pendiente'; detalle = '' })) }
       $rs = [runspacefactory]::CreateRunspace(); $rs.ApartmentState = 'STA'; $rs.Open()
       $ps = [powershell]::Create(); $ps.Runspace = $rs

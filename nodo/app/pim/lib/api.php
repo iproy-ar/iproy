@@ -190,7 +190,8 @@ function buscar(string $tipo): never {
             } elseif ($nombre === 'identifier') {
                 [$sys, $val] = token($uno);
                 $colId = $tipo === 'Device' && $sys !== null ? (es_sistema($sys, 'eui64') ? 'eui64' : (es_sistema($sys, 'anmat-pm') ? 'anmat_pm' : $col)) : $col;
-                $c[] = "$colId = ?"; $a[] = $colId === 'eui64' ? strtoupper($val) : $val;
+                if ($tipo === 'Device' && $colId === $col && con_sigla($val) !== $val) { $c[] = "($colId = ? OR $colId = ?)"; $a[] = $val; $a[] = con_sigla($val); }   // se encuentra con o sin la sigla del establecimiento
+                else { $c[] = "$colId = ?"; $a[] = $colId === 'eui64' ? strtoupper($val) : $val; }
             } elseif (in_array($nombre, ['business-status', 'code', 'type', 'interpretation'], true) && !in_array($tipo, ['Organization', 'Location'], true)) {
                 [, $val] = token($uno); $c[] = "$col = ?"; $a[] = $val;
             } elseif (in_array($nombre, ['name', 'device-name', 'manufacturer'], true)) {
@@ -374,7 +375,7 @@ function crear(string $tipo, ?array $j = null, bool $responder = true): array {
         $p->commit();
     } catch (\PDOException $e) {
         $p->rollBack();
-        if (($e->errorInfo[1] ?? 0) === 1062) throw new Fallo(409, 'duplicate', 'Ya existe un recurso con ese identificador');
+        if (($e->errorInfo[1] ?? 0) === 1062) throw new Fallo(409, 'duplicate', $tipo === 'Device' ? 'Ya existe un activo con ese código' : ($tipo === 'Location' ? 'Ya existe una ubicación con ese código' : 'Ya existe un recurso con ese identificador'));
         throw $e;
     } catch (\Throwable $e) { if ($p->inTransaction()) $p->rollBack(); throw $e; }
     if (!$responder) return $res;
@@ -399,6 +400,8 @@ function insertar(string $tabla, array $f): void {
 
 /** PIM-SOL: la solicitud crea su orden. Prioridad: la pedida o, si no, la banda IRU del activo. */
 function alta_solicitud(array $f, array $cli): array {
+    if ($f['activo_id'] && ($ax = fila('pim_activo', $f['activo_id'])) && $ax['estado'] !== 'active')
+        throw new Fallo(422, 'business-rule', "El activo {$ax['codigo']} «{$ax['nombre']}» está fuera de circulación" . ($ax['estado_motivo'] ? " ({$ax['estado_motivo']})" : '') . ': no admite pedidos nuevos', 'ServiceRequest.subject');
     $nodo = nodo_id();
     $idS = ulid();
     $numS = $nodo . '-SOL-' . str_pad((string) numero_nuevo('sol-' . $nodo), 6, '0', STR_PAD_LEFT);
@@ -457,7 +460,8 @@ function alta_observacion(array $f, array $cli): array {
         $q = pdo()->prepare("SELECT id FROM pim_orden WHERE activo_id = ? AND categoria_codigo = ? AND estado NOT IN ('completed','rejected','cancelled') LIMIT 1");
         $q->execute([$f['activo_id'], $cat]);
         $abierta = $q->fetchColumn();
-        if (!$abierta) {
+        if (!$abierta && (fila('pim_activo', $f['activo_id'])['estado'] ?? 'active') !== 'active') $abierta = null;   // fuera de circulación: la medición se guarda, sin orden
+        elseif (!$abierta) {
             $a = fila('pim_activo', $f['activo_id']);
             [, $task] = alta_solicitud(['prioridad' => null, 'categoria_codigo' => $cat, 'categoria_texto' => 'Medición fuera de rango · ' . $f['punto'],
                 'descripcion' => sprintf('Medición fuera de rango en %s: %s = %s %s (rango %s–%s) el %s', $a['nombre'], $f['punto'], rtrim(rtrim(number_format($f['valor'], 4, '.', ''), '0'), '.'),
@@ -466,12 +470,13 @@ function alta_observacion(array $f, array $cli): array {
                 'observacion_id' => $id], $cli);
             $abierta = $task['id'];
         }
-        pdo()->prepare('UPDATE pim_observacion SET orden_id = ? WHERE id = ?')->execute([$abierta, $id]);
+        if ($abierta) pdo()->prepare('UPDATE pim_observacion SET orden_id = ? WHERE id = ?')->execute([$abierta, $id]);
     }
     return obs_fhir(fila('pim_observacion', $id));
 }
 
-/** Bundle batch (POST /pim/r4): ServiceRequest y Observation. Cada entrada es independiente. */
+/** Bundle batch (POST /pim/r4): ServiceRequest y Observation; desde la 1.7.0 también alta y modificación de Device, Location y Organization.
+ *  Cada entrada es independiente (si una falla, las demás siguen). */
 function lote(): never {
     $j = cuerpo_json();
     if (($j['resourceType'] ?? '') !== 'Bundle' || ($j['type'] ?? '') !== 'batch') throw new Fallo(422, 'invalid', 'Se esperaba un Bundle de tipo batch');
@@ -481,8 +486,17 @@ function lote(): never {
     foreach ($ent as $e) {
         $r = $e['resource'] ?? null; $t = $r['resourceType'] ?? '';
         try {
-            if (($e['request']['method'] ?? '') !== 'POST' || !in_array($t, ['Observation', 'ServiceRequest'], true))
-                throw new Fallo(422, 'not-supported', 'El lote admite solo POST de Observation y ServiceRequest');
+            $m = (string) ($e['request']['method'] ?? '');
+            if ($m === 'PUT' && in_array($t, ['Device', 'Location', 'Organization'], true)) {   // 1.7.0: inventario por planilla
+                $id = (string) ($r['id'] ?? ''); if (($e['request']['url'] ?? '') !== "$t/$id") throw new Fallo(400, 'invalid', 'request.url debe ser <Tipo>/<id> del recurso');
+                $cli = exigir($t, 'u'); exigir_rol($cli, RECURSOS[$t]['modif'] ?: ['-'], "modificar $t");
+                preg_match('/^(W\/)?"?(\d+)"?$/', (string) ($e['request']['ifMatch'] ?? ''), $v) ?: throw new Fallo(428, 'required', 'Cada PUT del lote lleva request.ifMatch (W/"<versión>")');
+                $res = actualizar_recurso($t, $id, $r, (int) $v[2], $cli, !empty($e['request']['adoptar']));
+                $out[] = ['resource' => $res, 'response' => ['status' => '200 OK', 'location' => "$t/$id/_history/" . ($res['meta']['versionId'] ?? '')]];
+                continue;
+            }
+            if ($m !== 'POST' || !in_array($t, ['Observation', 'ServiceRequest', 'Device', 'Location', 'Organization'], true))
+                throw new Fallo(422, 'not-supported', 'El lote admite POST de Observation, ServiceRequest, Device, Location y Organization, y PUT de Device, Location y Organization');
             $res = crear($t, $r, false);
             $out[] = ['resource' => $res, 'response' => ['status' => '201 Created', 'location' => "$t/{$res['id']}"]];
         } catch (Fallo $f) {
@@ -500,10 +514,17 @@ function actualizar(string $tipo, string $id): never {
     $j = cuerpo_json();
     if (($j['resourceType'] ?? '') !== $tipo || ($j['id'] ?? '') !== $id) throw new Fallo(400, 'invalid', 'resourceType e id del cuerpo deben coincidir con la URL');
     $ver = if_match() ?? throw new Fallo(428, 'required', 'PIM exige If-Match: W/"<versión>" para modificar (control de concurrencia)');
+    $res = actualizar_recurso($tipo, $id, $j, $ver, $cli, strtolower((string) ($_SERVER['HTTP_X_PIM_ADOPTAR'] ?? '')) === 'si');
+    responder(200, $res, MIME, cab_version($res));
+}
+/** Aplica un PUT (también desde un lote). $adoptar: un registro traído de otro sistema pasa a gestionarse en este nodo (1.7.0). */
+function actualizar_recurso(string $tipo, string $id, array $j, int $ver, array $cli, bool $adoptar = false): array {
     $p = pdo(); $p->beginTransaction();
     try {
         $tabla = RECURSOS[$tipo]['tabla'];
         $r = fila($tabla, $id, true) ?? throw new Fallo(404, 'not-found', "$tipo/$id no existe");
+        $adoptado = false;
+        if ($adoptar && in_array($tipo, ['Device', 'Location'], true) && ($r['origen'] ?? 'pim') === 'legado') { $adoptado = true; $r['origen'] = 'pim'; }
         solo_lectura_legado($tipo, $r);
         if ((int) $r['version'] !== $ver) throw new Fallo(412, 'conflict', "La versión actual es {$r['version']}: releé el recurso antes de modificarlo");
         $motivo = null;
@@ -515,14 +536,48 @@ function actualizar(string $tipo, string $id): never {
             if ($tipo === 'Device' && $pts !== null && guardar_puntos($id, $pts)) $f['actualizado'] = (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s.v');
             $set = array_diff_assoc(array_map(fn($x) => $x === null ? null : (string) $x, $f), array_map(fn($x) => $x === null ? null : (string) $x, array_intersect_key($r, $f)));
             $set = array_intersect_key($f, $set);
+            if ($tipo === 'Location' && array_key_exists('parte_de', $set) && $set['parte_de'] !== null) sin_ciclo_local($id, (string) $set['parte_de']);
+            if ($tipo === 'Device') [$set, $motivo] = cambios_activo($r, $set);
         }
-        if (!$set) { $p->rollBack(); $res = (RECURSOS[$tipo]['fhir'])($r); responder(200, $res, MIME, cab_version($res)); }
+        if ($adoptado) { $set['origen'] = 'pim'; $set['origen_huella'] = null; $motivo = trim('Pasa a gestionarse en este nodo (antes venía de una carga). ' . ($motivo ?? '')); }
+        if (!$set) { $p->rollBack(); return (RECURSOS[$tipo]['fhir'])($r); }
         aplicar_cambios($tabla, $id, $set);
         $res = (RECURSOS[$tipo]['fhir'])(fila($tabla, $id));
         guardar_version($tipo, $id, (int) $res['meta']['versionId'], 'update', $cli['id'], $res, $motivo);
         $p->commit();
+    } catch (\PDOException $e) {
+        if ($p->inTransaction()) $p->rollBack();
+        if (($e->errorInfo[1] ?? 0) === 1062) throw new Fallo(409, 'duplicate', $tipo === 'Device' ? 'Ya existe otro activo con ese código' : 'Ya existe otro recurso con ese identificador');
+        throw $e;
     } catch (\Throwable $e) { if ($p->inTransaction()) $p->rollBack(); throw $e; }
-    responder(200, $res, MIME, cab_version($res));
+    return $res;
+}
+/** Reglas al modificar un activo (1.7.0): sacarlo de servicio exige motivo; se anota la fecha; el historial dice qué cambió. */
+function cambios_activo(array $r, array $set): array {
+    $motivo = [];
+    if (array_key_exists('estado', $set)) {
+        if ($set['estado'] !== 'active') {
+            if (trim((string) ($set['estado_motivo'] ?? $r['estado_motivo'] ?? '')) === '')
+                throw new Fallo(422, 'required', 'Para dejar un activo fuera de circulación hay que indicar el motivo (Device.statusReason.text)', 'Device.statusReason');
+            $motivo[] = (MOTIVOS_ESTADO[$set['estado_tipo'] ?? $r['estado_tipo'] ?? ''] ?? 'Fuera de servicio') . ': ' . ($set['estado_motivo'] ?? $r['estado_motivo']);
+        } else $motivo[] = 'Vuelve a estar en servicio';
+        $set['estado_fecha'] = (new \DateTimeImmutable('now', new \DateTimeZone('-03:00')))->format('Y-m-d H:i:s');
+    } elseif ($r['estado'] !== 'active') {
+        // fuera de circulación se corrige el motivo, pero no se pierde la fecha
+        foreach (['estado_tipo', 'estado_motivo'] as $k) if (array_key_exists($k, $set) && $set[$k] === null) unset($set[$k]);
+    }
+    if (array_key_exists('codigo', $set)) $motivo[] = "Código {$r['codigo']} → {$set['codigo']}";
+    if (array_key_exists('nombre', $set)) $motivo[] = 'Nombre corregido';
+    if (array_key_exists('local_id', $set)) $motivo[] = 'Cambio de ubicación';
+    return [$set, $motivo ? implode(' · ', $motivo) : null];
+}
+/** Una ubicación no puede quedar dentro de sí misma ni de una que depende de ella. */
+function sin_ciclo_local(string $id, string $padre): void {
+    $q = pdo()->prepare('SELECT parte_de FROM pim_local WHERE id = ?'); $x = $padre; $n = 0;
+    while ($x !== null && $x !== '' && $n++ < 50) {
+        if ($x === $id) throw new Fallo(422, 'business-rule', 'Una ubicación no puede quedar dentro de sí misma ni de una que depende de ella', 'Location.partOf');
+        $q->execute([$x]); $x = $q->fetchColumn() ?: null;
+    }
 }
 /** Los registros importados de iProy se gestionan en iProy (fuente de verdad, D-M3): en PIM son de solo lectura. */
 function solo_lectura_legado(string $tipo, array $r): void {

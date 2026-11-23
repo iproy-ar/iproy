@@ -67,6 +67,15 @@ paso_detener() {
   rm -f "${XDG_RUNTIME_DIR:-/tmp}"/*"$(printf '%s' "$PROD" | tr '[:upper:]' '[:lower:]')"*.sock 2>/dev/null || true
 }
 
+paso_pronosticos() {   # la corrida semanal de TimesFM que haya programado el instalador (cron o temporizador de systemd del usuario)
+  if command -v crontab >/dev/null 2>&1 && crontab -l 2>/dev/null | grep -qF "# iproy-timesfm $RAIZ"; then
+    crontab -l 2>/dev/null | grep -vF "# iproy-timesfm $RAIZ" | crontab - && ok "Corrida semanal de pronósticos quitada (cron)"; fi
+  local t; for t in "$HOME"/.config/systemd/user/iproy-timesfm-*.service; do
+    [[ -f "$t" ]] && grep -qF -e "--nodo \"$RAIZ\"" "$t" || continue
+    local u; u=$(basename "$t" .service); systemctl --user disable --now "$u.timer" >/dev/null 2>&1; rm -f "$t" "${t%.service}.timer"; ok "Corrida semanal de pronósticos quitada ($u)"
+  done
+}
+
 paso_accesos() {
   [[ -f "$LANZ" ]] && bash "$LANZ" acceso-directo --quitar >/dev/null 2>&1 || true
   local esc; esc="$(command -v xdg-user-dir >/dev/null && xdg-user-dir DESKTOP 2>/dev/null || true)"; [[ -n "$esc" && -d "$esc" ]] || esc="$HOME/Escritorio"; [[ -d "$esc" ]] || esc="$HOME/Desktop"
@@ -114,7 +123,7 @@ main() {
   if [[ $SI == 0 ]]; then preguntar "¿Desinstalar $PROD? Se va a borrar la carpeta de arriba" || { echo "Cancelado. No se tocó nada."; exit 0; }; fi
   echo; echo "1) Detener"; paso_detener
   echo "2) Datos"; paso_datos || exit 1
-  echo "3) Accesos directos"; paso_accesos
+  echo "3) Accesos directos"; paso_accesos; paso_pronosticos
   echo "4) Firewall"; paso_firewall
   echo "5) Borrar"; paso_borrar; paso_cache
   local reg="$HOME/desinstalacion_${PROD}_$(date +%Y-%m-%d_%H%M).log"

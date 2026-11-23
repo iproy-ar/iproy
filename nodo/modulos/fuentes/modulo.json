@@ -1,0 +1,17 @@
+{
+  "id": "fuentes",
+  "nombre": "Fuentes de datos externas",
+  "version": "1.0.0",
+  "abi": 1,
+  "nucleo": ">=1.0 <2.0",
+  "estabilidad": "estable",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Lee, en solo lectura, lo que ya juntan otros sistemas por HTTP (JSON): pasarelas, programas de una PC, APIs de equipos o de otro sistema de mantenimiento. Cada fuente tiene una dirección, cada cuánto se lee y reglas que dicen qué es cada dato (equipo, punto, unidad, momento). Las lecturas nuevas van a telemetria/medicion (sin repetir las ya leídas), los eventos y alarmas de los equipos a equipos/evento, y el historial se trae a pedido en lote (telemetria/historial). No escribe nunca en el origen. Las fuentes se exportan e importan como paquete JSON.",
+  "requiere": ["pim", "telemetria"],
+  "lib": "lib.php",
+  "capacidades": { "fuentes.ver": ["GM"], "fuentes.configurar": ["GM"] },
+  "tareas": [{ "id": "leer", "cada": 15, "archivo": "tareas/leer.php" }],
+  "rutas": "rutas.php",
+  "ui": { "script": "ui.js", "orden": 95 },
+  "config_defecto": { "tiempo_s": 20, "max_mb": 8 }
+}

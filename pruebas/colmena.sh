@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
 # Prueba de integración de la colmena entre DOS nodos iniciados (pueden ser de productos distintos: iProy, Colmen…).
-#   bash pruebas/colmena.sh <carpeta-nodo-A> <carpeta-nodo-B> [url-del-hub]
+#   [HUB_CODIGO=…] bash pruebas/colmena.sh <carpeta-nodo-A> <carpeta-nodo-B> [url-del-hub]   (HUB_CODIGO: código de registro del hub, si lo pide)
 # Cada carpeta es la de un nodo instalado (con data/). Usa el token del worker (solo funciona en el mismo equipo de cada nodo).
 # Para dos PC distintas: corré los pasos equivalentes con «<Prod>-Control.sh colmena …» en cada una (ver docs/COLMENA.md).
 set -u
@@ -46,7 +46,7 @@ ver "evento remoto A→bus de B" "$(A POST colmena/evento "{\"par\":\"$IB\",\"te
 ver "B recibió colmena/<a>/aviso/prueba" "$(B GET 'bus/eventos?tema=colmena/%23&n=500')" "colmena/$(echo "$IA" | tr A-Z a-z)/aviso/prueba"
 if [[ -n "$HUB" ]]; then
   echo "2) Por el hub de relevo ($HUB)"
-  A PUT colmena/config "{\"hub\":{\"url\":\"$HUB\",\"activo\":true}}" >/dev/null; B PUT colmena/config "{\"hub\":{\"url\":\"$HUB\",\"activo\":true}}" >/dev/null
+  A PUT colmena/config "{\"hub\":{\"url\":\"$HUB\",\"activo\":true,\"codigo\":\"${HUB_CODIGO:-}\"}}" >/dev/null; B PUT colmena/config "{\"hub\":{\"url\":\"$HUB\",\"activo\":true,\"codigo\":\"${HUB_CODIGO:-}\"}}" >/dev/null
   ver "A se registra en el hub" "$(A POST colmena/hub/registrar)" '"registrado"'
   ver "B se registra en el hub" "$(B POST colmena/hub/registrar)" '"registrado"'
   A POST colmena/vinculos/$IB/via '{"via":"hub"}' >/dev/null; B POST colmena/vinculos/$IA/via '{"via":"hub"}' >/dev/null

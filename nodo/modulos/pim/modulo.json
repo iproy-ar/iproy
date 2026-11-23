@@ -1,19 +1,44 @@
 {
   "id": "pim",
   "nombre": "Servidor PIM (HL7 FHIR R4)",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "abi": 1,
   "nucleo": ">=1.0 <2.0",
   "estabilidad": "estable",
   "licencia": "AGPL-3.0-or-later",
-  "descripcion": "Integra el Servidor PIM 1.1 (PIM 0.9.2: activos, solicitudes, órdenes, mediciones) al núcleo: un vigía publica en el bus cada alta o cambio (pim/<Tipo>/<create|update>) y la app suma las pestañas Órdenes, Nueva solicitud e Inventario. El servidor en sí sigue en /pim/r4 y es igual para cualquier cliente.",
+  "descripcion": "Integra el Servidor PIM 1.1 (PIM 0.9.2: activos, solicitudes, órdenes, mediciones) al núcleo: un vigía publica en el bus cada alta o cambio (pim/<Tipo>/<create|update>) y la app suma las pestañas Órdenes, Nueva solicitud e Inventario. Inventario (1.7.0): ubicaciones en árbol, alta guiada por clase (instalación, equipo médico, otro), edición con historial, fuera de circulación u obsoleto sin borrar nada, e importar y exportar por planilla (.xlsx, .csv u hoja de Google) con planilla de ejemplo. El servidor en sí sigue en /pim/r4 y es igual para cualquier cliente.",
   "requiere": [],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
   "capacidades": {
-    "pim.ordenes.operar": ["GM", "EJ"],
-    "pim.solicitar": ["GM", "SO"],
-    "pim.inventario.editar": ["GM"]
+    "pim.ordenes.operar": [
+      "GM",
+      "EJ"
+    ],
+    "pim.solicitar": [
+      "GM",
+      "SO"
+    ],
+    "pim.inventario.editar": [
+      "GM"
+    ]
   },
-  "tareas": [{ "id": "vigia", "cada": 20, "archivo": "tareas/vigia.php" }],
-  "ui": { "script": "ui.js", "orden": 10 },
-  "config_defecto": { "vigiar": ["Task", "ServiceRequest", "Device"] }
+  "tareas": [
+    {
+      "id": "vigia",
+      "cada": 20,
+      "archivo": "tareas/vigia.php"
+    }
+  ],
+  "ui": {
+    "script": "ui.js",
+    "orden": 10
+  },
+  "config_defecto": {
+    "vigiar": [
+      "Task",
+      "ServiceRequest",
+      "Device"
+    ]
+  }
 }

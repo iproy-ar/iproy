@@ -81,7 +81,8 @@ iProy no reemplaza un SCADA de control. Se ubica en el nivel 3 de ISA-95: gesti�
 
 <sub>🎓 [Lección: tu propio software con la incubadora →](https://iproy.com.ar/pim/aprende/tu-propio-software)</sub>
 
-- **Por calendario:** cada N días, con anticipación configurable. Genera la orden en PIM con el tipo EN 13306 `preventivo-sistematico` y la asigna al responsable del plan (organización PIM). Si no hay responsable, la deja en revisión.
+- **Plan por semanas (2.0.0, el habitual en un establecimiento):** como el cronograma anual en planilla. Cada tarea (equipo › parte › preventivo) tiene una frecuencia en semanas fijas: semanal 1, quincenal 2, mensual 4, bimestral 8, trimestral 13, semestral 26, anual 52. El cronograma de cada año marca en qué semanas se hace; la semana 1 es la del 1 de enero, de lunes a domingo, y el año tiene 53 o 54. Al empezar la semana se genera **una orden por equipo** con sus tareas; cada tarea se cierra con la **fecha real** en que se hizo, cualquier día de esa semana. Las **diarias** se marcan día por día (7 casillas, lunes a domingo) dentro de la misma orden. Las tareas sin frecuencia se marcan en la grilla, una por una o en bloque. El plan se carga desde una hoja (Migración), a mano o con el **relevamiento en recorrida**: el operario carga cada equipo desde plantillas por tipo, aun sin señal, y un Gestor lo revisa antes de que pase al plan.
+- **Planes especiales — por calendario:** cada N días o meses, con anticipación configurable, para obras o mejorativos. Genera la orden en PIM con el tipo EN 13306 `preventivo-sistematico` y la asigna al responsable del plan (organización PIM). Si no hay responsable, la deja en revisión.
 - **Por uso o condición:** contador de un punto de telemetría (por ejemplo, `HORAS-MARCHA` cada 500 h). Tipo `preventivo-condicional`.
 - **Reprogramación** desde la fecha real de finalización (configurable), escuchando `pim/Task/update`. No genera duplicados mientras haya una orden abierta.
 

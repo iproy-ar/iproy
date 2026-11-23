@@ -18,7 +18,7 @@ import threading, time, urllib.request, webbrowser, zipfile
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-VERSION = '1.6.2'
+VERSION = '1.7.0'   # la del código que baja de GitHub (tag v1.7.0); con IPROY_INST_CODIGO instala ese ZIP o carpeta
 TAG = 'v' + VERSION
 URL_CODIGO = f'https://github.com/iproy-ar/iproy/archive/refs/tags/{TAG}.zip'
 FRANKEN = {'url': 'https://github.com/php/frankenphp/releases/download/v1.13.3/frankenphp-linux-x86_64',
@@ -46,8 +46,9 @@ E = {'fase': 'espera', 'pasos': [], 'progreso': 0, 'sub': '', 'log': [], 'pregun
 PASOS = [('carpeta', 'Preparar la carpeta'), ('runtime', 'Bajar el servidor web (FrankenPHP)'), ('codigo', 'Bajar el código de iProy'),
          ('producto', 'Armar el producto'), ('mariadb', 'Bajar e instalar la base de datos (MariaDB)'), ('librerias', 'Revisar librerías del sistema'),
          ('init', 'Crear el nodo'), ('red', 'Abrir el acceso desde la red'), ('start', 'Arrancar el sistema'), ('usuario', 'Crear el usuario administrador'),
-         ('hora', 'Revisar la hora de la PC'), ('verificar', 'Comprobar que responde'), ('desinstalador', 'Dejar el desinstalador')]
-PESO = {'carpeta': 2, 'runtime': 22, 'codigo': 6, 'producto': 6, 'mariadb': 36, 'librerias': 2, 'init': 8, 'red': 2, 'start': 8, 'usuario': 3, 'hora': 2, 'verificar': 3, 'desinstalador': 1}
+         ('hora', 'Revisar la hora de la PC'), ('verificar', 'Comprobar que responde'), ('pronosticos', 'Pronósticos con Google TimesFM (opcional)'),
+         ('desinstalador', 'Dejar el desinstalador')]
+PESO = {'carpeta': 2, 'runtime': 22, 'codigo': 6, 'producto': 6, 'mariadb': 36, 'librerias': 2, 'init': 8, 'red': 2, 'start': 8, 'usuario': 3, 'hora': 2, 'verificar': 3, 'pronosticos': 4, 'desinstalador': 1}
 
 
 def log(t):
@@ -393,6 +394,24 @@ def instalar(o):
             except Exception: time.sleep(2)
         return ('error', 'No responde en ' + inst['url'])
 
+    def p_pronosticos():
+        """Copia las herramientas de pronóstico al nodo y, si se eligió, instala Python + PyTorch (CPU) + TimesFM en <nodo>/python,
+        baja el modelo, programa la corrida semanal y hace la primera (herramientas/pronosticos/instalar.py)."""
+        origen = trabajo / 'iproy' / 'herramientas' / 'pronosticos'
+        destino = raiz / 'herramientas' / 'pronosticos'
+        if not (origen / 'instalar.py').exists(): return ('saltado', 'Esta versión del código no trae las herramientas de pronóstico')
+        destino.parent.mkdir(parents=True, exist_ok=True); shutil.copytree(origen, destino, dirs_exist_ok=True)
+        cmd_luego = f'python3 "{destino / "instalar.py"}" --nodo "{raiz}"'
+        inst['cmd_pronosticos'] = cmd_luego
+        if not o.get('timesfm'): return ('saltado', f'No elegido. Para agregarlo después: {cmd_luego}')
+        sub('Bajando PyTorch, TimesFM y el modelo (≈ 1,2 GB): puede tardar varios minutos')
+        rc, out = correr([sys.executable, destino / 'instalar.py', '--nodo', raiz], pid='pronosticos')
+        res = next((json.loads(l[10:]) for l in reversed(out.splitlines()) if l.startswith('RESULTADO ')), None)
+        if rc != 0 or not res: return ('aviso', f'No se pudo instalar (ver el detalle técnico). El nodo funciona igual; se reintenta con: {cmd_luego}')
+        inst['componentes'].append({'nombre': 'Pronósticos Google TimesFM (Python, PyTorch CPU)', 'version': f"timesfm {res['timesfm']} · torch {res['torch']}", 'sha256': ''})
+        inst['pronosticos'] = res
+        return f"{res['carpeta']} · {res['programado']} · primera corrida: {res['primera_corrida']}"
+
     def p_desinstalador():
         """Deja uninstall-<Producto>.sh (con todo lo registrado embebido) y uninstall-<Producto>.json en la carpeta del producto."""
         slug = re.sub(r'[^a-z0-9]', '-', prod.lower()) + '-nodo'
@@ -415,7 +434,7 @@ def instalar(o):
         return f'{f.name} (guarda los datos antes de borrar; --help para las opciones)'
 
     fn = {'carpeta': p_carpeta, 'runtime': p_runtime, 'codigo': p_codigo, 'producto': p_producto, 'mariadb': p_mariadb, 'librerias': p_librerias,
-          'init': p_init, 'red': p_red, 'start': p_start, 'usuario': p_usuario, 'hora': p_hora, 'verificar': p_verificar, 'desinstalador': p_desinstalador}
+          'init': p_init, 'red': p_red, 'start': p_start, 'usuario': p_usuario, 'hora': p_hora, 'verificar': p_verificar, 'pronosticos': p_pronosticos, 'desinstalador': p_desinstalador}
     criticos = {'carpeta', 'runtime', 'codigo', 'producto', 'init', 'start'}
     for pid, _ in PASOS:
         ok = etapa(pid, fn[pid])
@@ -503,7 +522,7 @@ class H(http.server.BaseHTTPRequestHandler):
         if u == '/api/iniciar':
             with L:
                 if E['fase'] != 'espera': return self._env(409, {'error': 'La instalación ya empezó'})
-            o = {k: c.get(k) for k in ('tipo', 'vista', 'modo', 'nombre', 'sigla', 'color', 'plantilla', 'institucion', 'destino', 'puerto', 'usuario', 'clave')}
+            o = {k: c.get(k) for k in ('tipo', 'vista', 'modo', 'nombre', 'sigla', 'color', 'plantilla', 'institucion', 'destino', 'puerto', 'usuario', 'clave', 'timesfm')}
             err = validar(o)
             if err: return self._env(422, {'error': err})
             if not puerto_libre(int(o['puerto'])): return self._env(422, {'error': f"El puerto {o['puerto']} está ocupado: elegí otro."})
@@ -536,6 +555,7 @@ def validar(o):
     if not 1024 <= o['puerto'] <= 65000: return 'Puerto fuera de rango'
     if not re.fullmatch(r'[A-Za-z0-9._-]{3,30}', o['usuario'] or ''): return 'Usuario inválido'
     if len(o['clave'] or '') < 10: return 'La contraseña tiene que tener al menos 10 caracteres'
+    o['timesfm'] = bool(o.get('timesfm'))
     return ''
 
 

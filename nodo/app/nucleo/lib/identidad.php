@@ -73,5 +73,6 @@ function identidad_publica(): array {
     $i = identidad(); $n = nodo(); $p = producto();
     return ['protocolo' => PROTOCOLO, 'node_id' => $n['id'], 'nombre' => $n['nombre'], 'producto' => $p['nombre'], 'version' => $p['version'],
             'nucleo' => VERSION, 'firma_pub' => $i['firma_pub'], 'caja_pub' => $i['caja_pub'], 'huella' => huella($i['firma_pub']),
-            'pim_jwk' => jwk_publico('colmena', 'colmena-' . strtolower($n['id'])), 'url' => url_propia()];
+            'pim_jwk' => jwk_publico('colmena', 'colmena-' . strtolower($n['id'])), 'url' => url_propia(),
+            'urls' => modo_red() === 'malla' ? urls_propias() : [], 'malla' => ['hub' => hub_propio_activo(), 'modo' => modo_red()]];
 }

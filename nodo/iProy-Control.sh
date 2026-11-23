@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.6.2 · 09-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
+#  iProy-Control · iProy Portable «Colmena» · v1.7.0 · 20-11-2026 (núcleo modular + colmena con cola de salida + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
 #  Lanzador del nodo para Linux x64. No requiere permisos de administrador.
 #
 #  Uso:  ./iProy-Control.sh <comando> [opciones]
@@ -17,6 +17,9 @@
 #    importar-datos       carga descargas/sql/*.sql en las bases locales
 #    respaldo             volcado completo fechado + sha256 (rotación 7 diarios)
 #    restaurar [archivo]  rehace la base del nodo desde el último respaldo (la actual queda en data/mariadb.anterior_*)
+#    actualizar <paquete.zip> [--forzar] | --volver
+#                         instala una versión nueva SOBRE lo instalado (respaldo, detener, código nuevo, iniciar con migraciones;
+#                         si no arranca, vuelve sola a la anterior). Los datos no se tocan. También desde Configuración › Actualizaciones.
 #    verificar            compara sha256 de runtime/ app/ conf/ tools/ con MANIFEST.sha256
 #    confiar-ca           agrega la CA del nodo al almacén NSS del usuario (Chrome/Firefox)
 #    fhir-cliente alta <id> <jwks.json> ["system/*.read"]   registra un sistema externo (API FHIR)
@@ -36,6 +39,7 @@
 #    usuario alta <u> <AD|GM|EJ|SO|FT|CI> [organización] · usuario clave|baja <u> · usuario token <u> [días] · usuario lista
 #    colmena identidad|lista · colmena vincular <https://IP:8443 | ID> · colmena aceptar <par> [rol] · colmena revocar|ping <par>
 #    colmena via <par> auto|hub · colmena rpc <par> GET <ruta FHIR> · colmena hub <https://hosting/colmena-hub> [código] · colmena url <url>
+#    colmena cola [reintentar | descartar <id>]   lo que espera salir porque no había camino (1.6.3)
 #    Aplicación: http://localhost:<puerto>/app/ · API del núcleo: /api · Panel de red: /_iproy/red.php
 #
 #  Reglas: nada de secretos en el paquete; todo lo generado vive en data/.
@@ -50,7 +54,7 @@ MDB="${IPROY_MARIADB_DIR:-$RT/mariadb}"          # bintar oficial descomprimido 
 DATA="${IPROY_DATA_DIR:-$RAIZ/data}"
 APP="$RAIZ/app"
 RUN="$DATA/run"
-VER="1.6.2"
+VER="1.7.0"
 ALFABETO="23456789ABCDEFGHJKMNPQRSTUVWXYZ"     # sin 0 O 1 I L (P-1)
 BASES="legado_iproy legado_requerimientos legado_stock_mant legado_iot legado_user_gestion legado_analiticas legado_preventivos iproy"
 
@@ -680,8 +684,26 @@ cmd_colmena() {
     hub)       [[ -n "${1:-}" ]] || fallo "uso: colmena hub <https://tu-hosting/colmena-hub> [código de registro] | colmena hub apagar"
                if [[ "$1" == "apagar" ]]; then api PUT colmena/config '{"hub":{"activo":false}}' | ver
                else api PUT colmena/config "{\"hub\":{\"url\":\"$(json_txt "$1")\",\"activo\":true,\"codigo\":\"$(json_txt "${2:-}")\"}}" | ver && api POST colmena/hub/registrar | ver; fi;;
+    cola)      case "${1:-}" in
+                 ""|lista)   api GET colmena/cola | ver;;
+                 reintentar) api POST colmena/cola/reintentar | ver;;
+                 descartar)  api DELETE "colmena/cola/${2:?id del envío (colmena cola)}" | ver;;
+                 *) fallo "uso: colmena cola [lista | reintentar | descartar <id>]";;
+               esac;;
     url)       api PUT colmena/config "{\"url_publica\":\"$(json_txt "${1:-}")\"}" | ver;;
-    *) fallo "uso: colmena identidad | lista | vincular <url|ID> | aceptar <par> [rol] | rol <par> <rol> | revocar <par> | ping <par> | via <par> auto|hub | rpc <par> <método> <ruta> [cuerpo.json] | evento <par> <tema> [json] | hub <url> [código] | hub apagar | url <url pública>";;
+    # malla (1.7.0): cada nodo es hub de sus vinculados. Los mismos interruptores que en la app (Colmena › Red)
+    malla)     api GET colmena/malla | ver;;
+    medir)     api POST colmena/malla/sondear | ver;;
+    hub-propio) case "${1:-}" in
+                 encender) api PUT colmena/config '{"malla":{"hub_propio":true}}' | ver;;
+                 apagar)   api PUT colmena/config '{"malla":{"hub_propio":false}}' | ver;;
+                 *) fallo "uso: colmena hub-propio encender | apagar";;
+               esac;;
+    modo)      case "${1:-}" in
+                 malla|central|aislado) api PUT colmena/config "{\"malla\":{\"modo\":\"$1\"}}" | ver;;
+                 *) fallo "uso: colmena modo malla | central | aislado   (malla: todos los caminos · central: solo el hub central · aislado: sin colmena hasta reconectar)";;
+               esac;;
+    *) fallo "uso: colmena identidad | lista | vincular <url|ID> | aceptar <par> [rol] | rol <par> <rol> | revocar <par> | ping <par> | via <par> auto|hub | malla | medir | hub-propio encender|apagar | modo malla|central|aislado | rpc <par> <método> <ruta> [cuerpo.json] | evento <par> <tema> [json] | cola [reintentar | descartar <id>] | hub <url> [código] | hub apagar | url <url pública>";;
   esac
 }
 
@@ -713,11 +735,19 @@ cmd_start() {
     log "FrankenPHP en http://localhost:$IPROY_PUERTO ✔"
   fi
   if ! vivo worker; then
-    # cada 15 s el tick de sincronización; cada 5 min (20 vueltas) el puente iProy → Servidor PIM (v0.5)
-    ( i=0; while :; do curl -s -m 120 -o /dev/null -H "X-IPROY-Tick: $IPROY_TICK_TOKEN" "http://127.0.0.1:$IPROY_PUERTO/_iproy/tick.php" || true
-        (( i % 20 == 0 )) && { pim_importar > "$DATA/logs/pim_importacion.json" 2>/dev/null || true; }; i=$((i + 1)); sleep 15; done ) \
-      >/dev/null 2>&1 &
-    echo $! > "$RUN/worker.pid"; log "worker (tick cada 15 s) ✔"
+    # cada 15 s el tick de sincronización; cada 5 min (20 vueltas) el puente iProy → Servidor PIM (v0.5).
+    # Entre un tick y el siguiente, la escucha de la colmena (1.7.0): un pedido saliente que el hub mantiene abierto hasta que llega
+    # un sobre (espera larga, como AnyDesk en modo relevo). Si no hay hub, o el hub no espera, el worker duerme hasta el próximo tick.
+    ( i=0; prox=0; while :; do
+        if (( $(date +%s) >= prox )); then
+          curl -s -m 120 -o /dev/null -H "X-IPROY-Tick: $IPROY_TICK_TOKEN" "http://127.0.0.1:$IPROY_PUERTO/_iproy/tick.php" || true
+          (( i % 20 == 0 )) && { pim_importar > "$DATA/logs/pim_importacion.json" 2>/dev/null || true; }; i=$((i + 1)); prox=$(( $(date +%s) + 15 ))
+        fi
+        falta=$(( prox - $(date +%s) )); (( falta < 1 )) && continue
+        modo=$(curl -s -m $((falta + 40)) -H "X-IPROY-Tick: $IPROY_TICK_TOKEN" "http://127.0.0.1:$IPROY_PUERTO/_iproy/escuchar.php?espera=$falta" | grep -o '"modo":"[a-z-]*"' | cut -d'"' -f4)
+        [[ "$modo" == espera ]] || sleep "$falta"
+      done ) >/dev/null 2>&1 &
+    echo $! > "$RUN/worker.pid"; log "worker (tick cada 15 s + escucha de la colmena) ✔"
   fi
   # proceso residente MQTT (conexión permanente con el broker; si el módulo está deshabilitado, espera sin consumir)
   if [[ -d "$RAIZ/modulos/mqtt" ]] && ! vivo residente; then
@@ -897,6 +927,53 @@ cmd_respaldo() {
   log "respaldo: $(basename "$f") ($(stat -c%s "$f") B, sha $(cut -c1-16 "$f.sha256"))"
 }
 
+# ---------------------------------------------------------------- actualizar sobre lo instalado (1.7.0)
+# Lo pide la pantalla (Configuración › Actualizaciones, con --pedido) o se corre a mano con el .zip del código. Pasos: respaldo de la base,
+# detener, cambiar SOLO el código (incubadora/incubar.php actualizar del paquete: data/, runtime/ y descargas/ quedan), iniciar con el
+# lanzador NUEVO (aplica las migraciones) y, si no arranca, volver solo al código anterior. El ayudante tools/actualizar.php deja cada
+# paso en data/actualizaciones/estado.json para que la pantalla lo muestre al volver.
+cmd_actualizar() {
+  if [[ -z "${IPROY_DESPRENDIDO:-}" ]] && command -v setsid >/dev/null; then IPROY_DESPRENDIDO=1 exec setsid -w bash "${BASH_SOURCE[0]}" actualizar "$@"; fi
+  export IPROY_DESPRENDIDO=1
+  cargar_env; mkdir -p "$DATA/actualizaciones" "$DATA/logs"
+  local H="$RAIZ/tools/actualizar.php" LANZ="$RAIZ/$(basename "${BASH_SOURCE[0]}")" accion=aplicar cod res
+  [[ -f "$H" ]] || fallo "falta tools/actualizar.php"
+  case "${1:-}" in
+    --pedido) accion="$("$FP" php-cli "$H" accion "$RAIZ")";;
+    --volver) accion=volver; "$FP" php-cli "$H" paso "$RAIZ" pedido "Volviendo a la versión anterior";;
+    ""|-h|--ayuda) fallo "uso: actualizar <paquete.zip> [--forzar] | --volver";;
+    *) [[ -f "$1" ]] || fallo "no existe $1"
+       "$FP" php-cli "$H" pedir "$RAIZ" "$1" ${2:+"$2"} || fallo "el paquete no se instala (el motivo está arriba)";;
+  esac
+  paso() { "$FP" php-cli "$H" paso "$RAIZ" "$@" >/dev/null 2>&1 || true; }
+  terminar() { "$FP" php-cli "$H" terminar "$RAIZ" "$@" || true; }
+  log "actualización ($accion): respaldo de la base"
+  paso respaldo "Respaldo de la base"
+  vivo mariadb || ( cmd_start --no-abrir ) >/dev/null 2>&1 || true
+  if ! ( cmd_respaldo ); then terminar error "No se pudo hacer el respaldo de la base: no se tocó nada"; fallo "sin respaldo no se actualiza"; fi
+  log "actualización: deteniendo"; paso detener "Deteniendo el sistema"
+  cmd_stop >/dev/null 2>&1 || true
+  paso codigo "Cambiando el código"
+  if [[ "$accion" == volver ]]; then
+    if "$FP" php-cli "$H" volver "$RAIZ"; then res=vuelto; else res=error; fi
+  else
+    if cod="$("$FP" php-cli "$H" preparar "$RAIZ")" && "$FP" php-cli "$cod/incubadora/incubar.php" actualizar "$RAIZ"; then res=ok; else res=error; fi
+    if [[ "$res" == error ]]; then
+      log "actualización: el código no se pudo cambiar; se inicia la versión de antes"
+      bash "$LANZ" start --no-abrir || true; terminar error "No se pudo cambiar el código: sigue la versión anterior"; fallo "actualización fallida"
+    fi
+  fi
+  log "actualización: iniciando"; paso iniciar "Iniciando y aplicando las migraciones de la base"
+  if bash "$LANZ" start --no-abrir; then terminar "$res"; log "actualización: listo ($res)"; return 0; fi
+  if [[ "$res" == ok ]]; then
+    log "actualización: la versión nueva no arrancó; se vuelve a la anterior"
+    bash "$LANZ" stop >/dev/null 2>&1 || true
+    "$FP" php-cli "$H" volver "$RAIZ" && bash "$LANZ" start --no-abrir || true
+    terminar error "La versión nueva no arrancó: se volvió a la anterior (ver data/logs/actualizacion.log)"
+  else terminar error "No arrancó"; fi
+  fallo "actualización fallida"
+}
+
 cmd_verificar() {
   [[ -f "$RAIZ/MANIFEST.sha256" ]] || fallo "falta MANIFEST.sha256"
   ( cd "$RAIZ" && sha256sum --quiet -c MANIFEST.sha256 ) && log "✔ todos los archivos coinciden con el manifiesto" || fallo "hay archivos alterados o faltantes (ver arriba)"
@@ -1016,6 +1093,7 @@ case "${1:-}" in
   importar-app) cmd_importar_app;;
   importar-datos) shift; cmd_importar_datos "$@";;
   respaldo) cmd_respaldo;;
+  actualizar) shift; cmd_actualizar "$@";;
   restaurar) shift; cmd_restaurar "$@";;
   verificar) cmd_verificar;;
   confiar-ca) cmd_confiar_ca;;

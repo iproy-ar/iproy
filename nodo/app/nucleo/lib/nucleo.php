@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace Nucleo;
 
-const VERSION = '1.6.2';
+const VERSION = '1.7.0';
 const ABI = 1;                    // versión del ABI de módulos: modulo.json declara "abi": 1
 const PROTOCOLO = 'colmena/1';
 const ROLES = ['AD' => 'Administrador del nodo', 'GM' => 'Gestor de mantenimiento', 'EJ' => 'Ejecutor (técnico o empresa)',
@@ -97,7 +97,10 @@ function escribir_json(string $archivo, array $datos, bool $secreto = false): vo
 /** Configuración del núcleo (data/nucleo/config.json): hub de relevo, límites, etc. */
 function cfg(?array $cambios = null): array {
     $f = dir_datos() . '/config.json';
-    $c = leer_json($f) + ['hub' => ['url' => '', 'activo' => false, 'codigo' => ''], 'url_publica' => '', 'retencion_eventos_dias' => 7];
+    $c = leer_json($f) + ['hub' => ['url' => '', 'activo' => false, 'codigo' => ''], 'url_publica' => '', 'retencion_eventos_dias' => 7,
+                          'malla' => []];
+    // malla (1.7.0): hub propio encendido y todos los caminos, salvo que el administrador lo cambie
+    $c['malla'] = (array) $c['malla'] + ['hub_propio' => true, 'modo' => 'malla', 'cupo_espera' => 4];
     if ($cambios !== null) { $c = array_replace_recursive($c, $cambios); escribir_json($f, $c, true); }
     return $c;
 }
@@ -137,6 +140,11 @@ function texto_corto(mixed $v, int $n = 200): string { $s = is_string($v) ? $v :
 
 /** HTTP saliente simple (curl). TLS: la colmena no depende de él (sobres firmados y sellados de extremo a extremo). */
 function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = [], int $timeout = 10, bool $verificar_tls = true): array {
+    $ch = http_ch($metodo, $url, $cuerpo, $cab, $timeout, $verificar_tls);
+    return http_leer($ch, curl_exec($ch));
+}
+/** Prepara el pedido sin enviarlo (la malla usa varios a la vez con curl_multi). */
+function http_ch(string $metodo, string $url, ?string $cuerpo = null, array $cab = [], int $timeout = 10, bool $verificar_tls = true): \CurlHandle {
     $ch = curl_init($url);
     $h = [];
     foreach ($cab as $k => $v) $h[] = "$k: $v";
@@ -145,22 +153,27 @@ function http(string $metodo, string $url, ?string $cuerpo = null, array $cab = 
         CURLOPT_SSL_VERIFYPEER => $verificar_tls, CURLOPT_SSL_VERIFYHOST => $verificar_tls ? 2 : 0, CURLOPT_FOLLOWLOCATION => false]);
     if ($cuerpo !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $cuerpo);
     // Proxy de salida (redes hospitalarias, L-291): solo hacia Internet; la LAN y el propio equipo van directo.
-    $host = (string) parse_url($url, PHP_URL_HOST);
-    $privado = $host === 'localhost' || str_ends_with($host, '.local') || str_ends_with($host, '.colmena')
-        || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
-        || in_array($host, (array) (leer_json(raiz() . '/data/run/ips.json')['ipv4'] ?? []), true)          // el propio equipo
-        || sin_proxy($host);
-    if ($privado) curl_setopt($ch, CURLOPT_PROXY, '');                         // "" anula también el proxy de las variables de entorno
+    if (host_privado((string) parse_url($url, PHP_URL_HOST))) curl_setopt($ch, CURLOPT_PROXY, '');   // "" anula también el proxy de las variables de entorno
     elseif ($px = proxy_salida()) curl_setopt($ch, CURLOPT_PROXY, $px);
     foreach (['SSL_CERT_FILE', 'CURL_CA_BUNDLE'] as $e) if (($ca = getenv($e)) && is_file($ca)) { curl_setopt($ch, CURLOPT_CAINFO, $ca); break; }
-    $r = curl_exec($ch);
-    if ($r === false) { $e = curl_error($ch); return ['http' => 0, 'cuerpo' => '', 'cab' => [], 'error' => $e]; }
+    return $ch;
+}
+/** Convierte el resultado de un pedido (curl_exec o curl_multi_getcontent) en {http, cuerpo, cab, error}. */
+function http_leer(\CurlHandle $ch, string|bool|null $r): array {
+    if ($r === false || $r === null || ($r === '' && curl_errno($ch))) { $e = curl_error($ch) ?: 'sin respuesta'; return ['http' => 0, 'cuerpo' => '', 'cab' => [], 'error' => $e]; }
     $hs = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
     $cabs = [];
     foreach (explode("\r\n", substr($r, 0, $hs)) as $l) if (str_contains($l, ':')) { [$k, $v] = explode(':', $l, 2); $cabs[strtolower(trim($k))] = trim($v); }
     return ['http' => (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), 'cuerpo' => substr($r, $hs), 'cab' => $cabs, 'error' => null];
 }
 
+/** ¿El destino es la red local o el propio equipo? (a esos se va directo, sin el proxy de salida) */
+function host_privado(string $host): bool {
+    return $host === 'localhost' || str_ends_with($host, '.local') || str_ends_with($host, '.colmena')
+        || (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE))
+        || in_array($host, (array) (leer_json(raiz() . '/data/run/ips.json')['ipv4'] ?? []), true)          // el propio equipo
+        || sin_proxy($host);
+}
 /** NO_PROXY del sistema (dominios con sufijo, IP exactas o CIDR IPv4). */
 function sin_proxy(string $host): bool {
     foreach (array_filter(array_map('trim', explode(',', (string) (getenv('NO_PROXY') ?: getenv('no_proxy') ?: '')))) as $n) {
@@ -183,6 +196,6 @@ function proxy_salida(): string {
 function cargar(): void {
     static $ok = false;
     if ($ok) return;
-    foreach (['diario', 'identidad', 'modulos', 'bus', 'tareas', 'usuarios', 'pimcli', 'colmena', 'proc', 'apariencia', 'catalogos', 'recuperacion'] as $l) require_once __DIR__ . "/$l.php";
+    foreach (['diario', 'identidad', 'modulos', 'bus', 'tareas', 'usuarios', 'pimcli', 'colmena', 'malla', 'proc', 'apariencia', 'catalogos', 'recuperacion', 'qr', 'docx', 'planilla', 'actualizacion'] as $l) require_once __DIR__ . "/$l.php";
     $ok = true;
 }

@@ -16,6 +16,19 @@ Conecta por Internet nodos que no tienen IP fija ni puertos abiertos: un hospita
 4. Probalo: `https://tu-dominio/colmena-hub/index.php?r=estado` → `{"servicio":"colmena-hub","protocolo":"colmena/1",…}`.
 5. En cada nodo: `bash <Prod>-Control.sh colmena hub https://tu-dominio/colmena-hub [código]`.
 
+### Actualizar un hub 1.0.0 o 1.1.0 a 1.2.0 (espera larga, hora y malla)
+
+- Se reemplaza **solo** `index.php` (y `config.ejemplo.php`). `config.php` y la carpeta `datos/` no se tocan: los nodos registrados y los sobres pendientes quedan como están.
+- Los nodos viejos siguen funcionando igual (miran cada 15 s). Los nodos 1.7.0 con la escucha reciben los sobres en 1-2 s.
+- `espera_max` (25 s por defecto) es cuánto puede quedar abierto un pedido de buzón. Cada nodo que escucha ocupa un proceso PHP mientras espera: si el hosting limita los procesos simultáneos, bajalo (por ejemplo a 10) o ponelo en 0 para apagar la espera.
+- **1.2.0:** `enviar` le dice al remitente hace cuánto pidió algo el destinatario (`escucha`). Con eso un nodo sabe si lo están esperando ahí o si le conviene otro camino de la malla.
+- **1.2.0:** `'mantenimiento' => true` hace que el hub responda 503 a todo mientras trabajás en el hosting. Los nodos siguen por sus otros caminos y lo que no tenga camino espera en la cola de cada nodo.
+- `desfase_prueba_s` y `demora_prueba_ms` son solo para las pruebas automáticas: dejalos en 0.
+
+### El hub central y la malla
+
+Desde iProy 1.7.0 cada nodo es además hub de sus vinculados (`<nodo>/colmena-hub/`) y elige el camino más rápido. Este hub pasa a ser el **hub central**: el punto de encuentro de los nodos que no se alcanzan entre sí (otro edificio, otra ciudad, detrás de un router). Los nodos de una misma red siguen trabajando entre ellos aunque este hub no esté.
+
 ## Qué puede y qué no puede hacer el hub
 
 <sub>🎓 [Lección: conectá tu hospital con otros (la colmena) →](https://iproy.com.ar/pim/aprende/federar-hospitales)</sub>
@@ -26,7 +39,7 @@ Conecta por Internet nodos que no tienen IP fija ni puertos abiertos: un hospita
   - falsificarlo, porque va firmado con ed25519 y el destinatario lo verifica;
   - repetir pedidos, porque cada firma lleva un nonce de un solo uso;
   - reemplazar la clave de un nodo, porque se fija en el primer registro (TOFU).
-- **Si se cae:** los nodos siguen trabajando solos. Los sobres esperan (no hay pérdida si el nodo reintenta) y, por la intranet, la colmena funciona directo.
+- **Si se cae:** los nodos siguen trabajando solos. Los que se alcanzan entre sí siguen por la malla (directo, por el hub de cualquiera de ellos o con uno de puente). Lo demás espera en la cola de salida de cada nodo y sale cuando el hub vuelve.
 
 Mantenimiento: los sobres que nadie retira se descartan a los `ttl_dias`. La base es un único archivo SQLite que se puede respaldar copiándolo.
 
