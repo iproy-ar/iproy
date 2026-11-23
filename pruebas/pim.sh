@@ -14,7 +14,7 @@ OK=0; MAL=0; ver() { if [[ "$2" == *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1))
 no()  { if [[ "$2" != *"$3"* ]]; then echo "  ✔ $1"; OK=$((OK+1)); else echo "  ✘ $1 → ${2:0:300}"; MAL=$((MAL+1)); fi; }
 VT() { printf 'W/"%s"' "$(A GET "Task/$1" | grep -o '"versionId":"[0-9]*"' | head -1 | grep -o '[0-9]*')"; }   # If-Match de una orden: $transicion lo exige (1.6.2)
 id_de() { grep -o "\"resourceType\":\"$1\",\"id\":\"[^\"]*\"" | head -1 | grep -o '[0-9A-Z]\{26\}'; }
-NS=https://iproy.com.ar/fhir; S=$RANDOM; DESDE=$(date -d '-1 min' +%Y-%m-%dT%H:%M:%S-03:00)
+NS=https://iproy.com.ar/fhir; S=$RANDOM; DESDE=$(TZ=Etc/GMT+3 date -d '-1 min' +%Y-%m-%dT%H:%M:%S-03:00)   # 1.7.0: la hora se arma en -03:00, sea cual sea la zona del equipo que corre la prueba
 
 echo "1) Guía y conformidad (formato IHE)"
 M=$(A GET metadata)
@@ -41,13 +41,13 @@ QX=$(printf '%s' "$R" | id_de Location)
 ver "alias de la 0.9.1 (grupoUsoMedico) → pim-grupo-uso-medico" "$R" "$NS/StructureDefinition/pim-grupo-uso-medico"
 ver "ambiente controlado: presión positiva y renovaciones /h" "$R" '"valueCode":"positiva"'
 ver "type obligatorio de mCSD (texto del tipo de local)" "$R" '"type":[{"text":"Local"}]'
-ver "partof=Location/{establecimiento} incluye el edificio" "$(A GET "Location?partof=Location/$EST&_count=200")" "\"id\":\"$ED\""
+ver "partof=Location/{establecimiento} incluye el edificio" "$(A GET "Location?partof=Location/$EST&identifier=EJ-ED-$S")" "\"id\":\"$ED\""
 ver "name:exact" "$(A GET "Location?name:exact=Quir%C3%B3fano%20EJ%20$S")" "\"id\":\"$QX\""
 ver "organization=Organization/{organismo}" "$(A GET "Location?organization=Organization/$ORG&_count=1&_summary=count")" '"total":'
 ver "ITI-91: Location/_history?_since" "$(A GET "Location/_history?_since=$DESDE")" "Location/$QX"
 R=$(A POST Organization "{\"resourceType\":\"Organization\",\"identifier\":[{\"system\":\"$NS/sid/empresa\",\"value\":\"EJ-EMP-$S\"}],\"name\":\"Empresa EJ $S\",\"type\":[{\"coding\":[{\"system\":\"http://terminology.hl7.org/CodeSystem/organization-type\",\"code\":\"bus\"}]}]}")
 EMP=$(printf '%s' "$R" | id_de Organization); ver "empresa (pim-empresa)" "$R" "$NS/StructureDefinition/pim-empresa"
-ver "Organization?type=bus" "$(A GET "Organization?type=bus&_count=200")" "\"id\":\"$EMP\""
+ver "Organization?type=bus" "$(A GET "Organization?type=bus&identifier=EJ-EMP-$S")" "\"id\":\"$EMP\""   # con el identificador: un nodo con más de 200 empresas no la trae en la primera página
 ver "ITI-91: Organization/_history?_since" "$(A GET "Organization/_history?_since=$DESDE")" "Organization/$EMP"
 
 echo "3) PMA con datos REFES y EUI-64; categoría de alcance"
@@ -68,14 +68,15 @@ O2=$(printf '%s' "$R" | id_de Device)
 ver "sistema GAS-O2: alcance B (Tabla 3-x)" "$R" "\"url\":\"$NS/StructureDefinition/pim-categoria-alcance\",\"valueCoding\":{\"system\":\"$NS/CodeSystem/pim-categoria-alcance\",\"code\":\"B\"}"
 ver "IRU con banda en pim-valores" "$R" '"code":"banda-A"'
 no  "los puntos ya no van dentro de Device" "$R" 'pim-punto-medicion'
-ver "Device?categoria-alcance=B" "$(A GET "Device?categoria-alcance=B&_count=200")" "\"id\":\"$O2\""
+ver "Device?categoria-alcance=B (junto con _id: no depende del tamaño del nodo)" "$(A GET "Device?categoria-alcance=B&_id=$O2")" "\"id\":\"$O2\""
+ver "y con alcance A no aparece" "$(A GET "Device?categoria-alcance=A&_id=$O2")" "\"total\":0"
 
 echo "4) PIM-REG: Device/\$refes"
 R=$(A GET "Device/$PMA/\$refes"); ver "PMA completo" "$R" '"name":"completo","valueBoolean":true'
 R=$(A GET "Device/$PMA2/\$refes"); ver "PMA incompleto: informa lo que falta" "$R" '"name":"falta","valueString":"n.º de producto ANMAT"'
 ver "a nivel de tipo, con total" "$(A GET 'Device/$refes?completos=false')" '"name":"total"'
 ver "un sistema no es PMA → 404" "$(A GET "Device/$O2/\$refes")" 'no es un producto médico activo'
-ver "archivo CSV de carga (_format=csv)" "$(A GET 'Device/$refes?_format=csv')" "\"EJ-PMA-$S\";\"Fabricante EJ\""
+ver "archivo CSV de carga (_format=csv)" "$(A GET 'Device/$refes?_format=csv')" "EJ-PMA-$S\";\"Fabricante EJ\""   # el código puede llevar delante la sigla del establecimiento
 
 echo "5) Telemetría: DeviceMetric + Observation"
 DM=$(A GET "DeviceMetric?source=Device/$O2" | id_de DeviceMetric)

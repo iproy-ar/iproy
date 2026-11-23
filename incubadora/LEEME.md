@@ -60,6 +60,20 @@ php incubar.php verificar ../../Colmen/Colmen-Portable
   - el LEEME.
 - Para activarlo: `…-Control.sh nucleo arranque` o reiniciar el nodo.
 
+## `actualizar`: código nuevo para un producto ya instalado
+
+```bash
+php incubar.php actualizar <carpeta-del-producto> [--sumar migracion,reportes]
+```
+
+- Vuelve a incubar con la misma identidad (`producto.json`: nombre, sigla, color, plantilla y versión) en una carpeta al lado y reemplaza **solo el código**.
+- Quedan como estaban: `data/`, `runtime/`, `descargas/`, `python/`, los módulos activos del producto, su logo y los archivos que la incubación no trae (informes, desinstalador).
+- El código anterior queda en `<carpeta>.codigo-anterior-<fecha>`; cada actualización se anota en `data/actualizaciones.json`.
+- `--sumar` activa además esos módulos y los que ellos requieren.
+- El producto tiene que estar detenido. Al iniciarlo se aplican las migraciones de la base.
+- Con el producto base (iProy) no incuba: copia `nodo/`.
+- En Linux, `instalador/actualizar-linux.sh` hace todo: respaldo, detener, actualizar, iniciar.
+
 ## `verificar`
 
 <sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>

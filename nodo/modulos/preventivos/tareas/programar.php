@@ -13,5 +13,11 @@ return function (array $ctx): string {
         if (abierta((int) $p['id'])) continue;
         try { generar($p, 'calendario'); $n++; } catch (\Throwable $e) { asentar('preventivo.error', ['error' => $e->getMessage()], (string) $p['id']); }
     }
-    return "$n órdenes preventivas generadas";
+    // 2.0.0: plan semanal — desde el primer día de la semana se generan las órdenes por equipo (una vez; lo que ya existe no se repite)
+    $sem = '';
+    if (($ctx['cfg']['pmp_generar_ordenes'] ?? true) !== false) {
+        try { [$y, $w] = \Modulos\Preventivos\semana_de(date('Y-m-d')); $g = \Modulos\Preventivos\generar_semana($y, $w); $sem = " · semana $w/$y: {$g['creadas']} órdenes nuevas de {$g['equipos']} equipos"; }
+        catch (\Throwable $e) { asentar('pmp.error', ['error' => $e->getMessage()]); $sem = ' · plan semanal: ' . $e->getMessage(); }
+    }
+    return "$n órdenes preventivas generadas$sem";
 };

@@ -38,16 +38,22 @@ function eventos(int $desde, ?string $patron = null, int $max = 200): array {
 }
 /** Entrega los eventos pendientes a los módulos suscriptos (lo llama el planificador en cada tick). */
 function despachar(float $presupuesto = 5.0): array {
-    $fin = microtime(true) + $presupuesto; $n = 0; $err = [];
+    $fin = microtime(true) + $presupuesto; $n = 0; $err = []; $rotos = [];
     $ultimo = (int) (valor('SELECT MAX(id) FROM nucleo_evento') ?? 0);
     foreach (activos() as $id => $m) foreach ((array) $m['suscribe'] as $patron => $archivo) {
         $sus = "modulo:$id:$patron";
         $s = fila('SELECT * FROM nucleo_suscripcion WHERE suscriptor = ?', [$sus]);
         if (!$s) { q('INSERT INTO nucleo_suscripcion (suscriptor, cursor_id) VALUES (?, ?)', [$sus, $ultimo]); continue; }   // empieza desde ahora
         $cursor = (int) $s['cursor_id']; $fallos = (int) $s['fallos'];
-        if ($cursor >= $ultimo) continue;
-        incluir($id);
-        $fn = require $m['dir'] . '/' . $archivo;
+        if ($cursor >= $ultimo || isset($rotos[$id])) continue;
+        // Ola 4: si el código del módulo no carga (por ejemplo, un error de sintaxis), sus eventos esperan sin avanzar ni descartarse
+        // y los demás módulos siguen recibiendo los suyos; antes, el error cortaba el despacho de todo el tick.
+        try { incluir($id); $fn = require $m['dir'] . '/' . $archivo; }
+        catch (\Throwable $x) {
+            $rotos[$id] = true; $err[] = "$sus: no carga: " . $x->getMessage();
+            q('UPDATE nucleo_suscripcion SET ultimo_error = ? WHERE suscriptor = ?', [texto_corto('No carga el módulo: ' . $x->getMessage(), 500), $sus]);
+            error_log('[nucleo] bus: el módulo ' . $id . ' no carga: ' . $x->getMessage()); continue;
+        }
         while (microtime(true) < $fin) {
             $lote = filas('SELECT * FROM nucleo_evento WHERE id > ? ORDER BY id LIMIT 200', [$cursor]);
             if (!$lote) break;
@@ -56,6 +62,12 @@ function despachar(float $presupuesto = 5.0): array {
                     $GLOBALS['nucleo_modulo_actual'] = $id;
                     try { $fn(['id' => (int) $e['id'], 'ts' => $e['ts'], 'tema' => $e['tema'], 'origen' => $e['origen'], 'datos' => json_decode($e['datos'], true)], ctx($id)); $n++; $fallos = 0; }
                     catch (\Throwable $x) {
+                        // Ola 4: un error del código (función inexistente, clase que falta…) no es culpa del evento: no se cuenta ni se descarta; espera al arreglo
+                        if ($x instanceof \Error && !($x instanceof \TypeError) && !($x instanceof \ValueError) && !($x instanceof \ArithmeticError)) {
+                            $rotos[$id] = true; $err[] = "$sus: error del módulo: " . $x->getMessage();
+                            q('UPDATE nucleo_suscripcion SET ultimo_error = ? WHERE suscriptor = ?', [texto_corto('Error del módulo: ' . $x->getMessage(), 500), $sus]);
+                            break 2;
+                        }
                         $fallos++;
                         q('UPDATE nucleo_suscripcion SET fallos = ?, ultimo_error = ? WHERE suscriptor = ?', [$fallos, texto_corto($x->getMessage(), 500), $sus]);
                         if ($fallos < 5) { $err[] = "$sus: " . $x->getMessage(); break 2; }

@@ -1,5 +1,5 @@
 ﻿# =====================================================================
-#  iProy-Control · iProy Portable «Colmena» · v1.6.2 · 09-11-2026 (núcleo modular + colmena + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
+#  iProy-Control · iProy Portable «Colmena» · v1.7.0 · 20-11-2026 (núcleo modular + colmena con cola de salida + Servidor PIM alineado con IHE + listas, stock y recuperación sin Internet)
 #  Lanzador del nodo para Windows 10/11 x64. Compatible con Windows PowerShell 5.1.
 #  No requiere administrador. Uso (o doble clic en iProy-Control.bat):
 #    iProy-Control.bat init [-Nombre "Pañol Central"] [-Modo local|lan] [-Puerto 8080] [-PuertoDb 3407]   (sin -PuertoDb: el primero libre desde 3407)
@@ -9,6 +9,7 @@
 #    iProy-Control.bat pim token <id> <clave.xml> [alcances] | pim prueba | pim verificar | pim consola      (Consola PIM: http://localhost:8080/pim/)
 #    iProy-Control.bat red [estado] | red modo local|lan · precargar · nombre "PC Taller" · clave-auth [--borrar]   (panel: http://localhost:8080/_iproy/red.php)
 #    iProy-Control.bat nucleo estado|arranque|tick|tareas|diario|verificar · modulo activar|desactivar|config <id> · usuario alta <u> <rol> | lista
+#    iProy-Control.bat actualizar <paquete.zip> [forzar] | actualizar volver   (instala una versión nueva sobre lo instalado; datos intactos)
 #    iProy-Control.bat colmena identidad|lista|vincular <url|ID>|aceptar <par> [rol]|revocar|ping|via|rpc <par> GET <ruta>|hub <url> [código]   (app: http://localhost:8080/app/)
 # =====================================================================
 param(
@@ -30,7 +31,7 @@ param(
 $script:NombreDado = $PSBoundParameters.ContainsKey('Nombre')
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # en 5.1 la barra de progreso vuelve lentísimos Invoke-WebRequest y Expand-Archive
-$VER = '1.6.2'
+$VER = '1.7.0'
 $RAIZ = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RT = Join-Path $RAIZ 'runtime\win-x64'
 $FPDIR = Join-Path $RT 'frankenphp'
@@ -667,8 +668,19 @@ function CmdColmena([string]$acc, [string]$a1, [string]$a2, [string]$a3, [string
             Ver (Api 'POST' 'colmena/rpc' ('{"par":"' + $a1 + '","metodo":"' + $(if ($a2) { $a2 } else { 'GET' }) + '","ruta":' + ($a3 | ConvertTo-Json) + ',"cuerpo":' + $cu + ',"esperar":60}')) }
     'hub' { if ($a1 -eq 'apagar') { Ver (Api 'PUT' 'colmena/config' '{"hub":{"activo":false}}') }
             else { Ver (Api 'PUT' 'colmena/config' @{ hub = @{ url = $a1; activo = $true; codigo = $a2 } }); Ver (Api 'POST' 'colmena/hub/registrar' '{}') } }
+    'cola' { if ($a1 -eq 'reintentar') { Ver (Api 'POST' 'colmena/cola/reintentar' '{}') }
+             elseif ($a1 -eq 'descartar') { if (-not $a2) { Fallo 'uso: colmena cola descartar <id>' }; Ver (Api 'DELETE' "colmena/cola/$a2") }
+             else { Ver (Api 'GET' 'colmena/cola') } }
     'url' { Ver (Api 'PUT' 'colmena/config' @{ url_publica = $a1 }) }
-    default { Fallo 'uso: colmena identidad | lista | vincular <url|ID> | aceptar <par> [rol] | rol <par> <rol> | revocar <par> | ping <par> | via <par> auto|hub | rpc <par> <método> <ruta> [cuerpo.json] | hub <url> [código] | hub apagar | url <url>' }
+    # malla (1.7.0): cada nodo es hub de sus vinculados. Los mismos interruptores que en la app (Colmena > Red)
+    'malla' { Ver (Api 'GET' 'colmena/malla') }
+    'medir' { Ver (Api 'POST' 'colmena/malla/sondear' '{}') }
+    'hub-propio' { if ($a1 -eq 'encender') { Ver (Api 'PUT' 'colmena/config' '{"malla":{"hub_propio":true}}') }
+                   elseif ($a1 -eq 'apagar') { Ver (Api 'PUT' 'colmena/config' '{"malla":{"hub_propio":false}}') }
+                   else { Fallo 'uso: colmena hub-propio encender | apagar' } }
+    'modo' { if ($a1 -in @('malla', 'central', 'aislado')) { Ver (Api 'PUT' 'colmena/config' ('{"malla":{"modo":"' + $a1 + '"}}')) }
+             else { Fallo 'uso: colmena modo malla | central | aislado   (malla: todos los caminos; central: solo el hub central; aislado: sin colmena hasta reconectar)' } }
+    default { Fallo 'uso: colmena identidad | lista | vincular <url|ID> | aceptar <par> [rol] | rol <par> <rol> | revocar <par> | ping <par> | via <par> auto|hub | malla | medir | hub-propio encender|apagar | modo malla|central|aislado | cola [reintentar | descartar <id>] | rpc <par> <método> <ruta> [cuerpo.json] | hub <url> [código] | hub apagar | url <url>' }
   }
 }
 
@@ -700,7 +712,7 @@ function CmdStart {
   }
   if (-not (Vivo 'worker')) {
     $w = Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', """$RAIZ\tools\worker.ps1""", '-Puerto', $E.IPROY_PUERTO
-    Set-Content "$RUN\worker.pid" $w.Id; Log 'worker (tick cada 15 s) OK'
+    Set-Content "$RUN\worker.pid" $w.Id; Log 'worker (tick cada 15 s + escucha de la colmena) OK'
   }
   if ((Test-Path "$RAIZ\modulos\mqtt") -and -not (Vivo 'residente')) {   # conexión permanente con el broker MQTT
     $r = Start-Process -FilePath $FP -WorkingDirectory $FPDIR -ArgumentList 'php-cli', """$RAIZ\tools\residente.php""", 'mqtt' -WindowStyle Hidden -PassThru -RedirectStandardError "$DATA\logs\residente.log"
@@ -863,6 +875,60 @@ function CmdRespaldo([switch]$Silencioso) {
   Log "respaldo: $(Split-Path -Leaf $gz) ($((Get-Item $gz).Length) B, sha $($h.Substring(0,16)))"
 }
 
+# ---------- actualizar sobre lo instalado (1.7.0) ----------
+# Lo pide la pantalla (Configuración › Actualizaciones: «actualizar pedido» o «actualizar volver») o se corre a mano con el .zip del código.
+# Respaldo de la base, detener, cambiar SOLO el código (incubadora\incubar.php actualizar del paquete; data, runtime y descargas quedan),
+# iniciar con el lanzador NUEVO (aplica las migraciones) y, si no arranca, volver solo al código anterior. Los argumentos van sin guiones:
+# PowerShell toma «--algo» como nombre de parámetro.
+function CmdActualizar([string]$a1, [string]$a2) {
+  CargarEnv
+  New-Item -ItemType Directory -Force -Path "$DATA\actualizaciones", "$DATA\logs" | Out-Null
+  $H = Join-Path $RAIZ 'tools\actualizar.php'; $LANZ = $PSCommandPath
+  if (-not (Test-Path $H)) { Fallo 'falta tools\actualizar.php' }
+  $accion = 'aplicar'
+  switch -Regex ($a1) {
+    '^-*pedido$' { $accion = (& $FP php-cli $H accion $RAIZ | Out-String).Trim() }
+    '^-*volver$' { $accion = 'volver'; & $FP php-cli $H paso $RAIZ pedido 'Volviendo a la versión anterior' | Out-Null }
+    '^$' { Fallo 'uso: actualizar <paquete.zip> [forzar] | actualizar volver' }
+    default {
+      if (-not (Test-Path $a1)) { Fallo "no existe $a1" }
+      $x = @('php-cli', $H, 'pedir', $RAIZ, $a1); if ($a2 -match '^-*forzar$') { $x += '--forzar' }
+      & $FP @x; if ($LASTEXITCODE -ne 0) { Fallo 'el paquete no se instala (el motivo está arriba)' }
+    }
+  }
+  $paso = { param($p, $m) & $FP php-cli $H paso $RAIZ $p $m 2>$null | Out-Null }
+  $terminar = { param($r, $m) & $FP php-cli $H terminar $RAIZ $r $m }
+  $iniciar = { $p = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', """$LANZ""", 'start', '-NoAbrir' -WindowStyle Hidden -Wait -PassThru; return ($p.ExitCode -eq 0) }
+  Log "actualización ($accion): respaldo de la base"; & $paso 'respaldo' 'Respaldo de la base'
+  if (-not (Vivo 'mariadb')) { IniciarMariaDB }
+  $t0 = (Get-Date).AddSeconds(-2); CmdRespaldo -Silencioso
+  if (-not (Get-ChildItem "$DATA\backups\*.sql.gz" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $t0 })) {
+    & $terminar 'error' 'No se pudo hacer el respaldo de la base: no se tocó nada'; Fallo 'sin respaldo no se actualiza'
+  }
+  Log 'actualización: deteniendo'; & $paso 'detener' 'Deteniendo el sistema'
+  CmdStop
+  & $paso 'codigo' 'Cambiando el código'
+  $res = 'ok'
+  if ($accion -eq 'volver') { & $FP php-cli $H volver $RAIZ; if ($LASTEXITCODE -eq 0) { $res = 'vuelto' } else { $res = 'error' } }
+  else {
+    $cod = (& $FP php-cli $H preparar $RAIZ | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0 -and $cod) { & $FP php-cli "$cod\incubadora\incubar.php" actualizar $RAIZ; if ($LASTEXITCODE -ne 0) { $res = 'error' } } else { $res = 'error' }
+    if ($res -eq 'error') {
+      Log 'actualización: el código no se pudo cambiar; se inicia la versión de antes'
+      & $iniciar | Out-Null; & $terminar 'error' 'No se pudo cambiar el código: sigue la versión anterior'; Fallo 'actualización fallida'
+    }
+  }
+  Log 'actualización: iniciando'; & $paso 'iniciar' 'Iniciando y aplicando las migraciones de la base'
+  if (& $iniciar) { & $terminar $res ''; Log "actualización: listo ($res)"; return }
+  if ($res -eq 'ok') {
+    Log 'actualización: la versión nueva no arrancó; se vuelve a la anterior'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', """$LANZ""", 'stop' -WindowStyle Hidden -Wait | Out-Null
+    & $FP php-cli $H volver $RAIZ; if ($LASTEXITCODE -eq 0) { & $iniciar | Out-Null }
+    & $terminar 'error' 'La versión nueva no arrancó: se volvió a la anterior (ver data\logs\actualizacion.log)'
+  } else { & $terminar 'error' 'No arrancó' }
+  Fallo 'actualización fallida'
+}
+
 function CmdVerificar([switch]$SoloContar) {
   $m = Join-Path $RAIZ 'MANIFEST.sha256'; if (-not (Test-Path $m)) { Fallo 'falta MANIFEST.sha256' }
   $mal = 0
@@ -990,6 +1056,7 @@ switch ($Comando) {
   'importar-app' { CmdImportarApp }
   'importar-datos' { CmdImportarDatos }
   'respaldo' { CmdRespaldo }
+  'actualizar' { CmdActualizar $SoloBase $P2 }
   'verificar' { CmdVerificar }
   'diagnostico' { CmdDiagnostico }
   'fhir-cliente' { CmdFhirCliente $SoloBase $P2 $P3 $P4 }

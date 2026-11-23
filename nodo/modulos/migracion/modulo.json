@@ -1,0 +1,16 @@
+{
+  "id": "migracion",
+  "nombre": "Migración de datos",
+  "version": "1.2.0",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Trae datos de otro sistema para empezar a usar el nodo con historia: desde una hoja de cálculo (archivo CSV o texto pegado), desde una hoja publicada en la web o desde una base MySQL (consulta de solo lectura). El administrador elige el destino (servicios, empresas, equipos médicos, sistemas de instalación, órdenes o planes preventivos), une las columnas del origen con los campos PIM, revisa las tablas de equivalencias (estados, tipos de mantenimiento, prioridades y categorías, con cuántas filas trae cada valor), simula y recién después carga. La carga la hace el Servidor PIM, es repetible sin duplicar y deja cada registro marcado como traído de otro sistema.",
+  "requiere": ["pim"],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": { "migracion.usar": [] },
+  "ui": { "script": "ui.js", "orden": 98 },
+  "config_defecto": { "max_filas": 60000, "lote": 500, "max_bytes": 25000000, "hosts_url": ["docs.google.com", "googleusercontent.com", "onedrive.live.com", "sharepoint.com"] }
+}

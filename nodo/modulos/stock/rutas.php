@@ -5,7 +5,8 @@
 declare(strict_types=1);
 
 use Nucleo\Fallo;
-use function Modulos\Stock\{alta_insumo, validar_insumo, insumo, mover, alta_proveedor, validar_proveedor, resumen, proximo_codigo};
+use function Modulos\Stock\{alta_insumo, validar_insumo, insumo, mover, alta_proveedor, validar_proveedor, resumen, proximo_codigo,
+    analitica, tendencias, pedido, pedidos, crear_pedido, estado_pedido, plan_conteo, guardar_conteo, reporte, graficos, sugerencia_prioridad, enviar_pedido, planilla_pedido};
 use function Nucleo\{filas, fila, q, asentar};
 
 $SEL_MOV = 'SELECT m.*, i.codigo, i.descripcion, i.unidad, p.nombre AS proveedor FROM stock_movimiento m JOIN stock_insumo i ON i.id = m.insumo_id LEFT JOIN stock_proveedor p ON p.id = m.proveedor_id';
@@ -44,6 +45,21 @@ return [
         return ['movimientos' => filas("$SEL_MOV" . ($w ? ' WHERE ' . implode(' AND ', $w) : '') . ' ORDER BY m.fecha DESC, m.clave DESC, m.renglon LIMIT 1000', $a)];
     }],
     ['POST', '/movimientos', 'stock.mover', fn(array $c) => ['_http' => 201] + mover($c['cuerpo'])],
+
+    // 1.2 · pañol: reposición, tendencias, pedidos, conteo cíclico y reportes
+    ['GET', '/analitica', 'stock.ver', fn(array $c) => analitica($c['query'])],
+    ['GET', '/tendencias', 'stock.ver', fn(array $c) => tendencias($c['query'])],
+    ['GET', '/pedidos', 'stock.ver', fn(array $c) => ['pedidos' => pedidos($c['query'])]],
+    ['GET', '/pedidos/sugerencia', 'stock.ver', fn(array $c) => ['sugerencia' => sugerencia_prioridad((string) ($c['query']['orden'] ?? ''), (string) ($c['query']['activo'] ?? ''))]],
+    ['GET', '/pedidos/{id}', 'stock.ver', fn(array $c) => ['pedido' => pedido((int) $c['params']['id']) ?? throw new Fallo(404, 'No existe el pedido')]],
+    ['POST', '/pedidos', 'stock.mover', fn(array $c) => ['_http' => 201, 'pedido' => crear_pedido($c['cuerpo'])]],
+    ['GET', '/pedidos/{id}/planilla', 'stock.ver', fn(array $c) => planilla_pedido((int) $c['params']['id'])],
+    ['POST', '/pedidos/{id}/enviar', 'stock.mover', fn(array $c) => enviar_pedido((int) $c['params']['id'], $c['cuerpo'])],
+    ['POST', '/pedidos/{id}/estado', 'stock.mover', fn(array $c) => estado_pedido((int) $c['params']['id'], $c['cuerpo'])],
+    ['GET', '/conteo', 'stock.ver', fn(array $c) => plan_conteo($c['query'])],
+    ['POST', '/conteo', 'stock.mover', fn(array $c) => ['_http' => 201] + guardar_conteo($c['cuerpo'], \Nucleo\puede('stock.editar'))],
+    ['GET', '/reportes/graficos', 'stock.ver', fn(array $c) => graficos($c['query'])],
+    ['GET', '/reportes/{tipo}', 'stock.ver', fn(array $c) => reporte((string) $c['params']['tipo'], $c['query'])],
 
     ['GET', '/proveedores', 'stock.ver', fn(array $c) => ['proveedores' => filas('SELECT p.*, (SELECT MAX(fecha) FROM stock_movimiento m WHERE m.proveedor_id = p.id) AS ultimo_ingreso FROM stock_proveedor p'
         . (empty($c['query']['todos']) ? ' WHERE activo = 1' : '') . ' ORDER BY nombre')]],

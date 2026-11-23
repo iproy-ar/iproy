@@ -1,0 +1,16 @@
+{
+  "id": "pedidos_red",
+  "nombre": "Pedidos a otros nodos",
+  "version": "1.0.0",
+  "abi": 1,
+  "nucleo": ">=1.0 <2.0",
+  "estabilidad": "estable",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Pedir un trabajo a otro nodo de la colmena desde la app (Ola P · P2): se busca el equipo o la instalación en el nodo vinculado, se escribe el pedido y se crea la solicitud y la orden en su Servidor PIM, con el número que devuelve. Este nodo guarda cada pedido y sigue su estado (solicitada, asignada, en ejecución, finalizada…) consultando al otro nodo, por la red de la institución o por el hub. Requiere que el otro nodo le haya dado a este el rol SO (solicitante).",
+  "requiere": ["pim"],
+  "lib": "lib.php",
+  "capacidades": { "pedidos_red.ver": ["GM", "SO", "CI"], "pedidos_red.pedir": ["GM", "SO"] },
+  "tareas": [{ "id": "seguimiento", "cada": 600, "archivo": "tareas/seguimiento.php" }],
+  "rutas": "rutas.php",
+  "ui": { "script": "ui.js", "orden": 82 }
+}

@@ -17,7 +17,23 @@ use PDO;
 
 const CLIENTE_IMPORTADOR = 'importador-iproy';
 /** Estado de iProy → estado de negocio PIM (⚠ difiere del mapeo de la v0.3, que usaba el estado FHIR directo). */
-const ESTADO_LEGADO = ['Revision' => 'en-revision', 'En Proceso' => 'asignada', 'Atencion' => 'en-ejecucion', 'Finalizado' => 'finalizada', 'DENEGADO' => 'rechazada'];
+// Equivalencias validadas con las 24.698 órdenes reales (21-11-2026): «Atencion» es una orden frenada (en-espera), no una en ejecución.
+const ESTADO_LEGADO = ['Revision' => 'en-revision', 'En Proceso' => 'asignada', 'Atencion' => 'en-espera', 'Finalizado' => 'finalizada', 'DENEGADO' => 'rechazada'];
+/** Estado PIM de una orden del sistema anterior: el estado escrito, afinado por las fechas (misma regla que el módulo de migración). */
+function estado_legado(string $estado, bool $conInicio, bool $conFin): string {
+    $e = ESTADO_LEGADO[$estado] ?? 'solicitada';
+    if ($e === 'en-revision' && $conFin) return 'finalizada';
+    if ($e === 'asignada' && $conInicio) return 'en-ejecucion';
+    return $e;
+}
+/** Tipo de mantenimiento PIM (EN 13306): el correctivo con prioridad A es inmediato. */
+function tipo_legado(string $tm, string $prioridad): ?string {
+    if (str_contains($tm, 'prevent')) return 'preventivo-sistematico';
+    if (str_contains($tm, 'predict')) return 'predictivo';
+    if (str_contains($tm, 'correct')) return strtoupper(trim($prioridad)) === 'A' ? 'correctivo-inmediato' : 'correctivo-diferido';
+    if (str_contains($tm, 'mejora')) return 'mejora';
+    return null;
+}
 
 function pdo_fhir(): PDO {
     $v = cfg()['priv'];
@@ -128,7 +144,7 @@ function importar(): array {
                 $s = fn($i) => (isset($v[$i]) && (string) $v[$i] !== '') ? mb_substr((string) $v[$i], 0, 120) : null;
                 $baja = str_contains(normalizar((string) ($v[12] ?? '')), 'baja');
                 $sumar('Device', reflejar('pim_activo', 'Device', ulid_legado('equipo', (string) $cod), [
-                    'clase' => 'equipo-medico', 'codigo' => mb_substr((string) $cod, 0, 60), 'nombre' => mb_substr((string) ($v[5] ?: $cod), 0, 200),
+                    'clase' => 'equipo-medico', 'codigo' => mb_substr(con_sigla((string) $cod), 0, 60), 'nombre' => mb_substr((string) ($v[5] ?: $cod), 0, 200),
                     'tipo_codigo' => $s(2) ? mb_substr($s(2), 0, 40) : null, 'tipo_texto' => $s(1) ?? $s(0), 'local_id' => $loc_de($s(4), true),
                     'fabricante' => $s(6), 'modelo' => $s(7), 'serie' => $s(8), 'estado' => $baja ? 'inactive' : 'active'], 'IproyPim\dev_fhir'));
             }
@@ -145,16 +161,18 @@ function importar(): array {
             $lote(function () use ($buf, $tareas, $loc_de, $sumar) {
                 foreach ($buf as $r) {
                     $tm = normalizar((string) ($r['tipo_man'] ?? ''));
-                    $tipoM = str_contains($tm, 'prevent') ? 'preventivo-sistematico' : (str_contains($tm, 'correct') ? 'correctivo-diferido' : (str_contains($tm, 'mejora') ? 'mejora' : null));
+                    $tipoM = tipo_legado($tm, (string) ($r['prioridad'] ?? ''));
+                    $ini = fecha_db($r['fecha_atencion'] ?? $r['fecha_proc']); $finL = fecha_db($r['fecha_fin']);
+                    $en = estado_legado((string) $r['estado'], $ini !== null, $finL !== null);
                     $tt = trim((string) ($r['tipo_tarea'] ?? '')); $cat = $tareas[normalizar($tt)] ?? null;
                     $sumar('Task', reflejar('pim_orden', 'Task', ulid_legado('orden', (string) $r['id']), [
                         'numero' => (string) $r['id'], 'codigo_legado' => $r['codigo'] !== null ? mb_substr((string) $r['codigo'], 0, 30) : null, 'legado_id' => (int) $r['id'],
                         'local_id' => $loc_de($r['servicio_solicitante'], false),
                         'responsable_id' => trim((string) $r['empresa']) !== '' ? ulid_legado('empresa', trim((string) $r['empresa'])) : null,
-                        'estado_negocio' => $en = (ESTADO_LEGADO[(string) $r['estado']] ?? 'solicitada'), 'estado' => ESTADOS_ORDEN[$en],
+                        'estado_negocio' => $en, 'estado' => ESTADOS_ORDEN[$en], 'motivo_estado' => in_array($en, CON_MOTIVO, true) ? 'Sin motivo registrado en el sistema de origen' : null,
                         'prioridad' => banda_prioridad()[(string) $r['prioridad']] ?? 'routine', 'tipo_mantenimiento' => $tipoM,
                         'categoria_codigo' => $cat ? mb_substr((string) $cat['codigo'], 0, 40) : null, 'categoria_texto' => $tt !== '' ? mb_substr($tt, 0, 160) : null,
-                        'descripcion' => $r['detalle'], 'inicio' => fecha_db($r['fecha_atencion'] ?? $r['fecha_proc']), 'fin' => fecha_db($r['fecha_fin']),
+                        'descripcion' => $r['detalle'], 'inicio' => $ini, 'fin' => in_array($en, ['finalizada', 'conformada', 'rechazada', 'anulada'], true) ? $finL : null,
                         'autoria' => fecha_db($r['marca_temporal']) ?? date('Y-m-d H:i:s')], 'IproyPim\task_fhir'));
                 }
             });

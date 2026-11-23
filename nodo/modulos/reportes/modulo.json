@@ -1,0 +1,67 @@
+{
+  "id": "reportes",
+  "nombre": "Reportes (auditoría y empresas)",
+  "version": "1.5.0",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Dos paneles sobre las órdenes de trabajo. Auditoría: todas las órdenes con filtros, período, indicadores que llevan al detalle, calificación con estrellas, impresión de la orden y descarga CSV. Reporte de la empresa: lo que recibió, terminó y tiene pendiente cada empresa o área, preventivo contra correctivo y los movimientos día por día. El módulo no lee la base PIM: arma su propia copia de consulta con los eventos del bus y la API PIM, y la puede reconstruir entera.",
+  "requiere": [
+    "pim"
+  ],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": {
+    "reportes.auditoria": [
+      "GM",
+      "CI",
+      "FT"
+    ],
+    "reportes.empresa": [
+      "GM",
+      "CI",
+      "FT",
+      "EJ"
+    ],
+    "reportes.calificar": [
+      "GM"
+    ],
+    "reportes.reconstruir": [
+      "GM"
+    ],
+    "reportes.pronosticos": [
+      "GM"
+    ]
+  },
+  "suscribe": {
+    "pim/Task/+": "eventos.php",
+    "stock/movimiento": "eventos_stock.php",
+    "pim/Device/+": "eventos_activo.php"
+  },
+  "tareas": [
+    {
+      "id": "reconstruir",
+      "cada": 86400,
+      "archivo": "tareas/reconstruir.php"
+    }
+  ],
+  "ui": {
+    "script": "ui.js",
+    "orden": 60
+  },
+  "config_defecto": {
+    "max_filas": 3000,
+    "fecha_contrato": null,
+    "areas_criticas": [
+      "Guardia",
+      "Quirófanos",
+      "Terapia intensiva",
+      "Esterilización",
+      "Hemoterapia",
+      "Diálisis"
+    ],
+    "contrato_entrante": null,
+    "contrato_saliente": null
+  }
+}

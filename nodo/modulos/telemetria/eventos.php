@@ -27,5 +27,5 @@ return function (array $ev, array $ctx): void {
     q('INSERT INTO tel_serie (activo_id, punto, ts, valor) VALUES (?,?,?,?)', [$a['id'], $m['punto'], $m['ts'], $m['valor']]);
     if ($enviar) q('INSERT INTO tel_cola (activo_id, punto, valor, unidad, ts) VALUES (?,?,?,?,?)', [$a['id'], $m['punto'], $m['valor'], $m['unidad'], $m['ts']]);
     publicar('telemetria/valor', ['activo_id' => $a['id'], 'activo' => $m['activo'], 'nombre' => $a['nombre'], 'punto' => $m['punto'],
-                                  'valor' => $m['valor'], 'unidad' => $m['unidad'], 'ts' => $m['ts'], 'origen' => $m['origen']], 'telemetria');
+                                  'valor' => $m['valor'], 'unidad' => $m['unidad'], 'ts' => $m['ts'], 'origen' => $m['origen']] + (isset($m['etiqueta']) ? ['etiqueta' => $m['etiqueta']] : []), 'telemetria');
 };

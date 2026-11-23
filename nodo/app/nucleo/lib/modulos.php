@@ -103,8 +103,8 @@ function incluir(string $id): void {
     static $hecho = [];
     if (isset($hecho[$id])) return;
     $m = modulo($id) ?? throw new Fallo(503, "El módulo $id no está cargado");
-    $hecho[$id] = true;
     if (!empty($m['lib'])) require_once $m['dir'] . '/' . $m['lib'];
+    $hecho[$id] = true;   // Ola 4: recién después de cargar bien (en modo worker, un error de sintaxis no debe quedar «cargado» para los pedidos siguientes)
 }
 function ctx(string $id, array $extra = []): array {
     return ['modulo' => $id, 'cfg' => cfg_modulo($id), 'nodo' => nodo(), 'usuario' => $GLOBALS['nucleo_usuario'] ?? null] + $extra;
@@ -119,12 +119,18 @@ function asegurar_tabla_migraciones(): void {
 function migrar(string $modulo, string $dir): array {
     asegurar_tabla_migraciones();
     $hechas = []; foreach (filas('SELECT numero, sha256 FROM nucleo_migracion WHERE modulo = ?', [$modulo]) as $f) $hechas[(int) $f['numero']] = $f['sha256'];
-    $aplicadas = [];
+    $aplicadas = []; $equiv = migraciones_equivalentes($dir);
     foreach (glob("$dir/*.sql") ?: [] as $a) {
         if (!preg_match('/^(\d{3})_[a-z0-9_]+\.sql$/', basename($a), $x)) continue;
         $n = (int) $x[1]; $sql = (string) file_get_contents($a); $sha = hash('sha256', $sql);
         if (isset($hechas[$n])) {
-            if ($hechas[$n] !== $sha) asentar('modulo.migracion_alterada', ['archivo' => basename($a)], $modulo);   // nunca se reaplica: se avisa
+            if ($hechas[$n] === $sha) continue;
+            if (in_array($hechas[$n], $equiv[$n] ?? [], true)) {   // cambió solo un comentario (1.7.0): se registra la versión nueva
+                q('UPDATE nucleo_migracion SET archivo = ?, sha256 = ? WHERE modulo = ? AND numero = ?', [basename($a), $sha, $modulo, $n]);
+                asentar('modulo.migracion_comentario', ['archivo' => basename($a)], $modulo);
+                continue;
+            }
+            asentar('modulo.migracion_alterada', ['archivo' => basename($a)], $modulo);   // nunca se reaplica: se avisa
             continue;
         }
         foreach (dividir_sql($sql) as $st) pdo()->exec($st);
@@ -132,6 +138,13 @@ function migrar(string $modulo, string $dir): array {
         $aplicadas[] = basename($a);
     }
     return $aplicadas;
+}
+/** sql/equivalentes.txt: «NNN sha256-anterior motivo» por línea. Versiones anteriores que difieren solo en comentarios. */
+function migraciones_equivalentes(string $dir): array {
+    $r = [];
+    foreach (@file("$dir/equivalentes.txt", FILE_IGNORE_NEW_LINES) ?: [] as $l)
+        if (preg_match('/^(\d{3})\s+([a-f0-9]{64})\b/', trim($l), $m)) $r[(int) $m[1]][] = $m[2];
+    return $r;
 }
 function dividir_sql(string $sql): array {
     $sql = preg_replace('/^\s*--.*$/m', '', $sql);
@@ -159,6 +172,8 @@ function arrancar(): array {
     registrar_tareas();
     $res['catalogos'] = sembrar_catalogos();
     asentar('nucleo.arranque', ['version' => VERSION, 'producto' => producto()['nombre'], 'modulos' => $r['orden'], 'contaminado' => contaminado()]);
+    // malla: al encender, el primer tick vuelve a buscar a los vinculados, mide los caminos y les avisa dónde encontrar a este nodo
+    try { estado('colmena_malla', ['pendiente' => 1, 'anuncio' => 0, 'medicion' => 0] + estado('colmena_malla')); } catch (\Throwable) {}
     return $res + ['estado' => $r['estado']];
 }
 function activar_modulo(string $id, bool $si): void {

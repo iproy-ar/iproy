@@ -250,6 +250,20 @@ Uno por vez. `usuario alta` pide la contraseña dos veces sin mostrarla: **anota
 
 ---
 
+## Actualizar a una versión nueva sin reinstalar (desde la 1.7.0)
+
+Una versión nueva se instala **sobre** lo instalado, como una aplicación que baja su actualización: usuarios, equipos, órdenes, configuración y vínculos de la colmena quedan como están. Las migraciones de la base solo agregan.
+
+1. Entrá como administrador a **Configuración › Actualizaciones** (pide la contraseña).
+2. **Buscar ahora** mira la última versión publicada en GitHub (también se revisa sola una vez por día y avisa). Sin Internet, o para probar una versión antes de publicarla, **Subir un paquete (.zip)**: el .zip del código (el de la versión en GitHub o el que arma `git archive`).
+3. La pantalla dice qué trae el paquete (versión nueva, otra compilación, anterior o mayor) y qué va a pasar.
+4. **Actualizar ahora**: respaldo de la base, el sistema se detiene alrededor de un minuto, se cambia solo el código, vuelve solo y aplica los cambios de la base. Si no arranca, vuelve solo a la versión anterior.
+5. **Volver a la versión anterior** está en el historial de la misma pantalla. Se guardan las tres últimas versiones de código al lado de la carpeta del producto.
+
+Por la terminal: `bash iProy-Control.sh actualizar <paquete.zip>` (Linux) o `iProy-Control.bat actualizar <paquete.zip>` (Windows); `… actualizar --volver` (Linux) o `… actualizar volver` (Windows). Un producto incubado usa su propio lanzador (`<Producto>-Control`) y conserva su nombre, sus módulos y su logo.
+
+Un nodo instalado antes de la 1.7.0 no tiene esta pantalla: se actualiza una vez con `instalador/actualizar-linux.sh` (o reinstalando) y desde ahí, desde la aplicación.
+
 ## C. Problemas que aparecieron en la práctica y cómo se resolvieron
 
 | Síntoma | Causa | Solución (1.1.1) |

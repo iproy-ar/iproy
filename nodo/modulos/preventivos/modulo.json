@@ -1,18 +1,53 @@
 {
   "id": "preventivos",
   "nombre": "Mantenimiento preventivo",
-  "version": "1.1.0",
+  "version": "2.2.0",
   "abi": 1,
   "nucleo": ">=1.0 <2.0",
   "estabilidad": "estable",
   "licencia": "AGPL-3.0-or-later",
-  "descripcion": "Planes preventivos por calendario (cada N días) o por uso/condición (contador de un punto de telemetría, p. ej. horas de marcha). Genera la solicitud y la orden en PIM con su tipo EN 13306, la asigna al responsable del plan y reprograma desde la fecha real de finalización.",
-  "requiere": ["pim"],
+  "descripcion": "Plan preventivo por semanas (2.0.0), como el cronograma anual de la planilla: cada tarea (sistema › equipo › parte › preventivo) con su frecuencia en semanas fijas; el cronograma de cada año marca las semanas (1 = la del 1 de enero, lunes a domingo; 53 o 54 por año) y cada lunes se genera una orden por equipo con sus tareas, que se cierran una por una con la fecha real. Relevamiento en recorrida con plantillas por tipo de equipo, sin señal, con revisión del Gestor. Planes especiales (obras, mejorativos, por uso): planes preventivos por calendario (cada N días) o por uso/condición (contador de un punto de telemetría, p. ej. horas de marcha). Genera la solicitud y la orden en PIM con su tipo EN 13306, la asigna al responsable del plan y reprograma desde la fecha real de finalización. Importa planes de otro sistema (hoja de cálculo, CSV o MySQL, desde Configuración › Migración): por activo y frecuencia, con sus tareas como lista de verificación, en pausa hasta revisarlos. Cada orden lleva el registro por tarea (hecha, no se hizo con motivo, no aplica). Mensual, bimestral… avanzan por mes calendario.",
+  "requiere": [
+    "pim"
+  ],
   "lib": "lib.php",
-  "capacidades": { "preventivos.ver": ["GM", "EJ", "CI"], "preventivos.editar": ["GM"] },
-  "suscribe": { "pim/Task/update": "eventos_ot.php", "telemetria/valor": "eventos_uso.php" },
-  "tareas": [{ "id": "programar", "cada": 300, "archivo": "tareas/programar.php" }],
+  "capacidades": {
+    "preventivos.ver": [
+      "GM",
+      "EJ",
+      "CI"
+    ],
+    "preventivos.editar": [
+      "GM"
+    ],
+    "preventivos.registrar": [
+      "GM",
+      "EJ"
+    ],
+    "preventivos.relevar": [
+      "GM",
+      "EJ"
+    ]
+  },
+  "suscribe": {
+    "pim/Task/update": "eventos_ot.php",
+    "telemetria/valor": "eventos_uso.php",
+    "pim/Device/+": "eventos_activo.php"
+  },
+  "tareas": [
+    {
+      "id": "programar",
+      "cada": 300,
+      "archivo": "tareas/programar.php"
+    }
+  ],
   "rutas": "rutas.php",
-  "ui": { "script": "ui.js", "orden": 30 },
-  "config_defecto": { "reprogramar_desde_ejecucion": true }
+  "ui": {
+    "script": "ui.js",
+    "orden": 30
+  },
+  "config_defecto": {
+    "reprogramar_desde_ejecucion": true,
+    "pmp_generar_ordenes": true
+  }
 }

@@ -1,0 +1,16 @@
+{
+  "id": "widgets",
+  "nombre": "Widgets y tablero",
+  "version": "1.0.1",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Catálogo de widgets del nodo: el administrador decide el nombre, el grupo, el ícono y el orden de cada acceso, arma los grupos del menú y los perfiles (qué widgets ve cada persona). Además crea widgets nuevos desde la pantalla, sin escribir código: formularios de carga, sábanas (listas con filtros, edición en la fila y descarga), tableros de indicadores y páginas. Cada widget creado guarda sus registros en una tabla propia del módulo; la definición tiene número de versión y se puede exportar e importar.",
+  "requiere": [],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": { "widgets.usar": ["GM", "EJ", "SO", "FT", "CI"], "widgets.configurar": [] },
+  "ui": { "script": "ui.js", "orden": 1 },
+  "config_defecto": { "max_filas": 2000, "max_campos": 40 }
+}

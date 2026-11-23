@@ -33,7 +33,7 @@ function de_lista(string $cat, mixed $v, bool $req, string $campo): ?string {
     return $c;
 }
 
-/** Próximo código {n}-{CAT}-{SUB}: n es correlativo general (como en el pañol de MantHMQ). */
+/** Próximo código {n}-{CAT}-{SUB}: n es correlativo general (como en el pañol del sistema anterior). */
 function proximo_codigo(string $cat, string $sub): string {
     $sc = valor('SELECT sigla FROM nucleo_catalogo_valor WHERE catalogo = ? AND codigo = ?', ['stock_categoria', $cat]) ?: $cat;
     $ss = valor('SELECT sigla FROM nucleo_catalogo_valor WHERE catalogo = ? AND codigo = ?', ['stock_subcategoria', $sub]) ?: $sub;
@@ -97,7 +97,7 @@ function mover(array $d): array {
     $cab = ['tipo' => $tipo, 'fecha' => $fecha,
         'origen' => $tipo === 'ingreso' ? de_lista('stock_origen', $d['origen'] ?? null, true, 'Origen') : null,
         'motivo' => $tipo === 'egreso' ? de_lista('stock_motivo_egreso', $d['motivo'] ?? null, true, 'Motivo') : null,
-        'comprobante' => texto($d['comprobante'] ?? null, 80, false, 'Comprobante'), 'expediente' => texto($d['expediente'] ?? null, 80, false, 'Expediente'),
+        'comprobante' => texto($d['comprobante'] ?? null, 80, false, 'Comprobante'), 'orden_compra' => texto($d['orden_compra'] ?? null, 80, false, 'Orden de compra'), 'expediente' => texto($d['expediente'] ?? null, 80, false, 'Expediente'),
         'resolucion' => texto($d['resolucion'] ?? null, 80, false, 'Resolución o disposición'),
         'proveedor_id' => null, 'orden' => texto($d['orden'] ?? null, 64), 'orden_numero' => texto($d['orden_numero'] ?? null, 40),
         'destino' => texto($d['destino'] ?? null, 64), 'destino_nombre' => texto($d['destino_nombre'] ?? null, 200),
@@ -130,12 +130,15 @@ function mover(array $d): array {
               $tipo === 'ingreso' && $precio !== null ? [$saldo, $precio, $ins['id']] : [$saldo, $ins['id']]);
             $fila = $cab + ['clave' => $clave, 'renglon' => $i + 1, 'insumo_id' => (int) $ins['id'], 'cantidad' => $cant, 'precio' => $precio, 'saldo' => $saldo];
             q('INSERT INTO stock_movimiento (' . implode(',', array_keys($fila)) . ') VALUES (' . implode(',', array_fill(0, count($fila), '?')) . ')', array_values($fila));
-            $res[] = ['codigo' => $ins['codigo'], 'cantidad' => $cant, 'saldo' => $saldo, 'bajo_minimo' => $saldo < (float) $ins['minimo']];
+            $res[] = ['codigo' => $ins['codigo'], 'cantidad' => $cant, 'saldo' => $saldo, 'bajo_minimo' => $saldo < (float) $ins['minimo'],
+                'descripcion' => $ins['descripcion'], 'unidad' => $ins['unidad'], 'precio' => $precio];
         }
         pdo()->commit();
     } catch (\Throwable $e) { if (pdo()->inTransaction()) pdo()->rollBack(); throw $e; }
     asentar('stock.' . $tipo, ['clave' => $clave, 'renglones' => count($res), 'origen' => $cab['origen'], 'motivo' => $cab['motivo'], 'orden' => $cab['orden_numero']], $clave);
-    publicar('stock/movimiento', ['clave' => $clave, 'tipo' => $tipo, 'renglones' => $res], 'stock');
+    // 1.1: el evento lleva la orden, la fecha y la observación, para que otros módulos armen su propia copia (p. ej. insumos por orden en reportes)
+    publicar('stock/movimiento', ['clave' => $clave, 'tipo' => $tipo, 'fecha' => $cab['fecha'], 'motivo' => $cab['motivo'], 'orden' => $cab['orden'], 'orden_numero' => $cab['orden_numero'],
+        'observacion' => $cab['observacion'] ?? null, 'renglones' => $res], 'stock');
     return ['clave' => $clave, 'renglones' => $res];
 }
 
@@ -171,3 +174,5 @@ function resumen(): array {
     $r['valor'] = (float) $r['valor'];
     return $r;
 }
+
+require_once __DIR__ . '/panol.php';   // 1.2: reposición, pedidos, conteo cíclico y reportes del pañol

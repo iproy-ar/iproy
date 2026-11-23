@@ -10,6 +10,7 @@
  *             POST /api/colmena/sobre         entrada de sobres de otros nodos (autenticados por firma)
  *  sesión     POST /api/sesion {usuario, clave} · GET /api/sesion · DELETE /api/sesion · POST /api/sesion/clave
  *  proc       GET  /api/proc/{sistema|modulos|tareas|bus|diario|vinculos|capacidades|rpc} · POST /api/proc/diario/verificar
+ *  qr         GET  /api/qr?texto=   SVG del código QR (ola 3c)
  *  módulos    POST /api/modulos/{id}/{activar|desactivar} · GET|PUT /api/modulos/{id}/config · GET /api/modulos/{id}/ui.js
  *             POST /api/tareas/{modulo:tarea}/ejecutar
  *  bus        GET  /api/bus/eventos?desde=&tema= · POST /api/bus/publicar {tema, datos}
@@ -19,12 +20,17 @@
  *  PIM        /api/pim/{ruta FHIR}            la API PIM con el rol del usuario (en el mismo proceso)
  *  colmena    GET /api/colmena/vinculos · POST /api/colmena/vincular {destino} · POST /api/colmena/vinculos/{par}/{aceptar|revocar|rol|ping}
  *             POST /api/colmena/rpc {par, metodo, ruta, cuerpo, esperar} · GET /api/colmena/rpc/{id} · POST /api/colmena/evento {par, tema, datos}
- *             GET|PUT /api/colmena/config {hub:{url,activo,codigo}, url_publica} · POST /api/colmena/hub/{registrar|buzon}
+ *             GET /api/colmena/cola · POST /api/colmena/cola/reintentar · DELETE /api/colmena/cola/{id}   cola de salida (1.6.3)
+ *             GET|PUT /api/colmena/config {hub:{url,activo,codigo}, url_publica, malla:{hub_propio, modo}} · POST /api/colmena/hub/{registrar|buzon}
+ *             GET /api/colmena/malla · POST /api/colmena/malla/sondear    malla (1.7.0): hub propio, hubs alcanzados y caminos por vínculo
+ *  hub propio GET|POST /colmena-hub/index.php?r=…    el mismo protocolo del hub central, para los nodos con vínculo activo (lib/malla.php)
  *  apariencia GET /api/apariencia (pública: logo, institución, fondo del ingreso) · GET /api/apariencia/imagen/{archivo}
  *             GET /api/perfil · PUT /api/perfil {nombre, vista, fondo, opacidad, recientes, widgets_ocultos} · POST /api/perfil/fondo (imagen cruda)
  *             POST /api/sesion/config {clave} (2 h) · GET|PUT /api/config/apariencia · POST /api/config/imagen/{logo|fondo_login|fondo_tablero}
  *  catálogos  GET /api/catalogos[?valores=a,b] · GET /api/catalogos/{k}[?padre=&todos=1] · POST /api/catalogos/{k} {texto, padre, sigla}
  *             PUT /api/catalogos/{k}/{codigo} {texto, sigla, orden, activo}   listas desplegables editables (1.6.0)
+ *  actualiz.  GET /api/actualizacion · POST /api/actualizacion/{buscar|bajar|subir|aplicar|volver} · DELETE /api/actualizacion/paquete
+ *             PUT /api/actualizacion/config {revisar_auto}   versión nueva sobre lo instalado (1.7.0; lib/actualizacion.php)
  *  módulos    /api/m/{modulo}/{ruta}          rutas propias de cada módulo (rutas.php)
  *  internas   POST /api/nucleo/{arranque|tick|usuario}   solo el lanzador (127.0.0.1 + token del worker)
  */
@@ -57,10 +63,12 @@ try {
         responder(200, ['licencia' => $pr['licencia'], 'fuente' => $pr['fuente'], 'version' => $pr['version'], 'base' => $pr['base'],
             'aviso' => 'Este programa es software libre (AGPL-3.0-or-later). Quien lo use por red tiene derecho a recibir el código fuente correspondiente, incluidas las modificaciones.']);
     }
-    if ($es('GET', 'colmena', 'identidad')) responder(200, identidad_publica());
+    if ($es('GET', 'colmena', 'identidad')) { if (modo_red() === 'aislado') throw new Fallo(503, 'Este nodo está aislado de la colmena'); responder(200, identidad_publica()); }
     if ($es('GET', 'apariencia')) responder(200, ['ok' => true] + apariencia_publica());
     if ($es('GET', 'apariencia', 'imagen', '*')) servir_imagen($p[2]);
     if ($es('POST', 'colmena', 'sobre')) {
+        // 1.7.0 (malla): fuera del modo «malla» nada entra directo a este equipo (solo lo que el nodo va a buscar al hub central)
+        if (modo_red() !== 'malla') throw new Fallo(503, modo_red() === 'aislado' ? 'Este nodo está aislado de la colmena' : 'Este nodo solo recibe por el hub central');
         $r = recibir_sobre(cuerpo(), 'lan');
         responder(200, ['ok' => true, 'sobre' => $r]);
     }
@@ -106,6 +114,11 @@ try {
     // ---------------------------------------------------------------- perfil propio y configuración de apariencia (1.2.0)
     if ($es('GET', 'sesion', 'codigos')) responder(200, ['ok' => true, 'codigos' => codigos_estado($u['usuario']), 'email' => valor('SELECT email FROM nucleo_usuario WHERE usuario = ?', [$u['usuario']])]);
     if ($es('POST', 'sesion', 'codigos')) responder(200, ['ok' => true, 'codigos' => generar_codigos($u['usuario'], (string) $c('actual', ''))]);
+    // Ola 4: documento Word (.docx) a partir de un modelo simple (ver lib/docx.php); para cualquier usuario con sesión
+    if ($es('POST', 'docx')) {
+        responder(200, ['ok' => true, 'nombre' => nombre_archivo((string) $c('archivo', 'documento'), 'docx'), 'tipo' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'base64' => base64_encode(docx((array) $c('modelo', [])))]); }
+    // ola 3c: código QR de un texto corto (enlaces que se imprimen o se mandan por correo), con sesión
+    if ($es('GET', 'qr')) { $t = (string) ($_GET['texto'] ?? ''); if ($t === '' || strlen($t) > 213) throw new Fallo(422, 'texto: de 1 a 213 bytes'); responder(200, ['ok' => true, 'svg' => qr_svg($t, $t)]); }
     if ($es('GET', 'perfil')) responder(200, ['ok' => true, 'vista' => vista_usuario($u['usuario']), 'perfil' => perfil($u['usuario']), 'config_confirmada' => config_confirmada()]);
     if ($es('PUT', 'perfil')) {
         if (array_key_exists('email', cuerpo())) guardar_usuario(['usuario' => $u['usuario'], 'email' => $c('email')], false);
@@ -153,6 +166,23 @@ try {
         responder(201, ['ok' => true, 'apariencia' => $a, 'publica' => apariencia_publica()]);
     }
 
+    // ---------------------------------------------------------------- actualizaciones (1.7.0): una versión nueva sobre lo instalado, sin tocar los datos
+    if ($es('GET', 'actualizacion')) { exigir('sistema.admin'); responder(200, ['ok' => true] + act_estado()); }
+    if ($es('POST', 'actualizacion', 'buscar')) { exigir_config(); $d = act_buscar(); responder(200, ['ok' => true, 'encontrada' => $d] + act_estado()); }
+    if ($es('POST', 'actualizacion', 'bajar')) { exigir_config(); act_bajar(); responder(200, ['ok' => true] + act_estado()); }
+    if ($es('POST', 'actualizacion', 'subir')) {   // cuerpo crudo: una parte del .zip (?id=&parte=&total=&nombre=)
+        exigir_config(); $r = act_subir_parte((string) ($_GET['id'] ?? ''), (int) ($_GET['parte'] ?? 0), (int) ($_GET['total'] ?? 0), (string) ($_GET['nombre'] ?? 'paquete.zip'));
+        responder(200, ['ok' => true, 'subida' => $r] + (isset($r['sha256']) ? act_estado() : []));
+    }
+    if ($es('DELETE', 'actualizacion', 'paquete')) { exigir_config(); act_descartar(); responder(200, ['ok' => true] + act_estado()); }
+    if ($es('POST', 'actualizacion', 'aplicar')) { $ua = exigir_config(); responder(202, ['ok' => true] + act_aplicar(cuerpo(), $ua)); }
+    if ($es('POST', 'actualizacion', 'volver')) { $ua = exigir_config(); responder(202, ['ok' => true] + act_volver($ua)); }
+    if ($es('PUT', 'actualizacion', 'config')) {
+        exigir_config(); $cf = act_config();
+        if (array_key_exists('revisar_auto', cuerpo())) $cf['revisar_auto'] = (bool) $c('revisar_auto');
+        act_json('config', $cf); responder(200, ['ok' => true] + act_estado());
+    }
+
     // ---------------------------------------------------------------- PIM con el rol del usuario
     if (($p[0] ?? '') === 'pim') { exigir('pim.usar'); pim_proxy(implode('/', array_slice($p, 1)), $u); }
 
@@ -190,7 +220,7 @@ try {
     }
 
     // ---------------------------------------------------------------- usuarios
-    if ($es('GET', 'usuarios')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuarios' => filas('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado FROM nucleo_usuario ORDER BY usuario'), 'roles' => ROLES]); }
+    if ($es('GET', 'usuarios')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuarios' => filas('SELECT usuario, nombre, rol, organizacion, email, activo, cambiar_clave, ultimo_ingreso, creado, cap_extra, cap_bloqueadas FROM nucleo_usuario ORDER BY usuario'), 'roles' => ROLES]); }
     if ($es('POST', 'usuarios')) { exigir('usuarios.admin'); responder(201, ['ok' => true, 'usuario' => guardar_usuario(cuerpo(), true)]); }
     if ($es('PUT', 'usuarios', '*')) { exigir('usuarios.admin'); responder(200, ['ok' => true, 'usuario' => guardar_usuario(['usuario' => $p[1]] + cuerpo(), false)]); }
     if ($es('POST', 'usuarios', '*', 'clave-temporal')) responder(200, ['ok' => true] + clave_temporal($p[1]));
@@ -204,15 +234,18 @@ try {
     }
 
     // ---------------------------------------------------------------- colmena
-    if ($es('GET', 'colmena', 'vinculos')) { exigir('colmena.ver'); responder(200, ['ok' => true, 'yo' => array_diff_key(identidad_publica(), ['pim_jwk' => 1]) + ['url' => url_propia()], 'vinculos' => proc('vinculos'), 'hub' => array_diff_key(cfg()['hub'], ['codigo' => 1])]); }
+    if ($es('GET', 'colmena', 'vinculos')) { exigir('colmena.ver'); responder(200, ['ok' => true, 'yo' => array_diff_key(identidad_publica(), ['pim_jwk' => 1]) + ['url' => url_propia()], 'vinculos' => proc('vinculos'), 'hub' => array_diff_key(cfg()['hub'], ['codigo' => 1]),
+        'malla' => ['hub_propio' => !empty(malla_cfg()['hub_propio']), 'modo' => modo_red()]]); }
     if ($es('POST', 'colmena', 'vincular')) { exigir('colmena.admin'); responder(200, ['ok' => true] + vincular((string) $c('destino', ''), (string) $c('tipo', 'institucional'))); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'aceptar')) { exigir('colmena.admin'); responder(200, ['ok' => true] + aceptar($p[2], (string) $c('rol', 'CI'), $c('vence'), $c('acta_sha'))); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'revocar')) { exigir('colmena.admin'); responder(200, ['ok' => true] + revocar($p[2])); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'rol')) { exigir('colmena.admin'); responder(200, ['ok' => true] + rol_par($p[2], (string) $c('rol', 'CI'))); }
     if ($es('POST', 'colmena', 'vinculos', '*', 'via')) {
         exigir('colmena.admin'); $via = (string) $c('via', 'auto');
-        if (!in_array($via, ['auto', 'hub'], true)) throw new Fallo(422, 'via: auto (intranet y, si falla, hub) | hub (siempre por el hub)');
+        if (!in_array($via, ['auto', 'hub'], true)) throw new Fallo(422, 'via: auto (el camino más rápido que ande) | hub (nunca directo ni por su hub propio: solo por el hub central, el de otro nodo o un puente)');
         q('UPDATE nucleo_vinculo SET via = ? WHERE par = ?', [$via, strtoupper($p[2])]); asentar('colmena.via', ['via' => $via], strtoupper($p[2]));
+        if ($via === 'hub') { q('UPDATE nucleo_vinculo SET url_ok = NULL WHERE par = ?', [strtoupper($p[2])]); q("DELETE FROM nucleo_ruta WHERE par = ? AND camino = 'directo'", [strtoupper($p[2])]); q('DELETE FROM nucleo_malla_hub WHERE clave = ?', [strtoupper($p[2])]); }
+        malla_pendiente();
         responder(200, ['ok' => true, 'par' => strtoupper($p[2]), 'via' => $via]);
     }
     if ($es('POST', 'colmena', 'vinculos', '*', 'ping')) { exigir('colmena.ver'); responder(200, ['ok' => true] + ping_par($p[2])); }
@@ -223,8 +256,12 @@ try {
         responder(200, ['ok' => true, 'rpc' => $r]);
     }
     if ($es('GET', 'colmena', 'rpc', '*')) { exigir('colmena.usar'); responder(200, ['ok' => true, 'rpc' => rpc_estado($p[2]) ?? throw new Fallo(404, 'RPC inexistente')]); }
+    if ($es('GET', 'colmena', 'cola')) { exigir('colmena.ver'); $l = cola_lista(); responder(200, ['ok' => true, 'pendientes' => count($l), 'horas' => COLA_HORAS, 'cola' => $l]); }
+    if ($es('POST', 'colmena', 'cola', 'reintentar')) { exigir('colmena.usar'); responder(200, ['ok' => true] + cola_drenar(null, true)); }
+    if ($es('DELETE', 'colmena', 'cola', '*')) { exigir('colmena.admin'); responder(200, ['ok' => true] + cola_descartar($p[2])); }
     if ($es('POST', 'colmena', 'evento')) { exigir('colmena.usar'); responder(200, ['ok' => true] + evento_remoto((string) $c('par', ''), (string) $c('tema', ''), (array) $c('datos', []))); }
-    if ($es('GET', 'colmena', 'config')) { exigir('colmena.admin'); $x = cfg(); responder(200, ['ok' => true, 'hub' => ['url' => $x['hub']['url'], 'activo' => $x['hub']['activo'], 'codigo' => $x['hub']['codigo'] !== '' ? '••••' : ''], 'url_publica' => $x['url_publica'], 'url_efectiva' => url_propia()]); }
+    if ($es('GET', 'colmena', 'config')) { exigir('colmena.admin'); $x = cfg(); responder(200, ['ok' => true, 'hub' => ['url' => $x['hub']['url'], 'activo' => $x['hub']['activo'], 'codigo' => $x['hub']['codigo'] !== '' ? '••••' : ''], 'url_publica' => $x['url_publica'], 'url_efectiva' => url_propia(),
+        'malla' => ['hub_propio' => !empty($x['malla']['hub_propio']), 'modo' => modo_red(), 'cupo_espera' => (int) $x['malla']['cupo_espera']]]); }
     if ($es('PUT', 'colmena', 'config')) {
         exigir('colmena.admin');
         $cambio = [];
@@ -234,12 +271,22 @@ try {
             if (isset($cambio['hub']['activo'])) $cambio['hub']['activo'] = (bool) $cambio['hub']['activo'];
         }
         if (($x = $c('url_publica')) !== null) $cambio['url_publica'] = rtrim((string) $x, '/');
-        cfg($cambio); estado('colmena_hub', []);
-        asentar('colmena.config', ['hub' => cfg()['hub']['url'], 'activo' => cfg()['hub']['activo'], 'url_publica' => cfg()['url_publica']]);
-        responder(200, ['ok' => true]);
+        if ($cambio) {
+            $antes = cfg()['hub']; cfg($cambio);
+            // el registro en el hub central se vuelve a hacer solo si cambió la dirección o el código (no por encenderlo o apagarlo)
+            if (isset($cambio['hub']) && (rtrim((string) cfg()['hub']['url'], '/') !== rtrim((string) $antes['url'], '/') || array_key_exists('codigo', $cambio['hub']))) estado('colmena_hub', []);
+            malla_pendiente();
+        }
+        if (is_array($mm = $c('malla'))) malla_configurar($mm);   // interruptores de la malla: hub propio y modo de red
+        if ($cambio) asentar('colmena.config', ['hub' => cfg()['hub']['url'], 'activo' => cfg()['hub']['activo'], 'url_publica' => cfg()['url_publica']]);
+        responder(200, ['ok' => true, 'malla' => ['hub_propio' => !empty(malla_cfg()['hub_propio']), 'modo' => modo_red()]]);
     }
     if ($es('POST', 'colmena', 'hub', 'registrar')) { exigir('colmena.admin'); responder(200, ['ok' => true, 'hub' => hub_registrar()]); }
     if ($es('POST', 'colmena', 'hub', 'buzon')) { exigir('colmena.usar'); responder(200, ['ok' => true] + hub_buzon()); }
+    // 1.7.0: «Probar camino» (hub, proxy, certificado, hora, registro, escucha y, con ?vinculos=1, un pedido de prueba a cada vínculo)
+    if ($es('GET', 'colmena', 'malla')) { exigir('colmena.ver'); responder(200, ['ok' => true] + malla_estado()); }
+    if ($es('POST', 'colmena', 'malla', 'sondear')) { exigir('colmena.usar'); $x = malla_sondear(true); $n = malla_medir(true); responder(200, ['ok' => true, 'sondeo' => $x, 'medidos' => $n] + malla_estado()); }
+    if ($es('GET', 'colmena', 'diagnostico')) { exigir('colmena.usar'); responder(200, ['ok' => true] + colmena_diagnostico(($_GET['vinculos'] ?? '') === '1')); }
 
     // ---------------------------------------------------------------- catálogos: listas desplegables (1.6.0)
     if ($es('GET', 'catalogos')) {

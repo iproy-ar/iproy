@@ -9,6 +9,7 @@
  *                         [--descripcion "…"] [--fuente https://…/colmen]
  *   php incubar.php modulo <id> --nombre "Calibraciones" --campos "equipo:texto!,fecha:fecha!,resultado:opcion(apto|no-apto),patron:texto"
  *                         [--destino ../nodo/modulos] [--ver GM,EJ,CI] [--editar GM]
+ *   php incubar.php actualizar <carpeta-del-producto> [--sumar migracion]   código nuevo para un producto ya instalado, sin tocar sus datos
  *   php incubar.php verificar <carpeta>          licencias, cabeceras SPDX, manifiestos, secretos y datos institucionales
  *   php incubar.php plantillas                    lista las plantillas
  *
@@ -38,10 +39,12 @@ const VERBATIM = ['conf/pim-guia'];                  // artefactos del estándar
 const PROTEGIDO = [                                  // nunca se renombran (estándar, atribución, protocolo)
     'https://iproy.com.ar/pim', 'https://iproy.com.ar/fhir', 'ar.iproy.pim',
     'Proyecto iProy y colaboradores',
+    'iproy-ar/iproy',                                 // de dónde bajan sus actualizaciones los productos derivados (1.7.0)
+    'https://iproy.com.ar/aprende-iproy',             // manual de usuario de la aplicación (1.7.0)
 ];
 const PLANTILLAS = [
-    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, stock del pañol, preventivos, alarmas ISA-18.2, telemetría, MQTT, Modbus y equipos médicos por IHE MEM-DMC.',
-                                'modulos' => ['pim', 'stock', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus', 'mem']],
+    'gestion-mantenimiento' => ['descripcion' => 'Gestión de mantenimiento completa: órdenes, solicitudes, inventario, stock del pañol, preventivos, alarmas ISA-18.2, telemetría, MQTT, Modbus, equipos médicos por IHE MEM-DMC y migración de datos de otros sistemas.',
+                                'modulos' => ['pim', 'stock', 'telemetria', 'alarmas', 'preventivos', 'mqtt', 'modbus', 'mem', 'migracion']],
     'mantenimiento-basico'  => ['descripcion' => 'Órdenes, solicitudes, inventario, stock del pañol y preventivos (sin integración industrial).',
                                 'modulos' => ['pim', 'stock', 'preventivos']],
     'monitoreo-industrial'  => ['descripcion' => 'Telemetría, alarmas ISA-18.2, MQTT y Modbus sobre el inventario PIM (tipo SCADA liviano).',
@@ -315,13 +318,100 @@ function verificar(string $dir, bool $silencioso = false): array {
     return $r;
 }
 
+// ====================================================================== actualizar un producto ya instalado (1.7.0)
+/**
+ * Lleva un producto incubado e instalado al código de esta distribución sin tocar sus datos:
+ *   php incubar.php actualizar <carpeta-del-producto> [--sumar migracion,reportes]
+ * Se vuelve a incubar con la misma identidad (producto.json: nombre, sigla, color, plantilla, versión) en una carpeta al lado, se guarda
+ * el código anterior en <carpeta>.codigo-anterior-<fecha> y se reemplaza solo el código. Quedan como estaban: data/, runtime/, descargas/,
+ * python/, los módulos activos del producto, su logo y todo archivo que la incubación no trae (informes, desinstalador).
+ * --sumar activa además esos módulos (y los que ellos requieren). El producto tiene que estar detenido; al iniciarlo se aplican las migraciones.
+ */
+function cmd_actualizar(array $o): void {
+    $dir = (string) ($o['_'][1] ?? salir('uso: incubar.php actualizar <carpeta-del-producto> [--sumar id1,id2]'));
+    $dir = realpath(rtrim($dir, '/\\')) ?: salir("No existe la carpeta $dir");
+    $pj = json_decode((string) @file_get_contents("$dir/producto.json"), true) ?: salir("$dir no tiene producto.json: no parece un producto incubado");
+    $nombre = (string) ($pj['nombre'] ?? '');
+    if (!preg_match('/^[A-Za-z][A-Za-z0-9]{2,19}$/', $nombre) || (!is_file("$dir/$nombre-Control.sh") && !is_file("$dir/$nombre-Control.ps1"))) salir("No encuentro el lanzador $nombre-Control en $dir");
+    if (!is_dir("$dir/data")) salir("$dir no tiene data/: sin datos no hay nada que conservar (incubalo de nuevo)");
+    foreach (glob("$dir/data/*.env") ?: [] as $env) {
+        if (str_contains(basename($env), 'secrets')) continue;
+        foreach (file($env, FILE_IGNORE_NEW_LINES) ?: [] as $l) if (preg_match('/^[A-Z0-9_]+_PUERTO=(\d+)/', $l, $m)) {
+            $s = @fsockopen('127.0.0.1', (int) $m[1], $en, $es, 1.0);
+            if ($s) { fclose($s); salir("$nombre está funcionando (puerto {$m[1]}): detenelo antes con «$nombre-Control stop»"); }
+        }
+    }
+    $base = json_decode((string) file_get_contents(__DIR__ . '/../nodo/producto.json'), true) ?: [];
+    dice("Actualizando «{$nombre}» con el código de {$base['nombre']} {$base['version']} de esta carpeta · plantilla " . ($pj['plantilla'] ?? '?'));
+    // 1) incubar de nuevo, al lado (mismo disco: los rename no copian)
+    $tmp = dirname($dir) . '/.incubar-' . $nombre . '-' . bin2hex(random_bytes(3));
+    ob_start();
+    if (strcasecmp($nombre, (string) ($base['nombre'] ?? '')) === 0) copia_simple(realpath(__DIR__ . '/../nodo'), "$tmp/$nombre-Portable");   // el producto base (iProy) no se incuba: se copia
+    else cmd_nuevo(array_filter(['nombre' => $nombre, 'sigla' => $pj['sigla'] ?? null, 'plantilla' => $pj['plantilla'] ?? 'gestion-mantenimiento', 'color' => $pj['colores']['primario'] ?? null,
+        'version' => $pj['version'] ?? null, 'descripcion' => $pj['descripcion'] ?? null, 'fuente' => ($pj['fuente'] ?? '') ?: null, 'destino' => $tmp], fn($v) => $v !== null));
+    $log = (string) ob_get_clean();
+    $nuevo = "$tmp/$nombre-Portable";
+    if (!is_dir($nuevo)) { borrar($tmp); salir("La incubación no terminó:\n$log"); }
+    // 2) módulos: los activos del producto, más los pedidos, más lo que requieran
+    $req = [];
+    foreach (array_merge(glob("$nuevo/modulos/*/modulo.json") ?: [], glob("$nuevo/modulos.disponibles/*/modulo.json") ?: []) as $mj) {
+        $j = json_decode((string) file_get_contents($mj), true) ?: []; $req[$j['id'] ?? basename(dirname($mj))] = (array) ($j['requiere'] ?? []);
+    }
+    $activos = array_map('basename', glob("$dir/modulos/*", GLOB_ONLYDIR) ?: []);
+    $sumar = array_values(array_filter(array_map('trim', explode(',', (string) ($o['sumar'] ?? '')))));
+    foreach ($sumar as $id) if (!isset($req[$id])) { borrar($tmp); salir("--sumar: no existe el módulo «{$id}» (" . implode(', ', array_keys($req)) . ')'); }
+    $quiero = array_values(array_unique(array_merge(array_filter($activos, fn($id) => isset($req[$id])), $sumar)));
+    for ($i = 0; $i < count($quiero); $i++) foreach ($req[$quiero[$i]] ?? [] as $r) if (isset($req[$r]) && !in_array($r, $quiero, true)) $quiero[] = $r;
+    // 3) el código anterior se guarda al lado; el nuevo ocupa su lugar
+    $bk = "$dir.codigo-anterior-" . gmdate('Ymd-His'); mkdir($bk, 0755, true);   // hora UTC: el nombre ordena igual con cualquier zona horaria
+    $CONSERVAR = ['data', 'runtime', 'descargas', 'python'];
+    $movidos = [];
+    foreach (scandir($nuevo) as $n) {
+        if ($n === '.' || $n === '..' || in_array($n, $CONSERVAR, true)) continue;
+        if (file_exists("$dir/$n") || is_link("$dir/$n")) rename("$dir/$n", "$bk/$n");
+        rename("$nuevo/$n", "$dir/$n"); $movidos[] = $n;
+    }
+    @mkdir("$dir/modulos.disponibles", 0755, true);
+    foreach (glob("$dir/modulos/*", GLOB_ONLYDIR) ?: [] as $md) if (!in_array(basename($md), $quiero, true)) rename($md, "$dir/modulos.disponibles/" . basename($md));
+    foreach ($quiero as $id) if (!is_dir("$dir/modulos/$id") && is_dir("$dir/modulos.disponibles/$id")) rename("$dir/modulos.disponibles/$id", "$dir/modulos/$id");
+    // 4) lo propio del producto: su logo, la fecha de incubación, su versión y su fuente
+    foreach (['logo.png', 'logo-512.png'] as $l) if (is_file("$bk/app/app/$l")) copy("$bk/app/app/$l", "$dir/app/app/$l");
+    $np = json_decode((string) file_get_contents("$dir/producto.json"), true) ?: [];
+    foreach (['incubado', 'version', 'descripcion', 'fuente'] as $k) if (isset($pj[$k])) $np[$k] = $pj[$k];
+    $np['actualizado'] = date('c');
+    file_put_contents("$dir/producto.json", json_encode($np, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+    foreach (array_merge(glob("$dir/*.sh") ?: [], glob("$dir/tools/*.sh") ?: []) as $sh) @chmod($sh, 0755);
+    file_put_contents("$bk/.movidos.json", json_encode($movidos));   // para «volver a la versión anterior» (tools/actualizar.php volver)
+    @mkdir("$dir/data/actualizaciones", 0700, true);
+    $hist = "$dir/data/actualizaciones/codigo.json"; $h = json_decode((string) @file_get_contents($hist), true) ?: [];
+    $h[] = ['fecha' => date('c'), 'antes' => $pj['base'] ?? null, 'ahora' => $np['base'] ?? null, 'codigo_anterior' => basename($bk), 'modulos' => $quiero, 'sumados' => array_values(array_diff($quiero, $activos))];
+    file_put_contents($hist, json_encode($h, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+    borrar($tmp);
+    dice("✔ Código reemplazado (" . count($movidos) . ' elementos). Datos, runtime y descargas sin tocar.');
+    dice('  Código anterior: ' . $bk);
+    dice('  Módulos activos: ' . implode(', ', $quiero) . (($s = array_diff($quiero, $activos)) ? ' (sumados: ' . implode(', ', $s) . ')' : ''));
+    dice("Siguiente: «$nombre-Control start». Al iniciar se aplican las migraciones de la base.");
+}
+function copia_simple(string $o, string $d): void {
+    @mkdir($d, 0755, true);
+    foreach (scandir($o) as $n) {
+        if ($n === '.' || $n === '..' || in_array($n, EXCLUIR, true) || is_link("$o/$n")) continue;
+        if (is_dir("$o/$n")) copia_simple("$o/$n", "$d/$n"); else { copy("$o/$n", "$d/$n"); @chmod("$d/$n", fileperms("$o/$n") & 0777); }
+    }
+}
+function borrar(string $d): void {
+    if (!file_exists($d) && !is_link($d)) return;
+    if (is_dir($d) && !is_link($d)) { foreach (scandir($d) as $n) if ($n !== '.' && $n !== '..') borrar("$d/$n"); @rmdir($d); } else @unlink($d);
+}
+
 // ====================================================================== entrada
 if (PHP_SAPI !== 'cli' && PHP_SAPI !== 'frankenphp-cli' && !str_contains(PHP_SAPI, 'cli')) { http_response_code(404); exit; }
 $o = args(array_slice($argv, 1));
 match ($o['_'][0] ?? '') {
     'nuevo' => cmd_nuevo($o),
     'modulo' => cmd_modulo($o),
+    'actualizar' => cmd_actualizar($o),
     'verificar' => exit(verificar((string) ($o['_'][1] ?? salir('uso: incubar.php verificar <carpeta>')))['ok'] ? 0 : 2),
     'plantillas' => array_map(fn($k, $v) => dice(str_pad($k, 24) . $v['descripcion'] . ' [' . implode(', ', $v['modulos']) . ']'), array_keys(PLANTILLAS), PLANTILLAS),
-    default => salir("Incubadora · uso:\n  php incubar.php nuevo --nombre <Nombre> [--sigla ABC] [--destino carpeta] [--color #RRGGBB] [--version 0.1.0] [--plantilla " . implode('|', array_keys(PLANTILLAS)) . "]\n  php incubar.php modulo <id> --nombre \"…\" --campos \"campo:tipo[!],…\"\n  php incubar.php verificar <carpeta>\n  php incubar.php plantillas", 0),
+    default => salir("Incubadora · uso:\n  php incubar.php nuevo --nombre <Nombre> [--sigla ABC] [--destino carpeta] [--color #RRGGBB] [--version 0.1.0] [--plantilla " . implode('|', array_keys(PLANTILLAS)) . "]\n  php incubar.php modulo <id> --nombre \"…\" --campos \"campo:tipo[!],…\"\n  php incubar.php actualizar <carpeta-del-producto> [--sumar modulo1,modulo2]\n  php incubar.php verificar <carpeta>\n  php incubar.php plantillas", 0),
 };

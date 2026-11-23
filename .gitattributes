@@ -1,0 +1,2 @@
+# El código que se baja (git archive o el .zip de una versión en GitHub) dice de qué commit salió: lo usa el actualizador (1.7.0)
+nodo/BUILD export-subst

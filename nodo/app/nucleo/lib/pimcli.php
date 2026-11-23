@@ -63,6 +63,7 @@ function pim(string $metodo, string $ruta, ?array $cuerpo = null, array $o = [])
         $cab = ['Accept' => 'application/fhir+json', 'Authorization' => 'Bearer ' . pim_token($cli, $i > 0)];
         if ($cuerpo !== null) $cab['Content-Type'] = 'application/fhir+json';
         if (!empty($o['if_match'])) $cab['If-Match'] = $o['if_match'];
+        foreach ((array) ($o['cab'] ?? []) as $k => $v) $cab[$k] = $v;   // cabeceras propias de PIM (X-PIM-Adoptar)
         $r = http($metodo, base_local() . '/pim/r4' . ($ruta !== '' ? '/' . ltrim($ruta, '/') : ''),
                   $cuerpo !== null ? json_encode($cuerpo, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null, $cab, (int) ($o['timeout'] ?? 30));
         if ($r['http'] !== 401) break;

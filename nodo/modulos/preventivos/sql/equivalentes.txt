@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Proyecto iProy y colaboradores
+# Versiones anteriores de una migración que difieren solo en comentarios (el SQL que se ejecuta es el mismo).
+# Un nodo que ya aplicó la versión anterior la registra con la nueva sin avisar «migración alterada».
+# Formato: número  sha256-anterior  motivo
+003 77b2d122f8457f05ef87e47654daefc8803e857c3ade0811e48ed97db94d279c comentario sin el nombre del sistema anterior (1.7.0)

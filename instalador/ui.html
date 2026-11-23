@@ -123,6 +123,7 @@ table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}th,td{te
       <div><label for="c1">Contraseña (mínimo 10)</label><input id="c1" type="password" autocomplete="new-password"><div class="fuerza"><i id="fz"></i></div></div>
       <div><label for="c2">Repetila</label><input id="c2" type="password" autocomplete="new-password"><div class="chico" id="cEst"></div></div>
     </div>
+    <label class="chk" style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="tfm" style="margin-top:3px"><span><b>Pronósticos con Google TimesFM</b> (opcional) · instala Python, PyTorch para CPU y el modelo de Google en la carpeta del nodo (≈ 1,2 GB y unos minutos más), programa una corrida por semana y hace la primera. No toca otros Python de la PC. Se puede agregar después.</span></label>
     <div class="nota">📝 <b>Anotá la contraseña</b> antes de seguir. No queda escrita en ningún archivo ni en el informe.</div>
     <div id="opErr"></div>
     <div class="btns"><button class="sec" id="b2v">Atrás</button><button class="pri" id="b2">Instalar</button></div>
@@ -212,7 +213,7 @@ $('#c1').oninput = $('#c2').oninput = () => {
 let tPuerto; $('#puerto').oninput = () => { clearTimeout(tPuerto); tPuerto = setTimeout(async () => { try { const r = await api('GET', '/api/puerto?n=' + (+$('#puerto').value)); $('#puertoEst').innerHTML = r.libre ? '<span class="estado-ok">✔ libre</span>' : '<span class="estado-er">✘ ocupado por otro programa</span>'; } catch (e) {} }, 300); };
 $('#b2').onclick = async () => {
   const o = { tipo: opc.tipo, vista: opc.vista, modo: opc.modo, nombre: $('#nombre').value.trim(), sigla: $('#sigla').value.trim(), color: $('#color').value, plantilla: $('#plantilla').value,
-    institucion: $('#inst').value.trim(), destino: $('#dest').value.trim(), puerto: +$('#puerto').value, usuario: $('#usu').value.trim(), clave: $('#c1').value };
+    institucion: $('#inst').value.trim(), destino: $('#dest').value.trim(), puerto: +$('#puerto').value, usuario: $('#usu').value.trim(), clave: $('#c1').value, timesfm: $('#tfm').checked };
   const err = [];
   if (o.tipo === 'propio' && !/^[A-Za-z][A-Za-z0-9]{1,19}$/.test(o.nombre)) err.push('El nombre del producto tiene que empezar con una letra y tener solo letras y números (2 a 20).');
   if (o.tipo === 'propio' && !/^[A-Z]{3}$/.test(o.sigla)) err.push('La sigla tiene que tener 3 letras.');

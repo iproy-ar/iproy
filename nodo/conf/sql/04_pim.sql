@@ -239,3 +239,9 @@ ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_prioridad    VARCHAR(10)
 ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_motivo       VARCHAR(255) NULL;
 ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_autor        VARCHAR(80)  NULL;
 ALTER TABLE pim_orden ADD COLUMN IF NOT EXISTS decision_ts           DATETIME(3)  NULL;
+
+-- 1.7.0 (inventario): por qué un activo dejó de estar en servicio. Nunca se borra: queda fuera de circulación, con el motivo y la fecha,
+-- y el historial (pim_version) guarda quién lo cambió. Device.statusReason los publica.
+ALTER TABLE pim_activo ADD COLUMN IF NOT EXISTS estado_tipo   VARCHAR(30)  NULL COMMENT 'obsoleto | fuera-de-circulacion | cargado-por-error';
+ALTER TABLE pim_activo ADD COLUMN IF NOT EXISTS estado_motivo VARCHAR(300) NULL;
+ALTER TABLE pim_activo ADD COLUMN IF NOT EXISTS estado_fecha  DATETIME     NULL;

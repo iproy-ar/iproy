@@ -1,5 +1,7 @@
 # iProy
 
+> 📘 **Manual de usuario de iProy:** [iproy.com.ar/aprende-iproy](https://iproy.com.ar/aprende-iproy) — cómo se usa la aplicación, pantalla por pantalla.
+>
 > 🎓 **Capacitación PIM:** este documento tiene su versión guiada, con diagramas, ejemplos y foro, en [iproy.com.ar/pim](https://iproy.com.ar/pim/). El código fuente vive en [github.com/iproy-ar/iproy](https://github.com/iproy-ar/iproy).
 
 
@@ -17,7 +19,7 @@
 |---|---|---|
 | **Estándar PIM** | **0.9.4** (borrador) | La especificación (`especificacion/`): perfiles FHIR, estados, terminologías. Es lo que debe cumplir cualquier software compatible. |
 | **API PIM** | **1.3.1** | El contrato OpenAPI (`api/`). Implementa el estándar 0.9.4. |
-| **Software iProy** | **1.6.2** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. |
+| **Software iProy** | **1.7.0** | El nodo, la incubadora y la aplicación (`nodo/`, `incubadora/`). Implementa la API. Desde esta versión se actualiza sobre lo instalado, desde la propia aplicación. |
 
 El estándar sigue en 0.9.x a propósito: la 1.0 de un estándar significa «estable, no cambia sin un proceso formal», y llega cuando estén completos los perfiles del nivel Intermedio (PRV, ENS, KPI) y lo hayan probado otros hospitales. El software ya está en 1.x porque funciona y pasa todas las pruebas. Explicado para no técnicos: https://iproy.com.ar/pim/conoce#tres-versiones-tres-cosas-distintas
 >
@@ -105,7 +107,9 @@ Cada mensaje entre nodos va **firmado (ed25519)** y **sellado (X25519)** de extr
 
 La autorización la da el vínculo, y los permisos los aplica el Servidor PIM del nodo que recibe, según el rol que su administrador le dio al otro nodo. Cada operación queda en el Provenance con el nodo como autor.
 
-## Estado (v1.6.2 · 09-11-2026)
+## Estado (v1.7.0 · 23-11-2026)
+
+Las pruebas de la 1.7.0, con sus resultados, están en [pruebas/LEEME.md](pruebas/LEEME.md): las 16 suites de un nodo, la colmena en malla con tres nodos, el Inventario (`inventario.sh`) y la actualización sobre lo instalado (`actualizacion.sh`, también sobre un producto incubado). La tabla de abajo es la de la 1.1.0, comparada con un producto derivado.
 
 <sub>🎓 [Plan de divulgación y novedades →](https://iproy.com.ar/pim/plan)</sub>
 
@@ -116,6 +120,7 @@ La autorización la da el vínculo, y los permisos los aplica el Servidor PIM de
 | `pruebas/negativas.sh` (1.6.2): lo que el servidor tiene que rechazar, con tokens SMART de cada rol (`If-Match` 428 y 412, cliente sin rol, lo que el Ejecutor no ve, transiciones inválidas, Bundle vacío) | 36/36 | |
 | `pruebas/mem.sh`: PCD-15 por MLLP y HTTP, ACK, alta por EUI-64, códigos MDC, ubicación, orden por autoprueba, rechazos | 19/19 | 19/19 |
 | `pruebas/colmena.sh`: nodo iProy ↔ nodo Colmen por la intranet y por el hub local | 20/20 | |
+| `pruebas/cola.sh` (1.6.3): cola de salida de la colmena. Con el camino cortado los pedidos esperan, salen solos al volver, llegan una sola vez y en orden; la revocación sin conexión llega igual | 33/33 | |
 | `pruebas/industrial.sh`: alarmas ISA-18.2, preventivos, Modbus TCP y MQTT con simuladores | 19/19 | 19/19 |
 | `pruebas/nucleo16.sh` (1.6.0): listas desplegables, recuperación de la contraseña sin Internet (códigos y clave temporal), Ejecutor → responsable y stock del pañol | 45/45 | |
 | `herramientas/contrato.py`: especificación 0.9.4 ↔ Servidor PIM 1.1 ↔ OpenAPI 1.3.1 | sin diferencias no declaradas | |
@@ -132,6 +137,8 @@ Lo pendiente y los límites conocidos están en [docs/HOJA_DE_RUTA.md](docs/HOJA
 
 <sub>🎓 [Rutas de aprendizaje por rol →](https://iproy.com.ar/pim/aprende)</sub>
 
+- **[Manual de usuario de iProy](https://iproy.com.ar/aprende-iproy)**: el uso diario de la aplicación (pedidos, órdenes, inventario, pañol, preventivos, paneles, colmena, configuración y actualizaciones).
+- **[docs/TUTORIAL_COLMENA.md](docs/TUTORIAL_COLMENA.md): tutorial paso a paso** para armar una colmena de hasta cuatro instalaciones, en la misma red y por Internet, con la cola de salida.
 - **[docs/PRUEBA_COLMENA_3_NODOS.md](docs/PRUEBA_COLMENA_3_NODOS.md): plan de la primera prueba de interoperabilidad real** (dos nodos en una red y uno en otra institución por el hub de relevo).
 - **[docs/INSTALACION.md](docs/INSTALACION.md): tutorial de instalación en Linux y Windows**, basado en una práctica real; versión guiada en https://iproy.com.ar/pim/instalar.
 - **Sitio de capacitación y divulgación:** https://iproy.com.ar/pim — lecciones por rol, manuales, planos, casos, API, foro y reseñas.

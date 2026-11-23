@@ -1,0 +1,51 @@
+{
+  "id": "paneles",
+  "nombre": "Paneles IoT",
+  "version": "2.0.1",
+  "abi": 1,
+  "nucleo": ">=1.7 <2.0",
+  "estabilidad": "pruebas",
+  "licencia": "AGPL-3.0-or-later",
+  "descripcion": "Paneles IoT por áreas (Quirófanos, Energía, Ósmosis, Climatización…): cada área agrupa paneles de un tipo — tarjetas de señales, tablero de energía con curvas, referencias en semáforo e informe imprimible o Word, grilla de equipos por sector con tendencias y análisis de fallas, sinóptico con valores en vivo, y eventos y alarmas de los equipos. Quién ve cada área lo deciden sus reglas (rol, perfil, organización o usuario). Guarda su propio historial (detalle fino de las últimas semanas y por hora hasta 400 días) a partir de los eventos del bus, sin leer tablas de otros módulos.",
+  "requiere": [
+    "telemetria"
+  ],
+  "lib": "lib.php",
+  "rutas": "rutas.php",
+  "capacidades": {
+    "paneles.ver": [
+      "GM",
+      "EJ",
+      "CI",
+      "FT",
+      "SO"
+    ],
+    "paneles.configurar": [
+      "GM"
+    ]
+  },
+  "suscribe": {
+    "telemetria/valor": "eventos.php",
+    "alarmas/cambio": "eventos_alarma.php",
+    "telemetria/serie": "eventos_serie.php",
+    "equipos/evento": "eventos_equipo.php",
+    "pim/Device/+": "eventos_activo.php"
+  },
+  "tareas": [
+    {
+      "id": "depurar",
+      "cada": 21600,
+      "archivo": "tareas/depurar.php"
+    }
+  ],
+  "ui": {
+    "script": "ui.js",
+    "orden": 42
+  },
+  "config_defecto": {
+    "paso_s": 300,
+    "detalle_dias": 35,
+    "retener_dias": 400,
+    "sin_datos_min": 30
+  }
+}
